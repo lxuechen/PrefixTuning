@@ -249,7 +249,6 @@ if __name__ == '__main__':
 
     logging_dir = os.path.join(folder_name, 'runs', Model_FILE)
     Model_FILE = '{}{}'.format(folder_name, Model_FILE)
-    print(Model_FILE)
 
     if args.notes is not None and 'large' in args.notes:
         OLD_MODEL = "gpt2-large"
@@ -326,7 +325,6 @@ if __name__ == '__main__':
         --train_embs no ".format(Model_FILE, OLD_MODEL, OLD_MODEL, args.bsz, args.bsz, args.epoch, TRAIN_FILE,
                                  args.mode, TEST_FILE,
                                  args.tuning_mode, logging_dir)
-
     COMMANDLINE += app
 
     if load_prefix_model:
