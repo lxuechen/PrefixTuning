@@ -25,7 +25,8 @@ import math
 import os, transformers, torch
 from dataclasses import dataclass, field
 from typing import Optional
-from train_control import PrefixTuning, ClassificationHead, PrefixEmbTuning
+from train_control import PrefixTuning, ClassificationHead
+from train_control2 import PrefixEmbTuning
 from transformers.file_utils import cached_path
 
 import glob
