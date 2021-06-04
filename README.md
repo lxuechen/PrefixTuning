@@ -68,5 +68,12 @@ E2E task:
 ```bash
 cd transformers/examples/control; mkdir save_e2e_models_convcheck/
 
-python train_e2e.py --optim_prefix yes --preseqlen 5 --epoch 5 --learning_rate 0.00005 --mode webnlg --bsz 5 --seed 101
+python train_e2e.py \
+  --optim_prefix yes \
+  --preseqlen 5 \
+  --epoch 5 \
+  --learning_rate 0.00005 \
+  --mode data2text \
+  --bsz 5 \
+  --seed 101
 ```
