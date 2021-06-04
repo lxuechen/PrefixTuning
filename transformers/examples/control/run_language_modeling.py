@@ -702,9 +702,10 @@ def main():
         print(model_args.tuning_mode)
         print('adapting the size of the model embedding to include [PAD]')
         print('len(tokenizer) = ', len(tokenizer))
-        num_added_tokens = tokenizer.add_special_tokens(
-            {'pad_token': '[PAD]'})
+        # TODO: What is this???
+        num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         embedding_layer = model.resize_token_embeddings(len(tokenizer))
+
         print('len(tokenizer) = ', len(tokenizer))
         print(tokenizer.eos_token, tokenizer.eos_token_id)
         print(tokenizer.bos_token, tokenizer.bos_token_id)
@@ -714,22 +715,11 @@ def main():
             param.requires_grad = False
 
         gpt2 = model
-
-
-
         print('loading the prefix model from ', model_args.prefixModel_name_or_path)
-        # print(bool(".ckpt" in model_args.prefixModel_name_or_path))
-        if model_args.optim_prefix == 'yes':
-            optim_prefix_bool = True
-        elif model_args.optim_prefix == 'no':
-            optim_prefix_bool = False
-        else:
-            assert False, "model_args.optim_prefix should be either yes or no"
+        optim_prefix_bool: bool = model_args.optim_prefix.lower() == "yes"
 
         if model_args.prefixModel_name_or_path is not None:
             config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
-            # print(config2)
-
             if model_args.prefix_mode == 'embedding':
                 model = PrefixEmbTuning.from_pretrained(
                         model_args.prefixModel_name_or_path,
@@ -739,9 +729,7 @@ def main():
                         model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
                         use_infix=(data_args.format_mode == 'infix')
                     )
-
             elif model_args.prefix_mode == 'activation':
-
                 model = PrefixTuning.from_pretrained(
                     model_args.prefixModel_name_or_path,
                     from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
@@ -752,9 +740,8 @@ def main():
                 )
             else:
                 assert False, "invalid prefix mode"
-
         else:
-
+            # TODO: What is this?
             # should clone the config and construct it.
             config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
             config_prefix._my_arg_tune_mode = model_args.tuning_mode
@@ -778,25 +765,12 @@ def main():
             config_prefix.init_random = model_args.init_random
             config_prefix.mid_dim = model_args.mid_dim
 
-
-
             print('training the prefix model from scratch. ')
             if model_args.prefix_mode == 'embedding':
-
-                # specific parametrization for embedding.
                 config_prefix.parametrize_emb = model_args.parametrize_emb
-
                 model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
-
-                # model = PrefixEmbTuning(config, model_gpt2=gpt2,
-                #                         optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                #                         use_infix=(data_args.format_mode == 'infix'))
             elif model_args.prefix_mode == 'activation':
                 model = PrefixTuning(config_prefix, model_gpt2=gpt2)
-
-                # model = PrefixTuning(config, model_gpt2=gpt2,
-                #                      optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                #                      use_infix=(data_args.format_mode == 'infix'))
             else:
                 assert False, "invalid prefix mode"
 
