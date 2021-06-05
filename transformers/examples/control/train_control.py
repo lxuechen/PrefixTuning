@@ -36,31 +36,26 @@ class PrefixTuning(GPT2PreTrainedModel):
             self.optim_prefix = config.optim_prefix
         else:
             self.optim_prefix = optim_prefix
-        print(f"self.optim_prefix: {self.optim_prefix}")
 
         if hasattr(config, 'preseqlen') and self.optim_prefix:
             self.preseqlen = config.preseqlen
         elif self.optim_prefix:
             self.preseqlen = preseqlen
-        print(f"self.preseqlen: {self.preseqlen}")
 
         if hasattr(config, 'use_infix'):
             self.use_infix = config.use_infix
         else:
             self.use_infix = use_infix
-        print(f"self.use_infix: {self.use_infix}")
 
         if hasattr(config, '_my_arg_tune_mode'):
             self.tuning_mode = config._my_arg_tune_mode
         else:
             self.tuning_mode = 'prefixtune'
-        print(f"self.tuning_mode: {self.tuning_mode}")
 
         if hasattr(config, '_my_arg_task_mode'):
             self.task_mode = config._my_arg_task_mode
         else:
             assert False, 'the task is underspecified'
-        print(f"self.task_mode: {self.task_mode}")
 
         if hasattr(config, 'train_weights'):
             self.train_weights = (config.train_weights == 'yes')
@@ -71,25 +66,21 @@ class PrefixTuning(GPT2PreTrainedModel):
             self.format_mode = config.format_mode
         else:
             self.format_mode = 'cat'
-        print(f"self.format_mode: {self.format_mode}")
 
         if hasattr(config, 'prefix_dropout'):
             self.prefix_dropout = config.prefix_dropout
         else:
             self.prefix_dropout = 0.0
-        print(f"self.prefix_dropout: {self.prefix_dropout}")
 
         if hasattr(config, 'init_random'):
             self.init_random = (config.init_random == 'yes')
         else:
             self.init_random = False
-        print(f"self.init_random: {self.init_random}")
 
         if hasattr(config, 'mid_dim'):
             self.mid_dim = config.mid_dim
         else:
             self.mid_dim = 512
-        print(f"self.mid_dim: {self.mid_dim}")
 
         if hasattr(config, 'lowdata'):
             self.lowdata = config.lowdata
