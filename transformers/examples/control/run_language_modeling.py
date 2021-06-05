@@ -213,8 +213,7 @@ def get_dataset(
         )
 
 
-def get_classifier(
-    name: Optional[str], class_label: int, device: str):
+def get_classifier(name: Optional[str], class_label: int, device: str):
     if name is None:
         return None, None
 
@@ -254,10 +253,6 @@ def get_classifier(
 
 
 def main():
-    # See all possible arguments in src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
-
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -367,9 +362,6 @@ def main():
             logger.info("Training new model from scratch")
             model = AutoModelWithLMHead.from_config(config)
 
-    # HERE
-    # model.resize_token_embeddings(len(tokenizer))
-
     if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
         raise ValueError(
             "BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the"
@@ -382,40 +374,15 @@ def main():
     else:
         data_args.block_size = min(data_args.block_size, tokenizer.max_len)
 
-    # ADD SPECIAL TOKENS:
-    if (model_args.tuning_mode != 'prefixtune') and ('lowdata' not in training_args.output_dir) and (
-        model_args.tuning_mode != 'adaptertune'):
-        print(model_args.tuning_mode)
-        print('adapting the size of the model embedding to include [PAD], [BOS], [EOS].')
-        print('len(tokenizer) = ', len(tokenizer))
-        num_added_tokens = tokenizer.add_special_tokens(
-            {'pad_token': '[PAD]', 'bos_token': '[BOS]', 'eos_token': '[EOS]'})
-        embedding_layer = model.resize_token_embeddings(len(tokenizer))
-        print('len(tokenizer) = ', len(tokenizer))
-    elif data_args.dataless == 'yes':
-        print(model_args.tuning_mode, 'dataless setting, so no new tokens at all.')
-        print('We do not add special tokens to the tokenizer, instead, we just finetune on <|endoftext|>')
+    print(model_args.tuning_mode)
+    print('adapting the size of the model embedding to include [PAD]')
+    print('len(tokenizer) = ', len(tokenizer))
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    model.resize_token_embeddings(len(tokenizer))
 
-        print(tokenizer.eos_token_id)
-        print(tokenizer.eos_token)
-        print(tokenizer.pad_token_id)
-        tokenizer.pad_token = tokenizer.eos_token
-        # tokenizer(['he', 'hello w '], padding=True)
-
-        # tokenizer.pad_token_id = tokenizer.eos_token_id
-        # tokenizer.pad_token = tokenizer.eos_token
-        print(tokenizer.pad_token, tokenizer.pad_token_id)
-    else:
-        print(model_args.tuning_mode)
-        print('adapting the size of the model embedding to include [PAD]')
-        print('len(tokenizer) = ', len(tokenizer))
-        # TODO: What is this???
-        num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        embedding_layer = model.resize_token_embeddings(len(tokenizer))
-
-        print('len(tokenizer) = ', len(tokenizer))
-        print(tokenizer.eos_token, tokenizer.eos_token_id)
-        print(tokenizer.bos_token, tokenizer.bos_token_id)
+    print('len(tokenizer) = ', len(tokenizer))
+    print(tokenizer.eos_token, tokenizer.eos_token_id)
+    print(tokenizer.bos_token, tokenizer.bos_token_id)
 
     if model_args.tuning_mode == 'prefixtune':  # prefixtune
         for param in model.base_model.parameters():
