@@ -96,7 +96,7 @@ class PrefixTuning(GPT2PreTrainedModel):
         print('mode_para=0, for data2text Instruction based, just optimize a set of parameters ;) ')
         print('preseqlen is {}, under the mode of optimizing prefix directly'.format(self.preseqlen))
         print('UNDER PARAMETRIZATION 1')
-        self.input_tokens = torch.arange(self.preseqlen).long()
+        self.register_buffer('input_tokens', torch.arange(1, self.preseqlen))
         self.wte = nn.Embedding(self.preseqlen, config.n_embd)
         self.control_trans = nn.Sequential(
             nn.Linear(config.n_embd, self.mid_dim),
@@ -109,15 +109,18 @@ class PrefixTuning(GPT2PreTrainedModel):
         trainable_params = sum(param.numel() for param in self.parameters())
         print(f"total trainable param {trainable_params / 1e6:.4f} million")
 
-    def get_prompt_p5(self, control_code=None, gpt2=None, bsz=None):
-        input_tokens = self.input_tokens.unsqueeze(0).expand(bsz, -1).to(self.device)
+    def get_prompt_p5(self, batch_size):
+        # repeat indices over batch dimension.
+        input_tokens = self.input_tokens.expand(batch_size, -1)
+        # convert indices to embeddings.
         temp_control = self.wte(input_tokens)
-        past_key_values = self.control_trans(temp_control)  # bsz, seqlen, layer*emb
-        bsz, seqlen, _ = past_key_values.shape
+        past_key_values = self.control_trans(temp_control)
+
         past_key_values = past_key_values.view(
-            bsz, seqlen, self.match_n_layer * 2, self.match_n_head, self.match_n_embd
+            batch_size, self.preseqlen, self.match_n_layer * 2, self.match_n_head, self.match_n_embd
         )
         past_key_values = self.dropout(past_key_values)
+        # TODO: Why split into 2?
         past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
         return past_key_values
 
@@ -145,12 +148,12 @@ class PrefixTuning(GPT2PreTrainedModel):
                 src_attn=None,
                 tgt_attn=None,
                 **kwargs):
-        bsz = input_ids.shape[0]
+        batch_size = input_ids.size(0)
 
         if self.mode_para == 2:
-            past_key_values_prompt = self.get_prompt(src, gpt2=gpt2_model, bsz=bsz)
+            past_key_values_prompt = self.get_prompt(batch_size=batch_size)
         else:
-            past_key_values_prompt = self.get_prompt(control_code, gpt2=gpt2_model, bsz=bsz)
+            past_key_values_prompt = self.get_prompt(batch_size=batch_size)
         if past_key_values is not None:
             assert False, "Attention, use past_key_values for other things"
         else:
