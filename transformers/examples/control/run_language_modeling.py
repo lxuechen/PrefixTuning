@@ -75,9 +75,6 @@ from transformers import (
     TrainingArguments,
     set_seed,
     GPT2LMHeadModel,
-    BertTokenizerFast,
-    BertModel,
-    AutoModelForSequenceClassification,
     GPT2LMHeadModelAdapter,
 )
 
@@ -448,260 +445,52 @@ def main():
             else:
                 assert False, "invalid prefix mode"
 
-        if (data_args.dataless == 'yes'):
-            print('in dataless setting, loading the discriminator. ')
-            if model_args.dataless_control_type == 0:
-                discri_model, _ = get_classifier('sentiment', 1, training_args.device)
-                discri_tokenizer = None
-                discri_labels = ['positive', 'negative']
-            elif model_args.dataless_control_type == 1:
-                discri_tokenizer = BertTokenizerFast.from_pretrained('bert-large-uncased')
-                discri_model = BertModel.from_pretrained('bert-large-uncased', return_dict=True).cuda()
-                for param in discri_model.parameters():
-                    param.requires_grad = False
-            elif model_args.dataless_control_type == 2:
-                # using pretrained models of BERT/Albert/Robert etc...
-                discri_config = AutoConfig.from_pretrained(model_args.dataless_discri_model_path)
-                print(discri_config)
-                print('loading the discriminator from', model_args.dataless_discri_model_path)
-                discri_tokenizer = AutoTokenizer.from_pretrained(model_args.dataless_discri_model_path)
-                discri_model = AutoModelForSequenceClassification.from_pretrained(
-                    model_args.dataless_discri_model_path, return_dict=True).cuda()
-                # print(discri_model.class_labels)
-                for param in discri_model.parameters():
-                    param.requires_grad = False
-
-                # a quick check
-                # 1 means positive and 0 means negative
-                if model_args.dataless_discri_model_path == 'textattack/roberta-base-imdb':
-                    temp_input = discri_tokenizer('I am happy.', return_tensors="pt", add_special_tokens=True)
-                    temp_result = discri_model(temp_input['input_ids'].to(discri_model.device)).logits.view(-1).data
-                    print(temp_result)
-                    if temp_result[0] < temp_result[1]:
-                        print('1 means positive and 0 means negative')
-                        discri_labels = ['negative', 'positive']
-                    else:
-                        print('0 means positive and 1 means negative')
-                        discri_labels = None
-                    assert temp_result[0] < temp_result[1]
-                elif model_args.dataless_discri_model_path == 'textattack/roberta-base-ag-news':
-                    discri_labels = ['world', 'sports', 'business', 'science']
-                else:
-                    discri_labels = [x for x in discri_config.label2id.keys()]
-            elif model_args.dataless_control_type == 3:
-                print('controlling the length of generation. ')
-                discri_labels = ['short', 'medium', 'long']
-                discri_model = torch.tensor([5, 25, 45])
-                # discri_model = None
-                discri_tokenizer = None
-            print(model)
+        print('Not in dataless setting, loading the control code. ')
+        if 'sentiment' in training_args.output_dir:
+            print('sentiment does need discri_labels')
+            discri_labels = None
+        elif 'classify-sentiment' in training_args.output_dir:
+            print('classify-sentiment does need discri_labels')
+            discri_labels = None
+        elif 'classify-topic' in training_args.output_dir:
+            print('classify-topic does need discri_labels')
+            discri_labels = None
+        elif 'sent' in training_args.output_dir:
+            discri_labels = ['negative', 'positive']
+        elif 'topic' in training_args.output_dir:
+            discri_labels = ['world', 'sports', 'business', 'science']
+        elif 'keyword' in training_args.output_dir:
+            print('keyword is unbounded.')
+            discri_labels = None
+        elif 'embMatch' in training_args.output_dir:
+            print('embMatch is unbounded.')
+            discri_labels = None
+        elif 'data2text' in training_args.output_dir:
+            print('data2text does need discri_labels')
+            discri_labels = None
+        elif 'triples' in training_args.output_dir:
+            print('triples does need discri_labels')
+            discri_labels = None
+        elif 'webnlg' in training_args.output_dir:
+            print('triples does need discri_labels')
+            discri_labels = None
+        elif 'writingPrompts' in training_args.output_dir:
+            print('writingPrompts does need discri_labels')
+            discri_labels = None
+        elif 'cnndm' in training_args.output_dir:
+            print('cnndm does need discri_labels')
+            discri_labels = None
+        elif 'xsum' in training_args.output_dir:
+            print('xsum does need discri_labels')
+            discri_labels = None
+        elif 'lemma2text' in training_args.output_dir:
+            print('lemma2text does need discri_labels')
+            discri_labels = None
         else:
-            print('Not in dataless setting, loading the control code. ')
-            if 'sentiment' in training_args.output_dir:
-                print('sentiment does need discri_labels')
-                discri_labels = None
-            elif 'classify-sentiment' in training_args.output_dir:
-                print('classify-sentiment does need discri_labels')
-                discri_labels = None
-            elif 'classify-topic' in training_args.output_dir:
-                print('classify-topic does need discri_labels')
-                discri_labels = None
-            elif 'sent' in training_args.output_dir:
-                discri_labels = ['negative', 'positive']
-            elif 'topic' in training_args.output_dir:
-                discri_labels = ['world', 'sports', 'business', 'science']
-            elif 'keyword' in training_args.output_dir:
-                print('keyword is unbounded.')
-                discri_labels = None
-            elif 'embMatch' in training_args.output_dir:
-                print('embMatch is unbounded.')
-                discri_labels = None
-            elif 'data2text' in training_args.output_dir:
-                print('data2text does need discri_labels')
-                discri_labels = None
-            elif 'triples' in training_args.output_dir:
-                print('triples does need discri_labels')
-                discri_labels = None
-            elif 'webnlg' in training_args.output_dir:
-                print('triples does need discri_labels')
-                discri_labels = None
-            elif 'writingPrompts' in training_args.output_dir:
-                print('writingPrompts does need discri_labels')
-                discri_labels = None
-            elif 'cnndm' in training_args.output_dir:
-                print('cnndm does need discri_labels')
-                discri_labels = None
-            elif 'xsum' in training_args.output_dir:
-                print('xsum does need discri_labels')
-                discri_labels = None
-            elif 'lemma2text' in training_args.output_dir:
-                print('lemma2text does need discri_labels')
-                discri_labels = None
-            else:
-                assert False, 'should have topic/sent in the file name'
-
-    elif model_args.tuning_mode == 'finetune-top':
-        # print(model.config)
-        # print(model)
-        for param in model.base_model.parameters():
-            param.requires_grad = False
-
-        top_layers = model_args.top_layers
-        total_params = 0
-        if top_layers == 0:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name:
-                    print(name)
-                    param.requires_grad = True
-                    total_params += param.numel()
-        elif top_layers == 1:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name or 'transformer.h.23.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    total_params += param.numel()
-
-        elif top_layers == 2:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name or 'transformer.h.23.' in name or \
-                    'transformer.h.22.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 22:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.h.23.' in name or \
-                    'transformer.h.22.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 11:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.h.23.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 00:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-        print('the total number of trainable parameters is {}'.format(total_params))
-
-
-    elif model_args.tuning_mode == 'adaptertune':
-        print(model_args.tuning_mode)
-
-        for param in model.base_model.parameters():
-            param.requires_grad = False
-
-        total_params = 0
-        for name, param in model.named_parameters():
-            if 'adapter_block' in name:
-                print(name, end=' ')
-                param.requires_grad = True
-                print(param.shape, param.numel())
-                total_params += param.numel()
-
-        print('the total number of trainable parameters is {}'.format(total_params))
-
-        # return
-
-
-
-    elif model_args.tuning_mode == 'bothtune':  # prefixtune
-        print('IN BOTH TUNE: DOING both prefixtuning and the finetuning.')
-        for param in model.base_model.parameters():
-            param.requires_grad = True
-
-        gpt2 = model
-
-        discri_labels = None
-
-        print('loading the prefix model from ', model_args.prefixModel_name_or_path)
-        # print(bool(".ckpt" in model_args.prefixModel_name_or_path))
-        if model_args.optim_prefix == 'yes':
-            optim_prefix_bool = True
-        elif model_args.optim_prefix == 'no':
-            optim_prefix_bool = False
-        else:
-            assert False, "model_args.optim_prefix should be either yes or no"
-
-        if model_args.prefixModel_name_or_path is not None:
-            config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
-            # print(config2)
-
-            if model_args.prefix_mode == 'embedding':
-                model = PrefixEmbTuning.from_pretrained(
-                    model_args.prefixModel_name_or_path,
-                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                    config=config2,
-                    cache_dir=model_args.cache_dir,
-                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                    use_infix=(data_args.format_mode == 'infix')
-                )
-
-            elif model_args.prefix_mode == 'activation':
-
-                model = PrefixTuning.from_pretrained(
-                    model_args.prefixModel_name_or_path,
-                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                    config=config2,
-                    cache_dir=model_args.cache_dir,
-                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                    use_infix=(data_args.format_mode == 'infix')
-                )
-            else:
-                assert False, "invalid prefix mode"
-
-        else:
-
-            # should clone the config and construct it.
-            config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
-            config_prefix._my_arg_tune_mode = model_args.tuning_mode
-            config_prefix._my_arg_task_mode = data_args.task_mode
-            config_prefix._my_arg_control = True
-            config_prefix.train_weights = data_args.train_embs
-            config_prefix.optim_prefix = optim_prefix_bool
-            config_prefix.preseqlen = model_args.preseqlen
-            config_prefix.use_infix = (data_args.format_mode == 'infix')
-            config_prefix.format_mode = data_args.format_mode
-            config_prefix.prefix_dropout = model_args.prefix_dropout
-            config_prefix.vocab_size = len(tokenizer)
-            config_prefix.lowdata = ('lowdata' in training_args.output_dir)
-            if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
-                config_prefix.lowdata_token = tokenizer([data_args.lowdata_token],
-                                                        add_prefix_space=True)['input_ids']  # return_tensors='np',
-                print(data_args.lowdata_token)
-                print(config_prefix.lowdata_token)
-
-            # some extra stuff.
-            config_prefix.init_random = model_args.init_random
-            config_prefix.mid_dim = model_args.mid_dim
-
-            print('training the prefix model from scratch. ')
-            if model_args.prefix_mode == 'embedding':
-                config_prefix.parametrize_emb = model_args.parametrize_emb
-
-                model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
-
-            elif model_args.prefix_mode == 'activation':
-                model = PrefixTuning(config_prefix, model_gpt2=gpt2)
-
-            else:
-                assert False, "invalid prefix mode"
+            assert False, 'should have topic/sent in the file name'
 
     # Get datasets
     if data_args.task_mode == 'generate':
-
         prompt_text = '[BOS] By the riverside, '
 
         if prompt_text == '':
