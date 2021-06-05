@@ -757,82 +757,79 @@ def main():
                        textlength=50, nolinebreak=True)
         return
 
-    if (data_args.dataless == 'yes'):
-        pass
+    train_dataset = (
+        get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, training_args=training_args,
+                    finetune_mode=(model_args.tuning_mode == 'finetune')) if training_args.do_train else None
+    )
+    eval_dataset = (
+        get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
+                    training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
+        if training_args.do_eval
+        else None
+    )
+    if config.model_type == "xlnet":
+        data_collator = DataCollatorForPermutationLanguageModeling(
+            tokenizer=tokenizer,
+            plm_probability=data_args.plm_probability,
+            max_span_length=data_args.max_span_length,
+        )
     else:
-        train_dataset = (
-            get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, training_args=training_args,
-                        finetune_mode=(model_args.tuning_mode == 'finetune')) if training_args.do_train else None
-        )
-        eval_dataset = (
-            get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
-                        training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
-            if training_args.do_eval
-            else None
-        )
-        if config.model_type == "xlnet":
-            data_collator = DataCollatorForPermutationLanguageModeling(
-                tokenizer=tokenizer,
-                plm_probability=data_args.plm_probability,
-                max_span_length=data_args.max_span_length,
+
+        if data_args.task_mode == 'embMatch':
+            data_collator = DataCollatorForEmbMatchLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'topic' or data_args.task_mode == 'sentiment':
+            data_collator = DataCollatorForKeywordLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'classify-topic' or data_args.task_mode == 'classify-sentiment':
+            data_collator = DataCollatorForClassificationSentimentLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'length':
+            data_collator = DataCollatorForKeywordLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'keyword':
+            data_collator = DataCollatorForKeywordLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'data2text' or data_args.task_mode == 'triples' or data_args.task_mode == \
+            'webnlg':
+            print('FORMAT MODE IS ', data_args.format_mode)
+            data_collator = DataCollatorForData2TextLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
+                format_mode=data_args.format_mode
+            )
+        elif data_args.task_mode == 'writingPrompts':
+            print('FORMAT MODE IS ', data_args.format_mode)
+            data_collator = DataCollatorForWritingPromptsLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
+                format_mode=data_args.format_mode
+            )
+        elif data_args.task_mode == 'xsum' or data_args.task_mode == 'cnndm':
+            print('FORMAT MODE IS ', data_args.format_mode)
+            data_collator = DataCollatorForSumLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
+                format_mode=data_args.format_mode
+            )
+        elif data_args.task_mode == 'lemma2text':
+            data_collator = DataCollatorForData2TextLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'text2data':
+            data_collator = DataCollatorForText2DataLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
+        elif data_args.task_mode == 'gen_data':
+            data_collator = DataCollatorForWeightedLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
             )
         else:
-
-            if data_args.task_mode == 'embMatch':
-                data_collator = DataCollatorForEmbMatchLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'topic' or data_args.task_mode == 'sentiment':
-                data_collator = DataCollatorForKeywordLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'classify-topic' or data_args.task_mode == 'classify-sentiment':
-                data_collator = DataCollatorForClassificationSentimentLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'length':
-                data_collator = DataCollatorForKeywordLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'keyword':
-                data_collator = DataCollatorForKeywordLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'data2text' or data_args.task_mode == 'triples' or data_args.task_mode == \
-                'webnlg':
-                print('FORMAT MODE IS ', data_args.format_mode)
-                data_collator = DataCollatorForData2TextLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
-                    format_mode=data_args.format_mode
-                )
-            elif data_args.task_mode == 'writingPrompts':
-                print('FORMAT MODE IS ', data_args.format_mode)
-                data_collator = DataCollatorForWritingPromptsLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
-                    format_mode=data_args.format_mode
-                )
-            elif data_args.task_mode == 'xsum' or data_args.task_mode == 'cnndm':
-                print('FORMAT MODE IS ', data_args.format_mode)
-                data_collator = DataCollatorForSumLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
-                    format_mode=data_args.format_mode
-                )
-            elif data_args.task_mode == 'lemma2text':
-                data_collator = DataCollatorForData2TextLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'text2data':
-                data_collator = DataCollatorForText2DataLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            elif data_args.task_mode == 'gen_data':
-                data_collator = DataCollatorForWeightedLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
-            else:
-                data_collator = DataCollatorForLanguageModeling(
-                    tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-                )
+            data_collator = DataCollatorForLanguageModeling(
+                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+            )
 
     if (model_args.tuning_mode == 'prefixtune'):
         if 'topic' in training_args.output_dir:
@@ -854,11 +851,6 @@ def main():
         )
 
     # Training
-
-    if 'lowdata' in training_args.output_dir:
-        eval_output = trainer.evaluate()
-        # perplexity = math.exp(eval_output["eval_loss"])
-        print('initial eval loss is {}'.format(eval_output["eval_loss"]))
 
     if training_args.do_train:
         model_path = (
@@ -904,33 +896,7 @@ def main():
 
         results.update(result)
 
-    if 'lowdata' in training_args.output_dir:
-        print('evaluating the PPL on full dev data. ')
-        data_args.eval_data_file = "/u/scr/xlisali/e2e_data/src1_valid.txt"
-        eval_dataset = (
-            get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
-                        training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
-            if training_args.do_eval
-            else None
-        )
-        print(len(eval_dataset))
-        eval_output = trainer.evaluate(eval_dataset)
-        perplexity = math.exp(eval_output["eval_loss"])
-        print('                full_dev_perplexity = {}'.format(perplexity))
-
-        del model
-        del trainer
-        torch.cuda.empty_cache()
-        elem = os.path.abspath(training_args.output_dir)
-        checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
-        assert len(checkpoint_path) == 1
-        checkpoint_path = checkpoint_path[0]
-
-        print('running evaluation on ', checkpoint_path)
-
-        os.system('python ../text-generation/gen.py data2text yes yes {} no'.format(checkpoint_path))
-
-    elif data_args.task_mode == 'data2text':
+    if data_args.task_mode == 'data2text':
         del model
         del trainer
         if model_args.tuning_mode == 'prefixtune' or model_args.tuning_mode == 'bothtune':
