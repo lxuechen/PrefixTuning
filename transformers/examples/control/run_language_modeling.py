@@ -32,7 +32,6 @@ from transformers.file_utils import cached_path
 from annoying_args import DataTrainingArguments, ModelArguments
 from train_control import ClassificationHead, PrefixTuning
 from train_control2 import PrefixEmbTuning
-from aux import quick_generate
 
 path = os.path.abspath(transformers.__file__)
 
@@ -253,6 +252,7 @@ def get_classifier(name: Optional[str], class_label: int, device: str):
 def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    training_args.disable_tqdm = False
 
     if data_args.eval_data_file is None and training_args.do_eval:
         raise ValueError(
