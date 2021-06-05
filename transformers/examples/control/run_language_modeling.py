@@ -413,7 +413,6 @@ def main():
             else:
                 assert False, "invalid prefix mode"
         else:
-            # TODO: What is this?
             # should clone the config and construct it.
             config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
             config_prefix._my_arg_tune_mode = model_args.tuning_mode
@@ -489,29 +488,6 @@ def main():
             discri_labels = None
         else:
             assert False, 'should have topic/sent in the file name'
-
-    # Get datasets
-    if data_args.task_mode == 'generate':
-        prompt_text = '[BOS] By the riverside, '
-
-        if prompt_text == '':
-            input_ids_prompt = None
-        else:
-            input_ids_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt").to(
-                training_args.device)
-
-        discri_labels_code = tokenizer(
-            discri_labels, return_tensors="pt", is_split_into_words=True, add_special_tokens=False
-        )['input_ids']
-        discri_labels_code = discri_labels_code.view(-1).to(training_args.device).unsqueeze(0).split(1, dim=1)
-        print(discri_labels_code)
-        model = model.to(training_args.device)
-        gpt2 = gpt2.to(training_args.device)
-
-        quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer,
-                       sample_size=10, sample_from_gpt=False,
-                       textlength=50, nolinebreak=True)
-        return
 
     train_dataset = (
         get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, training_args=training_args,
@@ -715,7 +691,6 @@ def main():
             os.system('python ../text-generation/gen.py triples yes yes {} no'.format(checkpoint_path))
 
     return results
-
 
 
 def _mp_fn(index):
