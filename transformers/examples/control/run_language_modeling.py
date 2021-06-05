@@ -122,9 +122,6 @@ def get_dataset(
 ):
     file_path = args.eval_data_file if evaluate else args.train_data_file
     if args.line_by_line:
-        print(args.task_mode)
-        # return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
-        # return LineByLineWithWeightTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
         if args.task_mode == 'embMatch':
             dataset = LineByLineEmbMatchTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                     block_size=args.block_size,
@@ -140,7 +137,6 @@ def get_dataset(
                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
                 eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'keyword':
-            print(file_path)
             dataset = LineByLineKeywordTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                    block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                    eos_tok=tokenizer.eos_token)
