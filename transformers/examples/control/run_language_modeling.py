@@ -840,48 +840,10 @@ def main():
                 )
 
     if (model_args.tuning_mode == 'prefixtune'):
-        if (data_args.dataless == 'yes'):
-            trainer = Trainer_Prefix(
-                model=model,
-                model_gpt2=gpt2,
-                args=training_args,
-                prediction_loss_only=True,
-                tokenizer=tokenizer,
-                discri_tokenizer = discri_tokenizer,
-                discri_model=discri_model,
-                dataless_sample_size=model_args.dataless_sample_size,
-                dataless_sample_length=model_args.dataless_sample_length,
-                dataless_control_type=model_args.dataless_control_type,
-                dataless_usebaseline= (model_args.dataless_usebaseline == 'yes'),
-                discri_labels=discri_labels,
-                gumbel=(model_args.gumbel == 'yes'),
-                replay_buffer = (model_args.replay_buffer == 'yes'),
-                forward_kl='no', # focus of this week.
-                reverse_kl='yes',
-                sample_from_gpt = False, # true for forward_kl is ok. cannot be true for reverse KL.
-
-            )
-        else:
-            if 'topic' in training_args.output_dir:
-                discri_labels = ['world', 'sports', 'business', 'science']
-            elif 'sent' in training_args.output_dir:
-                discri_labels = ['negative', 'positive']
-            trainer = Trainer_Prefix(
-                model=model,
-                tokenizer=tokenizer,
-                discri_labels=discri_labels,
-                model_gpt2=gpt2,
-                args=training_args,
-                prediction_loss_only=True,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                data_collator=data_collator,
-                task_mode =data_args.task_mode,
-                use_dropout=(model_args.use_dropout == 'yes')
-            )
-
-    elif (model_args.tuning_mode == 'bothtune'):
-        print('BOTH TUNE for trainer prefix. ')
+        if 'topic' in training_args.output_dir:
+            discri_labels = ['world', 'sports', 'business', 'science']
+        elif 'sent' in training_args.output_dir:
+            discri_labels = ['negative', 'positive']
         trainer = Trainer_Prefix(
             model=model,
             tokenizer=tokenizer,
@@ -892,21 +854,8 @@ def main():
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            task_mode=data_args.task_mode,
-            use_dropout=(model_args.use_dropout == 'yes'),
-            both_tune=True,
-        )
-
-    else:
-
-        trainer = Trainer(
-            model=model,
-            tokenizer=tokenizer,
-            args=training_args,
-            data_collator=data_collator,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            prediction_loss_only=True,
+            task_mode =data_args.task_mode,
+            use_dropout=(model_args.use_dropout == 'yes')
         )
 
     # Training
@@ -916,12 +865,7 @@ def main():
         # perplexity = math.exp(eval_output["eval_loss"])
         print('initial eval loss is {}'.format(eval_output["eval_loss"]))
 
-    if False:
-        # data collection:
-        print('collecting data to the files {}/gptgen_sentiment.txt'.format(training_args.output_dir))
-        out_path = '{}/gptgen_sentiment.txt'.format(training_args.output_dir)
-        trainer.gen_data(out_path)
-    elif training_args.do_train:
+    if training_args.do_train:
         model_path = (
             model_args.model_name_or_path
             if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path)
@@ -935,8 +879,6 @@ def main():
 
         if not (data_args.dataless == 'yes'):
             trainer.train(model_path=model_path)
-        elif False:
-            trainer.train_dataless(model_path=model_path, verbose=True)
         else:
             trainer.train_amortized_pplm(model_path=model_path, verbose=True)
 
@@ -946,11 +888,6 @@ def main():
             if model_args.tuning_mode == 'bothtune':
                 gpt2_dir = os.path.join(training_args.output_dir, 'gpt2')
                 gpt2.save_pretrained(gpt2_dir)
-
-        # # For convenience, we also re-save the tokenizer to the same directory,
-        # # so that you can share your model easily on huggingface.co/models =)
-        # if trainer.is_world_master():
-        #     tokenizer.save_pretrained(training_args.output_dir)
 
     # Evaluation
     results = {}
@@ -972,7 +909,6 @@ def main():
 
         results.update(result)
 
-
     if 'lowdata' in training_args.output_dir:
         print('evaluating the PPL on full dev data. ')
         data_args.eval_data_file = "/u/scr/xlisali/e2e_data/src1_valid.txt"
@@ -992,7 +928,6 @@ def main():
         del model
         del trainer
         torch.cuda.empty_cache()
-        # gpt2 = gpt2.cpu()
         elem = os.path.abspath(training_args.output_dir)
         checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
         assert len(checkpoint_path) == 1
@@ -1095,15 +1030,12 @@ def quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_t
                       prompt]  # (2, batch_size, num_heads, sequence_length, embed_size_per_head)
         else:
             prompt = None
-        # print(len(prompt), prompt[0].shape)
         prompt_codes.append(prompt)
 
     if not sample_from_gpt:
         prompt_codes = list(zip(*prompt_codes))
-        # print(len(prompt_codes), len(prompt_codes[0]), prompt_codes[0][0].shape)
         prompt_full = []
         for prompt_c in prompt_codes:
-            # print(len(prompt_c), prompt_c[0].shape, prompt_c[1].shape)
             prompt_c = torch.cat(prompt_c, dim=1)
             prompt_full.append(prompt_c)
     else:
@@ -1146,32 +1078,15 @@ def quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_t
             )
 
         print(discri_labels[sst_codes[generated_sequence_idx]])
-        # generated_sequences.append(total_sequence)
         print(total_sequence)
 
-    print()
-
-    # clean up samples...
-
-    # full_results.append(results)
-
-    # sst_codes = torch.LongTensor(sst_codes)
-    # # full_results = self._tensorize_batch(full_results, self.tokenizer.eos_token_id)
-    #
-    # control_codes = torch.cat(control_codes, dim=0)
-    # labels = full_results.clone()
-    # if self.tokenizer.eos_token_id is not None:
-    #     mask = (labels == self.tokenizer.eos_token_id)
-    #     mask_cumsum = mask.cumsum(1)
-    #     mask = (mask & (mask_cumsum != 1) & (mask_cumsum != 2))
-    #     labels[mask] = -100
-    # return {'input_ids': full_results, 'control_code': control_codes, 'labels': labels, 'sst_codes': sst_codes}
     return {'input_ids': full_results, 'control_code': control_codes, 'sst_codes': sst_codes}
+
+
 def _mp_fn(index):
     # For xla_spawn (TPUs)
     main()
 
 
 if __name__ == "__main__":
-
     main()
