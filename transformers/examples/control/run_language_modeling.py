@@ -32,6 +32,7 @@ from transformers.file_utils import cached_path
 from annoying_args import DataTrainingArguments, ModelArguments
 from train_control import ClassificationHead, PrefixTuning
 from train_control2 import PrefixEmbTuning
+from aux import quick_generate
 
 path = os.path.abspath(transformers.__file__)
 
@@ -499,10 +500,9 @@ def main():
             input_ids_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt").to(
                 training_args.device)
 
-        print(input_ids_prompt)
-
-        discri_labels_code = tokenizer(discri_labels, return_tensors="pt",
-                                       is_split_into_words=True, add_special_tokens=False)['input_ids']
+        discri_labels_code = tokenizer(
+            discri_labels, return_tensors="pt", is_split_into_words=True, add_special_tokens=False
+        )['input_ids']
         discri_labels_code = discri_labels_code.view(-1).to(training_args.device).unsqueeze(0).split(1, dim=1)
         print(discri_labels_code)
         model = model.to(training_args.device)
@@ -530,7 +530,6 @@ def main():
             max_span_length=data_args.max_span_length,
         )
     else:
-
         if data_args.task_mode == 'embMatch':
             data_collator = DataCollatorForEmbMatchLanguageModeling(
                 tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
@@ -605,32 +604,23 @@ def main():
             task_mode=data_args.task_mode,
             use_dropout=(model_args.use_dropout == 'yes')
         )
+    else:
+        raise ValueError(f"Unsupported tuning_mode: {model_args.tuning_mode}")
 
     # Training
-
     if training_args.do_train:
         model_path = (
             model_args.model_name_or_path
             if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path)
             else None
         )
-
         # For convenience, we also re-save the tokenizer to the same directory,
         # so that you can share your model easily on huggingface.co/models =)
         if trainer.is_world_master():
             tokenizer.save_pretrained(training_args.output_dir)
 
-        if not (data_args.dataless == 'yes'):
-            trainer.train(model_path=model_path)
-        else:
-            trainer.train_amortized_pplm(model_path=model_path, verbose=True)
-
-        if 'lowdata' not in training_args.output_dir:
-            trainer.save_model()
-
-            if model_args.tuning_mode == 'bothtune':
-                gpt2_dir = os.path.join(training_args.output_dir, 'gpt2')
-                gpt2.save_pretrained(gpt2_dir)
+        trainer.train(model_path=model_path)
+        trainer.save_model()
 
     # Evaluation
     results = {}
@@ -726,76 +716,6 @@ def main():
 
     return results
 
-
-def quick_generate(
-    discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer,
-    sample_size=10, sample_from_gpt=False,
-    textlength=50, nolinebreak=True, stop_token='[EOS]'
-):
-    control_codes = []
-    sst_codes = []
-    prompt_codes = []
-    for a in range(len(discri_labels)):
-        control_code = discri_labels_code[a]
-        control_codes += [control_code] * sample_size
-        sst_codes += [a] * sample_size
-        if not sample_from_gpt:
-            prompt = model.get_prompt(control_code, gpt2)
-            prompt = [x.expand(-1, sample_size, -1, -1, -1) for x in
-                      prompt]  # (2, batch_size, num_heads, sequence_length, embed_size_per_head)
-        else:
-            prompt = None
-        prompt_codes.append(prompt)
-
-    if not sample_from_gpt:
-        prompt_codes = list(zip(*prompt_codes))
-        prompt_full = []
-        for prompt_c in prompt_codes:
-            prompt_c = torch.cat(prompt_c, dim=1)
-            prompt_full.append(prompt_c)
-    else:
-        prompt_full = None
-
-    full_results = gpt2.generate(
-        input_ids=input_ids_prompt,
-        emb_match=None,
-        control_code=None,
-        past_key_values=prompt_full,
-        max_length=textlength,
-        temperature=1.0,
-        top_k=0,
-        top_p=0.9,
-        repetition_penalty=1.0,
-        do_sample=True,
-        num_return_sequences=sample_size * len(discri_labels),
-        bad_words_ids=[[628], [198]] if nolinebreak else None,
-        use_cache=True
-    )
-
-    print(full_results)
-
-    for generated_sequence_idx, generated_sequence in enumerate(full_results):
-        print("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
-        generated_sequence = generated_sequence.tolist()
-
-        # Decode text
-        text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
-
-        # Remove all text after the stop token
-        text = text[: text.find(stop_token) if stop_token else None]
-
-        # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
-        if input_ids_prompt is not None:
-            total_sequence = (
-                prompt_text + text[len(tokenizer.decode(input_ids_prompt[0], clean_up_tokenization_spaces=True)):]
-            )
-        else:
-            total_sequence = (text)
-
-        print(discri_labels[sst_codes[generated_sequence_idx]])
-        print(total_sequence)
-
-    return {'input_ids': full_results, 'control_code': control_codes, 'sst_codes': sst_codes}
 
 
 def _mp_fn(index):
