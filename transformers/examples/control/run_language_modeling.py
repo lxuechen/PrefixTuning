@@ -19,17 +19,19 @@ GPT, GPT-2 and CTRL are fine-tuned using a causal language modeling (CLM) loss. 
 using a masked language modeling (MLM) loss. XLNet is fine-tuned using a permutation language modeling (PLM) loss.
 """
 
-
+import glob
 import logging
 import math
-import os, transformers, torch
-from dataclasses import dataclass, field
+import os
 from typing import Optional
-from annoying_args import ModelArguments, DataTrainingArguments, ModelArguments, MODEL_CONFIG_CLASSES
-from train_control import PrefixTuning, ClassificationHead
-from train_control2 import PrefixEmbTuning
+
+import torch
+import transformers
 from transformers.file_utils import cached_path
-import glob
+
+from annoying_args import DataTrainingArguments, ModelArguments
+from train_control import ClassificationHead, PrefixTuning
+from train_control2 import PrefixEmbTuning
 
 path = os.path.abspath(transformers.__file__)
 
@@ -40,36 +42,35 @@ from transformers import (
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
-    DataCollatorForWeightedLanguageModeling, # modified
-    DataCollatorForEmbMatchLanguageModeling, #modified
-    DataCollatorForTopicLanguageModeling, #modified
-    DataCollatorForLengthLanguageModeling, #modified
-    DataCollatorForKeywordLanguageModeling, #modified
-    DataCollatorForData2TextLanguageModeling, #modified
-    DataCollatorForText2DataLanguageModeling, #modified
-    DataCollatorForWritingPromptsLanguageModeling, #modified
-    DataCollatorForClassificationSentimentLanguageModeling, #modified
-    DataCollatorForSumLanguageModeling, #modified
+    DataCollatorForWeightedLanguageModeling,  # modified
+    DataCollatorForEmbMatchLanguageModeling,  # modified
+    # modified
+    # modified
+    DataCollatorForKeywordLanguageModeling,  # modified
+    DataCollatorForData2TextLanguageModeling,  # modified
+    DataCollatorForText2DataLanguageModeling,  # modified
+    DataCollatorForWritingPromptsLanguageModeling,  # modified
+    DataCollatorForClassificationSentimentLanguageModeling,  # modified
+    DataCollatorForSumLanguageModeling,  # modified
     HfArgumentParser,
     LineByLineTextDataset,
-    LineByLineWithWeightTextDataset, # modified
-    LineByLineEmbMatchTextDataset, # modified
-    LineByLineTopicTextDataset, # modified
-    LineByLineKeywordTextDataset, # modified
-    LineByLineLengthTextDataset, # modified
-    LineByLineData2TextTextDataset, # modified
-    LineByLineLemma2TextTextDataset, # modified
-    LineByLineText2DataTextDataset, # modified
-    LineByLineTriplesTextDataset, # modified
-    LineByLineWebNLGTextDataset,# modified
-    LineByLineWritingPromptsTextDataset,# modified
-    LineByLineSentimentTextDataset,# modified
-    LineByLineClassificationSentimentTextDataset,# modified
+    LineByLineWithWeightTextDataset,  # modified
+    LineByLineEmbMatchTextDataset,  # modified
+    LineByLineTopicTextDataset,  # modified
+    LineByLineKeywordTextDataset,  # modified
+    LineByLineLengthTextDataset,  # modified
+    LineByLineData2TextTextDataset,  # modified
+    LineByLineLemma2TextTextDataset,  # modified
+    LineByLineText2DataTextDataset,  # modified
+    LineByLineTriplesTextDataset,  # modified
+    LineByLineWebNLGTextDataset,  # modified
+    LineByLineWritingPromptsTextDataset,  # modified
+    LineByLineSentimentTextDataset,  # modified
+    LineByLineClassificationSentimentTextDataset,  # modified
     LineByLineClassificationTopicTextDataset,
-    LineByLineSumTextDataset,# modified
+    LineByLineSumTextDataset,  # modified
     PreTrainedTokenizer,
     TextDataset,
-    Trainer,
     Trainer_Prefix,
     TrainingArguments,
     set_seed,
@@ -98,17 +99,17 @@ DISCRIMINATOR_MODELS_PARAMS = {
         "pretrained_model": "gpt2-medium",
     },
     "length": {
-        "path": "/u/scr/xlisali/contrast_LM/transformers/examples/text-generation/pplm/length_classifier_head_epoch_10.pt",
+        "path": "/u/scr/xlisali/contrast_LM/transformers/examples/text-generation/pplm"
+                "/length_classifier_head_epoch_10.pt",
         "class_size": 5,
         "embed_size": 1024,
-        "class_vocab": {"very short":0, "short":1, "medium":2, "long":3, "very long":4},
+        "class_vocab": {"very short": 0, "short": 1, "medium": 2, "long": 3, "very long": 4},
         "default_class": 3,
         "pretrained_model": "gpt2-medium",
     }
 }
 
 logger = logging.getLogger(__name__)
-
 
 
 def get_dataset(
@@ -125,80 +126,84 @@ def get_dataset(
         # return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
         # return LineByLineWithWeightTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
         if args.task_mode == 'embMatch':
-            dataset = LineByLineEmbMatchTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size,
-                                                num_layer=1, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+            dataset = LineByLineEmbMatchTextDataset(tokenizer=tokenizer, file_path=file_path,
+                                                    block_size=args.block_size,
+                                                    num_layer=1, bos_tok=tokenizer.bos_token,
+                                                    eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'topic':
             dataset = LineByLineTopicTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                    block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                 eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'length':
             dataset = LineByLineLengthTextDataset(
                 tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+                block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'keyword':
             print(file_path)
             dataset = LineByLineKeywordTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                   eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'data2text':
             dataset = LineByLineData2TextTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                 eos_tok=tokenizer.eos_token,
-                                                 lowdata_token=args.lowdata_token if ('lowdata' in training_args.output_dir and finetune_mode) else None)
+                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                     eos_tok=tokenizer.eos_token,
+                                                     lowdata_token=args.lowdata_token if (
+                                                         'lowdata' in training_args.output_dir and finetune_mode)
+                                                     else None)
 
         elif args.task_mode == 'triples':
             dataset = LineByLineTriplesTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                   eos_tok=tokenizer.eos_token)
 
         elif args.task_mode == 'webnlg':
             dataset = LineByLineWebNLGTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'writingPrompts':
-            dataset = LineByLineWritingPromptsTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                   eos_tok=tokenizer.eos_token)
 
-        elif args.task_mode =='cnndm' or args.task_mode =='xsum':
+        elif args.task_mode == 'writingPrompts':
+            dataset = LineByLineWritingPromptsTextDataset(tokenizer=tokenizer, file_path=file_path,
+                                                          block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                          eos_tok=tokenizer.eos_token)
+
+        elif args.task_mode == 'cnndm' or args.task_mode == 'xsum':
             max_source_length = args.max_source_length
             max_target_length = args.train_max_target_length if not evaluate else args.val_max_target_length
             dataset = LineByLineSumTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                              block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                              eos_tok=tokenizer.eos_token, max_source_length=max_source_length,
-                                               max_target_length=max_target_length,)
+                                               block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                               eos_tok=tokenizer.eos_token, max_source_length=max_source_length,
+                                               max_target_length=max_target_length, )
 
         elif args.task_mode == 'sentiment':
             dataset = LineByLineSentimentTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                 eos_tok=tokenizer.eos_token)
+                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                     eos_tok=tokenizer.eos_token)
 
         elif args.task_mode == 'classify-sentiment':
             dataset = LineByLineClassificationSentimentTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                 eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'classify-topic':
-            dataset = LineByLineClassificationTopicTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                                    block_size=args.block_size,
                                                                    bos_tok=tokenizer.bos_token,
                                                                    eos_tok=tokenizer.eos_token)
 
+        elif args.task_mode == 'classify-topic':
+            dataset = LineByLineClassificationTopicTextDataset(tokenizer=tokenizer, file_path=file_path,
+                                                               block_size=args.block_size,
+                                                               bos_tok=tokenizer.bos_token,
+                                                               eos_tok=tokenizer.eos_token)
+
         elif args.task_mode == 'lemma2text':
             dataset = LineByLineLemma2TextTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+                                                      block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                      eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'text2data':
             dataset = LineByLineText2DataTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                      eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'gen_data':
-            dataset =  LineByLineWithWeightTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
+            dataset = LineByLineWithWeightTextDataset(tokenizer=tokenizer, file_path=file_path,
+                                                      block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                                                      eos_tok=tokenizer.eos_token)
         else:
             return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
         return dataset
@@ -210,6 +215,7 @@ def get_dataset(
             overwrite_cache=args.overwrite_cache,
             cache_dir=cache_dir,
         )
+
 
 def get_classifier(
     name: Optional[str], class_label: int, device: str):
@@ -272,7 +278,8 @@ def main():
         and not training_args.overwrite_output_dir
     ):
         raise ValueError(
-            f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
+            f"Output directory ({training_args.output_dir}) already exists and is not empty. Use "
+            f"--overwrite_output_dir to overcome."
         )
 
     # Setup logging
@@ -314,7 +321,8 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
     else:
         raise ValueError(
-            "You are instantiating a new tokenizer from scratch. This is not supported, but you can do it from another script, save it,"
+            "You are instantiating a new tokenizer from scratch. This is not supported, but you can do it from "
+            "another script, save it,"
             "and load it from here, using --tokenizer_name"
         )
 
@@ -331,11 +339,11 @@ def main():
     if model_args.tuning_mode in ['finetune', 'adaptertune', 'finetune-top']:
         print('objective is 0 because of finetune')
     elif model_args.tuning_mode == 'prefixtune':
-        print('objective is {}'.format(config._objective_mode ))
+        print('objective is {}'.format(config._objective_mode))
 
     if model_args.tuning_mode == 'adaptertune':
         config.adapter_design = model_args.adapter_design
-        config.bottleneck =  model_args.adapter_bottleneck
+        config.bottleneck = model_args.adapter_bottleneck
 
         if model_args.model_name_or_path:
             config.return_dict = True
@@ -379,11 +387,13 @@ def main():
         data_args.block_size = min(data_args.block_size, tokenizer.max_len)
 
     # ADD SPECIAL TOKENS:
-    if (model_args.tuning_mode != 'prefixtune') and ('lowdata' not in training_args.output_dir) and (model_args.tuning_mode != 'adaptertune'):
+    if (model_args.tuning_mode != 'prefixtune') and ('lowdata' not in training_args.output_dir) and (
+        model_args.tuning_mode != 'adaptertune'):
         print(model_args.tuning_mode)
         print('adapting the size of the model embedding to include [PAD], [BOS], [EOS].')
         print('len(tokenizer) = ', len(tokenizer))
-        num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]', 'bos_token':'[BOS]', 'eos_token':'[EOS]'})
+        num_added_tokens = tokenizer.add_special_tokens(
+            {'pad_token': '[PAD]', 'bos_token': '[BOS]', 'eos_token': '[EOS]'})
         embedding_layer = model.resize_token_embeddings(len(tokenizer))
         print('len(tokenizer) = ', len(tokenizer))
     elif data_args.dataless == 'yes':
@@ -411,7 +421,7 @@ def main():
         print(tokenizer.eos_token, tokenizer.eos_token_id)
         print(tokenizer.bos_token, tokenizer.bos_token_id)
 
-    if model_args.tuning_mode == 'prefixtune': # prefixtune
+    if model_args.tuning_mode == 'prefixtune':  # prefixtune
         for param in model.base_model.parameters():
             param.requires_grad = False
 
@@ -423,13 +433,13 @@ def main():
             config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
             if model_args.prefix_mode == 'embedding':
                 model = PrefixEmbTuning.from_pretrained(
-                        model_args.prefixModel_name_or_path,
-                        from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                        config=config2,
-                        cache_dir=model_args.cache_dir,
-                        model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                        use_infix=(data_args.format_mode == 'infix')
-                    )
+                    model_args.prefixModel_name_or_path,
+                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
+                    config=config2,
+                    cache_dir=model_args.cache_dir,
+                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
+                    use_infix=(data_args.format_mode == 'infix')
+                )
             elif model_args.prefix_mode == 'activation':
                 model = PrefixTuning.from_pretrained(
                     model_args.prefixModel_name_or_path,
@@ -458,7 +468,7 @@ def main():
             config_prefix.lowdata = ('lowdata' in training_args.output_dir)
             if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
                 config_prefix.lowdata_token = tokenizer([data_args.lowdata_token],
-                                                        add_prefix_space=True)['input_ids']  #return_tensors='np',
+                                                        add_prefix_space=True)['input_ids']  # return_tensors='np',
                 print(data_args.lowdata_token)
                 print(config_prefix.lowdata_token)
 
@@ -478,7 +488,7 @@ def main():
         if (data_args.dataless == 'yes'):
             print('in dataless setting, loading the discriminator. ')
             if model_args.dataless_control_type == 0:
-                discri_model, _ = get_classifier('sentiment', 1, training_args.device )
+                discri_model, _ = get_classifier('sentiment', 1, training_args.device)
                 discri_tokenizer = None
                 discri_labels = ['positive', 'negative']
             elif model_args.dataless_control_type == 1:
@@ -524,7 +534,7 @@ def main():
             print(model)
         else:
             print('Not in dataless setting, loading the control code. ')
-            if 'sentiment' in  training_args.output_dir:
+            if 'sentiment' in training_args.output_dir:
                 print('sentiment does need discri_labels')
                 discri_labels = None
             elif 'classify-sentiment' in training_args.output_dir:
@@ -544,13 +554,13 @@ def main():
                 print('embMatch is unbounded.')
                 discri_labels = None
             elif 'data2text' in training_args.output_dir:
-                print('data2text does need discri_labels' )
+                print('data2text does need discri_labels')
                 discri_labels = None
             elif 'triples' in training_args.output_dir:
-                print('triples does need discri_labels' )
+                print('triples does need discri_labels')
                 discri_labels = None
             elif 'webnlg' in training_args.output_dir:
-                print('triples does need discri_labels' )
+                print('triples does need discri_labels')
                 discri_labels = None
             elif 'writingPrompts' in training_args.output_dir:
                 print('writingPrompts does need discri_labels')
@@ -562,7 +572,7 @@ def main():
                 print('xsum does need discri_labels')
                 discri_labels = None
             elif 'lemma2text' in training_args.output_dir:
-                print('lemma2text does need discri_labels' )
+                print('lemma2text does need discri_labels')
                 discri_labels = None
             else:
                 assert False, 'should have topic/sent in the file name'
@@ -591,7 +601,7 @@ def main():
         elif top_layers == 2:
             for name, param in model.named_parameters():
                 if 'transformer.ln_f.' in name or 'transformer.wte' in name or 'transformer.h.23.' in name or \
-                        'transformer.h.22.' in name:
+                    'transformer.h.22.' in name:
                     print(name)
                     param.requires_grad = True
                     print(param.shape, param.numel())
@@ -600,7 +610,7 @@ def main():
         elif top_layers == 22:
             for name, param in model.named_parameters():
                 if 'transformer.ln_f.' in name or 'transformer.h.23.' in name or \
-                        'transformer.h.22.' in name:
+                    'transformer.h.22.' in name:
                     print(name)
                     param.requires_grad = True
                     print(param.shape, param.numel())
@@ -640,20 +650,18 @@ def main():
 
         print('the total number of trainable parameters is {}'.format(total_params))
 
-
         # return
 
 
 
-    elif model_args.tuning_mode == 'bothtune': # prefixtune
+    elif model_args.tuning_mode == 'bothtune':  # prefixtune
         print('IN BOTH TUNE: DOING both prefixtuning and the finetuning.')
         for param in model.base_model.parameters():
             param.requires_grad = True
 
         gpt2 = model
 
-        discri_labels=None
-
+        discri_labels = None
 
         print('loading the prefix model from ', model_args.prefixModel_name_or_path)
         # print(bool(".ckpt" in model_args.prefixModel_name_or_path))
@@ -670,13 +678,13 @@ def main():
 
             if model_args.prefix_mode == 'embedding':
                 model = PrefixEmbTuning.from_pretrained(
-                        model_args.prefixModel_name_or_path,
-                        from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                        config=config2,
-                        cache_dir=model_args.cache_dir,
-                        model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                        use_infix=(data_args.format_mode == 'infix')
-                    )
+                    model_args.prefixModel_name_or_path,
+                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
+                    config=config2,
+                    cache_dir=model_args.cache_dir,
+                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
+                    use_infix=(data_args.format_mode == 'infix')
+                )
 
             elif model_args.prefix_mode == 'activation':
 
@@ -708,15 +716,13 @@ def main():
             config_prefix.lowdata = ('lowdata' in training_args.output_dir)
             if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
                 config_prefix.lowdata_token = tokenizer([data_args.lowdata_token],
-                                                        add_prefix_space=True)['input_ids']  #return_tensors='np',
+                                                        add_prefix_space=True)['input_ids']  # return_tensors='np',
                 print(data_args.lowdata_token)
                 print(config_prefix.lowdata_token)
 
             # some extra stuff.
             config_prefix.init_random = model_args.init_random
             config_prefix.mid_dim = model_args.mid_dim
-
-
 
             print('training the prefix model from scratch. ')
             if model_args.prefix_mode == 'embedding':
@@ -730,16 +736,6 @@ def main():
             else:
                 assert False, "invalid prefix mode"
 
-
-
-
-
-
-
-
-
-
-
     # Get datasets
     if data_args.task_mode == 'generate':
 
@@ -748,7 +744,8 @@ def main():
         if prompt_text == '':
             input_ids_prompt = None
         else:
-            input_ids_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt").to(training_args.device)
+            input_ids_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt").to(
+                training_args.device)
 
         print(input_ids_prompt)
 
@@ -759,8 +756,9 @@ def main():
         model = model.to(training_args.device)
         gpt2 = gpt2.to(training_args.device)
 
-        quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer, sample_size=10, sample_from_gpt=False,
-                   textlength=50, nolinebreak=True)
+        quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer,
+                       sample_size=10, sample_from_gpt=False,
+                       textlength=50, nolinebreak=True)
         return
 
     if (data_args.dataless == 'yes'):
@@ -772,7 +770,7 @@ def main():
         )
         eval_dataset = (
             get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
-                        training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune') )
+                        training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
             if training_args.do_eval
             else None
         )
@@ -804,7 +802,8 @@ def main():
                 data_collator = DataCollatorForKeywordLanguageModeling(
                     tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
                 )
-            elif data_args.task_mode == 'data2text' or data_args.task_mode== 'triples' or data_args.task_mode == 'webnlg':
+            elif data_args.task_mode == 'data2text' or data_args.task_mode == 'triples' or data_args.task_mode == \
+                'webnlg':
                 print('FORMAT MODE IS ', data_args.format_mode)
                 data_collator = DataCollatorForData2TextLanguageModeling(
                     tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
@@ -816,7 +815,7 @@ def main():
                     tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
                     format_mode=data_args.format_mode
                 )
-            elif data_args.task_mode == 'xsum' or  data_args.task_mode == 'cnndm':
+            elif data_args.task_mode == 'xsum' or data_args.task_mode == 'cnndm':
                 print('FORMAT MODE IS ', data_args.format_mode)
                 data_collator = DataCollatorForSumLanguageModeling(
                     tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
@@ -854,7 +853,7 @@ def main():
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            task_mode =data_args.task_mode,
+            task_mode=data_args.task_mode,
             use_dropout=(model_args.use_dropout == 'yes')
         )
 
@@ -923,8 +922,6 @@ def main():
         perplexity = math.exp(eval_output["eval_loss"])
         print('                full_dev_perplexity = {}'.format(perplexity))
 
-
-
         del model
         del trainer
         torch.cuda.empty_cache()
@@ -940,7 +937,7 @@ def main():
     elif data_args.task_mode == 'data2text':
         del model
         del trainer
-        if model_args.tuning_mode == 'prefixtune' or model_args.tuning_mode == 'bothtune' :
+        if model_args.tuning_mode == 'prefixtune' or model_args.tuning_mode == 'bothtune':
             del gpt2
         torch.cuda.empty_cache()
         elem = os.path.abspath(training_args.output_dir)
@@ -950,7 +947,7 @@ def main():
 
         os.system('python ../text-generation/gen.py data2text yes yes {} no'.format(checkpoint_path))
 
-        if 'earlystop' in  training_args.output_dir:
+        if 'earlystop' in training_args.output_dir:
             elem = os.path.abspath(training_args.output_dir)
             checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
             assert len(checkpoint_path) == 1
@@ -974,9 +971,8 @@ def main():
 
         os.system('python ../text-generation/gen.py webnlg yes yes {} no'.format(checkpoint_path))
 
-
         # also run for early stopping:
-        if 'earlystop' in  training_args.output_dir:
+        if 'earlystop' in training_args.output_dir:
             elem = os.path.abspath(training_args.output_dir)
             checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
             assert len(checkpoint_path) == 1
@@ -985,8 +981,8 @@ def main():
             print('running early stopping evaluation on ', checkpoint_path)
 
             os.system('python ../text-generation/gen.py webnlg yes yes {} no'.format(checkpoint_path))
-        
-        
+
+
     elif data_args.task_mode == 'triples':
         del model
         del trainer
@@ -1000,8 +996,7 @@ def main():
 
         os.system('python ../text-generation/gen.py triples yes yes {} no'.format(checkpoint_path))
 
-
-        if 'earlystop' in  training_args.output_dir:
+        if 'earlystop' in training_args.output_dir:
             elem = os.path.abspath(training_args.output_dir)
             checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
             assert len(checkpoint_path) == 1
@@ -1011,16 +1006,18 @@ def main():
 
             os.system('python ../text-generation/gen.py triples yes yes {} no'.format(checkpoint_path))
 
-
     return results
 
-def quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer, sample_size=10, sample_from_gpt=False,
-                   textlength=50, nolinebreak=True, stop_token='[EOS]'):
+
+def quick_generate(
+    discri_labels, discri_labels_code, input_ids_prompt, prompt_text, model, gpt2, tokenizer,
+    sample_size=10, sample_from_gpt=False,
+    textlength=50, nolinebreak=True, stop_token='[EOS]'
+):
     control_codes = []
     sst_codes = []
     prompt_codes = []
     for a in range(len(discri_labels)):
-        sst_label = discri_labels[a]
         control_code = discri_labels_code[a]
         control_codes += [control_code] * sample_size
         sst_codes += [a] * sample_size
@@ -1041,19 +1038,21 @@ def quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_t
     else:
         prompt_full = None
 
-    full_results = gpt2.generate(input_ids=input_ids_prompt,
-                                      emb_match=None,
-                                      control_code=None,
-                                      past_key_values=prompt_full,
-                                      max_length=textlength,
-                                      temperature=1.0,
-                                      top_k=0,
-                                      top_p=0.9,
-                                      repetition_penalty=1.0,
-                                      do_sample=True,
-                                      num_return_sequences=sample_size * len(discri_labels),
-                                      bad_words_ids=[[628], [198]] if nolinebreak else None,
-                                      use_cache=True)
+    full_results = gpt2.generate(
+        input_ids=input_ids_prompt,
+        emb_match=None,
+        control_code=None,
+        past_key_values=prompt_full,
+        max_length=textlength,
+        temperature=1.0,
+        top_k=0,
+        top_p=0.9,
+        repetition_penalty=1.0,
+        do_sample=True,
+        num_return_sequences=sample_size * len(discri_labels),
+        bad_words_ids=[[628], [198]] if nolinebreak else None,
+        use_cache=True
+    )
 
     print(full_results)
 
@@ -1070,12 +1069,10 @@ def quick_generate(discri_labels, discri_labels_code, input_ids_prompt, prompt_t
         # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
         if input_ids_prompt is not None:
             total_sequence = (
-                    prompt_text + text[len(tokenizer.decode(input_ids_prompt[0], clean_up_tokenization_spaces=True)):]
+                prompt_text + text[len(tokenizer.decode(input_ids_prompt[0], clean_up_tokenization_spaces=True)):]
             )
         else:
-            total_sequence = (
-                    text
-            )
+            total_sequence = (text)
 
         print(discri_labels[sst_codes[generated_sequence_idx]])
         print(total_sequence)
