@@ -1210,7 +1210,7 @@ class Trainer_Prefix:
             del inputs['prompt_lab']
 
         # TODO: Marker -- forward pass!
-        print(f"--- type of model {type(model)}, type of gpt2 --- {type(gpt2_model)} ---")
+        # print(f"--- type of model {type(model)}, type of gpt2 --- {type(gpt2_model)} ---")
         outputs = model(**inputs, gpt2_model=gpt2_model)
         # Save past state if it exists
         if self.args.past_index >= 0:

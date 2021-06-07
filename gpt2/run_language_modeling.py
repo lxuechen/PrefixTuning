@@ -29,7 +29,8 @@ from typing import Optional
 import torch
 import transformers
 
-from train_control import PrefixEmbTuning, PrefixTuning
+from aux import PrefixEmbTuning
+from train_control import PrefixTuning
 
 path = os.path.abspath(transformers.__file__)
 print(path)
@@ -684,31 +685,29 @@ def main():
             assert False, "model_args.optim_prefix should be either yes or no"
 
         if model_args.prefixModel_name_or_path is not None:
-            config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
-
-            if model_args.prefix_mode == 'embedding':
-                model = PrefixEmbTuning.from_pretrained(
-                    model_args.prefixModel_name_or_path,
-                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                    config=config2,
-                    cache_dir=model_args.cache_dir,
-                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                    use_infix=(data_args.format_mode == 'infix')
-                )
-
-            elif model_args.prefix_mode == 'activation':
-                # TODO: Marker -- prefix head
-                print(f"--- Tune by patching activations ---")
-                model = PrefixTuning.from_pretrained(
-                    model_args.prefixModel_name_or_path,
-                    from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-                    config=config2,
-                    cache_dir=model_args.cache_dir,
-                    model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-                    use_infix=(data_args.format_mode == 'infix')
-                )
-            else:
-                assert False, "invalid prefix mode"
+            pass
+            # config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
+            #
+            # if model_args.prefix_mode == 'embedding':
+            #     model = PrefixEmbTuning.from_pretrained(
+            #         model_args.prefixModel_name_or_path,
+            #         from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
+            #         config=config2,
+            #         cache_dir=model_args.cache_dir,
+            #         model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
+            #         use_infix=(data_args.format_mode == 'infix')
+            #     )
+            # elif model_args.prefix_mode == 'activation':
+            #     model = PrefixTuning.from_pretrained(
+            #         model_args.prefixModel_name_or_path,
+            #         from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
+            #         config=config2,
+            #         cache_dir=model_args.cache_dir,
+            #         model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
+            #         use_infix=(data_args.format_mode == 'infix')
+            #     )
+            # else:
+            #     assert False, "invalid prefix mode"
 
         else:
 
@@ -759,8 +758,6 @@ def main():
                 model = PrefixTuning(config_prefix, model_gpt2=gpt2)
             else:
                 assert False, "invalid prefix mode"
-
-        discri_labels = None
 
     # --- Not useful for me ---
     elif model_args.tuning_mode == 'finetune-top':
@@ -949,7 +946,6 @@ def main():
             )
 
     else:
-
         trainer = Trainer(
             model=model,
             tokenizer=tokenizer,
@@ -991,14 +987,13 @@ def main():
         #     tokenizer.save_pretrained(training_args.output_dir)
 
     # Evaluation
+    # TODO: Marker -- Evaluation.
     results = {}
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        # eval_output = trainer.evaluate()
         eval_output = trainer.evaluate(train_dataset)
 
-        # perplexity = math.exp(eval_output["eval_loss"])
         perplexity = eval_output["eval_loss"]
         result = {"perplexity": perplexity}
 
@@ -1012,6 +1007,8 @@ def main():
 
         results.update(result)
 
+
+    # --- Useless for me ---
     if 'lowdata' in training_args.output_dir:
         print('evaluating the PPL on full dev data. ')
         data_args.eval_data_file = "/u/scr/xlisali/e2e_data/src1_valid.txt"
@@ -1126,6 +1123,8 @@ def main():
 
             os.system('python gen.py triples yes valid {} no'.format(checkpoint_path))
             os.system('python gen.py triples yes test {} no'.format(checkpoint_path))
+
+    # --- Useless for me ---
 
     return results
 
