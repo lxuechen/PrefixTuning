@@ -689,6 +689,8 @@ def main():
                     target_delta=privacy_args.target_delta,
                 )
                 privacy_engine.attach(trainer.optimizer)
+                print("--- Privacy!!! ---")
+                print(privacy_engine)
 
     else:
         trainer = Trainer(
