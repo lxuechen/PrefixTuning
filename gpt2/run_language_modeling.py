@@ -587,7 +587,6 @@ def main():
 
         if model_args.model_name_or_path:
             print('--- Loading Pretrained GPT2LMHead --')
-            print(config.return_dict)
             config.return_dict = True
             model = GPT2LMHeadModel.from_pretrained(
                 model_args.model_name_or_path,
