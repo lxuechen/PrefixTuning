@@ -1,11 +1,12 @@
 # from transformers import Trainer
 import torch
-from transformers import PreTrainedModel, GPT2PreTrainedModel, GPT2Tokenizer
-from torch import  nn
+from torch import nn
+from transformers import GPT2PreTrainedModel
 
 
 class PrefixTuning(GPT2PreTrainedModel):
     """Classification Head for  transformer encoders"""
+
     def __init__(self, config, model_gpt2, optim_prefix=False, preseqlen=5, use_infix=False, deep_param=False):
         super().__init__(config)
         print('under the PrefixTuning model')
@@ -14,7 +15,6 @@ class PrefixTuning(GPT2PreTrainedModel):
         self.match_n_head = config.n_head
         self.match_n_embd = config.n_embd // config.n_head
         self.n_embd = config.n_embd
-
 
         if hasattr(config, 'optim_prefix'):
             self.optim_prefix = config.optim_prefix
@@ -57,9 +57,6 @@ class PrefixTuning(GPT2PreTrainedModel):
         else:
             self.prefix_dropout = 0.0
 
-        # config_prefix.init_random = model_args.init_random
-        # config_prefix.mid_dim = model_args.mid_dim
-
         if hasattr(config, 'init_random'):
             self.init_random = (config.init_random == 'yes')
         else:
@@ -80,7 +77,6 @@ class PrefixTuning(GPT2PreTrainedModel):
         else:
             self.lowdata_token = None
 
-
         if hasattr(config, 'init_shallow'):
             self.init_shallow = (config.init_shallow == 'yes')
         else:
@@ -90,7 +86,6 @@ class PrefixTuning(GPT2PreTrainedModel):
             self.init_shallow_word = config.init_shallow_word
         else:
             self.init_shallow_word = None
-
 
         if True:
             self.mode_para = 0
@@ -114,14 +109,17 @@ class PrefixTuning(GPT2PreTrainedModel):
 
             # DIFFERENT PARAMETRIZATION:
             elif not deep_param and not self.init_shallow:
+                # TODO: Marker --- this by default!
                 low_data_init = 0
                 print('[Full prefix-tuning Setting :) ]')
-                self.input_tokens = torch.arange(self.preseqlen).long()
+                self.register_buffer('input_tokens', torch.arange(self.preseqlen))
                 self.wte = nn.Embedding(self.preseqlen, config.n_embd)
+                # TODO: This is super high-dimensional!!!
                 self.control_trans = nn.Sequential(
                     nn.Linear(config.n_embd, self.mid_dim),
                     nn.Tanh(),
-                    nn.Linear(self.mid_dim, config.n_layer * 2 * config.n_embd))
+                    nn.Linear(self.mid_dim, config.n_layer * 2 * config.n_embd)
+                )
                 if self.use_infix:
                     self.wte2 = nn.Embedding(self.preseqlen, config.n_embd)
                     self.get_prompt = self.get_prompt_p5_infix
@@ -168,18 +166,12 @@ class PrefixTuning(GPT2PreTrainedModel):
             self.forward = self.forward_infix
 
         ###### NUM PARAMS #########
-        total_param = 0
-        for name, param in self.named_parameters():
-            print(param.shape)
-            total_param += param.numel()
-        print('total param is {}'.format(total_param))
+        total_param = sum(param.numel() for param in self.parameters())
+        print('total param is {} million'.format(total_param / 1e6))
 
         if low_data_init == 3:
             print('use pt for this tensor', torch.LongTensor(self.lowdata_token))
             self.lowdata_init_train3(gpt2=model_gpt2, sample_input=torch.LongTensor(self.lowdata_token))
-
-
-
 
     def get_gold_init(self, gpt2, sample_input):
         gpt2 = gpt2.cuda()
@@ -190,7 +182,7 @@ class PrefixTuning(GPT2PreTrainedModel):
             output = torch.cat(output, dim=0)
         return output
 
-    def lowdata_init_train3(self, gpt2, sample_input, epochs=500): # prev=500
+    def lowdata_init_train3(self, gpt2, sample_input, epochs=500):  # prev=500
         self = self.cuda()
         gpt2 = gpt2.cuda()
         with torch.no_grad():
@@ -214,7 +206,7 @@ class PrefixTuning(GPT2PreTrainedModel):
 
     def get_prompt_p2(self, control_code=None, gpt2=None, bsz=None):
         assert bsz is not None
-        temp_control = self.control_trans.view(1, self.preseqlen,  self.match_n_layer * 2, self.match_n_head,
+        temp_control = self.control_trans.view(1, self.preseqlen, self.match_n_layer * 2, self.match_n_head,
                                                self.match_n_embd).expand(bsz, -1, -1, -1, -1)
         temp_control = self.dropout(temp_control)
         past_key_values = temp_control.permute([2, 0, 3, 1, 4]).split(2)
@@ -226,14 +218,16 @@ class PrefixTuning(GPT2PreTrainedModel):
         # print(temp.shape)
         return temp.split(2)
 
-
     def get_prompt_p5(self, control_code=None, gpt2=None, bsz=None):
-        input_tokens = self.input_tokens.unsqueeze(0).expand(bsz, -1).to(self.device)
+        # TODO: Marker --- this by default
+        # print(f"--- get prompt p5 ---")
+        input_tokens = self.input_tokens.unsqueeze(0).expand(bsz, -1)
         temp_control = self.wte(input_tokens)
-        past_key_values = self.control_trans(temp_control) #bsz, seqlen, layer*emb
+        past_key_values = self.control_trans(temp_control)  # bsz, seqlen, layer*emb
         bsz, seqlen, _ = past_key_values.shape
-        past_key_values = past_key_values.view(bsz, seqlen, self.match_n_layer * 2, self.match_n_head,
-                                               self.match_n_embd)
+        past_key_values = past_key_values.view(
+            bsz, seqlen, self.match_n_layer * 2, self.match_n_head, self.match_n_embd
+        )
         past_key_values = self.dropout(past_key_values)
         past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
         return past_key_values
@@ -251,11 +245,10 @@ class PrefixTuning(GPT2PreTrainedModel):
         past_key_values = self.dropout(past_key_values)
         past_key_values = past_key_values.permute([2, 0, 3, 1, 4])
 
-
         temp_emb = self.wte2(input_tokens)
         src_emb = gpt2.transformer.wte(src)
-        total_emb = torch.cat([src_emb, temp_emb], dim=1) #bsz, seqlen, dim
-        src_out = gpt2(inputs_embeds=total_emb, attention_mask=attn_mask ,use_cache=True, return_dict=True)
+        total_emb = torch.cat([src_emb, temp_emb], dim=1)  # bsz, seqlen, dim
+        src_out = gpt2(inputs_embeds=total_emb, attention_mask=attn_mask, use_cache=True, return_dict=True)
         src_past_key_vals = src_out.past_key_values
         src_past_key_vals = torch.cat(src_past_key_vals, dim=0)
         # print(src_past_key_vals.shape, past_key_values.shape) # the src should be longer than past.
@@ -273,34 +266,33 @@ class PrefixTuning(GPT2PreTrainedModel):
 
         return past_key_values
 
-
     def forward(self,
-        input_ids=None,
-        weights=None,
-        control_code=None,
-        emb_match=None,
-        past_key_values=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        gpt2_model=None,
-        src=None,
-        tgt=None,
-        src_attn=None,
-        tgt_attn=None,
-        **kwargs,
-        ):
+                input_ids=None,
+                weights=None,
+                control_code=None,
+                emb_match=None,
+                past_key_values=None,
+                attention_mask=None,
+                token_type_ids=None,
+                position_ids=None,
+                head_mask=None,
+                inputs_embeds=None,
+                encoder_hidden_states=None,
+                encoder_attention_mask=None,
+                labels=None,
+                use_cache=None,
+                output_attentions=None,
+                output_hidden_states=None,
+                return_dict=None,
+                gpt2_model=None,
+                src=None,
+                tgt=None,
+                src_attn=None,
+                tgt_attn=None,
+                **kwargs,
+                ):
 
-        #{"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
+        # {"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
 
         bsz = input_ids.shape[0]
 
@@ -321,49 +313,49 @@ class PrefixTuning(GPT2PreTrainedModel):
         output = gpt2_model(input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
                             past_key_values=past_key_values, attention_mask=attention_mask,
                             token_type_ids=token_type_ids, position_ids=position_ids,
-                           head_mask=head_mask, inputs_embeds=inputs_embeds, encoder_hidden_states=encoder_hidden_states,
-                           encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
-                           output_attentions=output_attentions, output_hidden_states=output_hidden_states,
-                           return_dict=return_dict, **kwargs)
+                            head_mask=head_mask, inputs_embeds=inputs_embeds,
+                            encoder_hidden_states=encoder_hidden_states,
+                            encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
+                            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+                            return_dict=return_dict, **kwargs)
 
         return output
 
-
     def forward_infix(self,
-        input_ids=None,
-        weights=None,
-        control_code=None,
-        emb_match=None,
-        past_key_values=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        gpt2_model=None,
-        src=None,
-        tgt=None,
-        src_attn=None,
-        tgt_attn=None,
-        cate_batch=None,
-        cate_attn=None,
-        **kwargs,
-        ):
+                      input_ids=None,
+                      weights=None,
+                      control_code=None,
+                      emb_match=None,
+                      past_key_values=None,
+                      attention_mask=None,
+                      token_type_ids=None,
+                      position_ids=None,
+                      head_mask=None,
+                      inputs_embeds=None,
+                      encoder_hidden_states=None,
+                      encoder_attention_mask=None,
+                      labels=None,
+                      use_cache=None,
+                      output_attentions=None,
+                      output_hidden_states=None,
+                      return_dict=None,
+                      gpt2_model=None,
+                      src=None,
+                      tgt=None,
+                      src_attn=None,
+                      tgt_attn=None,
+                      cate_batch=None,
+                      cate_attn=None,
+                      **kwargs,
+                      ):
 
-        #{"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
+        # {"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
 
         bsz = input_ids.shape[0]
 
         if self.mode_para == 2:
             past_key_values_prompt = self.get_prompt(src, None, gpt2=gpt2_model, bsz=bsz)
-            attention_mask = torch.cat([src_attn, src_attn, tgt_attn], dim=1) # bsz, seqlen
+            attention_mask = torch.cat([src_attn, src_attn, tgt_attn], dim=1)  # bsz, seqlen
         else:
             infix_attn = torch.ones(bsz, self.preseqlen).bool().to(self.device)
             attention_mask = torch.cat([src_attn, infix_attn, tgt_attn], dim=1)  # bsz, seqlen
@@ -383,21 +375,21 @@ class PrefixTuning(GPT2PreTrainedModel):
         if gpt2_model is None:
             assert False, "Didn't specify gpt2 model"
 
-
         output = gpt2_model(input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
                             past_key_values=past_key_values, attention_mask=attention_mask,
                             token_type_ids=token_type_ids, position_ids=position_ids,
-                           head_mask=head_mask, inputs_embeds=inputs_embeds, encoder_hidden_states=encoder_hidden_states,
-                           encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
-                           output_attentions=output_attentions, output_hidden_states=output_hidden_states,
-                           return_dict=return_dict, **kwargs)
+                            head_mask=head_mask, inputs_embeds=inputs_embeds,
+                            encoder_hidden_states=encoder_hidden_states,
+                            encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
+                            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+                            return_dict=return_dict, **kwargs)
 
         return output
 
 
-
 class PrefixEmbTuning(GPT2PreTrainedModel):
     """Classification Head for  transformer encoders"""
+
     def __init__(self, config, model_gpt2, optim_prefix=False, preseqlen=5, use_infix=False):
         super().__init__(config)
 
@@ -449,7 +441,6 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
         else:
             self.prefix_dropout = 0.0
 
-
         if hasattr(config, 'init_random'):
             self.init_random = (config.init_random == 'yes')
         else:
@@ -460,12 +451,10 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
         else:
             self.mid_dim = 512
 
-
         if hasattr(config, 'parametrize_emb'):
             self.parametrize_emb = config.parametrize_emb
         else:
             self.parametrize_emb = 'MLP'
-
 
         if True:
             self.mode_para = 0
@@ -509,23 +498,17 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
             total_param += param.numel()
         print('total param is {}'.format(total_param))
 
-
         ############################################################################
-
-
-
-
 
     def get_prompt_p5(self, control_code=None, gpt2=None, bsz=None):
         input_tokens = self.input_tokens.unsqueeze(0).expand(bsz, -1).to(self.device)
         temp_control = self.wte(input_tokens)
-        input_embs = self.control_trans(temp_control) #bsz, seqlen, emb_dim
+        input_embs = self.control_trans(temp_control)  # bsz, seqlen, emb_dim
         bsz, seqlen, _ = input_embs.shape
         input_embs = self.dropout(input_embs)
         temp_result = gpt2(inputs_embeds=input_embs, use_cache=True, return_dict=True)
         past_key_values = temp_result.past_key_values
         return past_key_values
-
 
     def get_prompt_p7(self, control_code=None, gpt2=None, bsz=None):
         input_tokens = self.input_tokens.unsqueeze(0).expand(bsz, -1).to(self.device)
@@ -536,39 +519,37 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
         past_key_values = temp_result.past_key_values
         return past_key_values
 
-
     def forward_infix(self,
-        input_ids=None,
-        weights=None,
-        control_code=None,
-        emb_match=None,
-        past_key_values=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        gpt2_model=None,
-        src=None,
-        tgt=None,
-        src_attn=None,
-        tgt_attn=None,
-        cate_batch=None,
-        cate_attn=None,
-        **kwargs,
-        ):
+                      input_ids=None,
+                      weights=None,
+                      control_code=None,
+                      emb_match=None,
+                      past_key_values=None,
+                      attention_mask=None,
+                      token_type_ids=None,
+                      position_ids=None,
+                      head_mask=None,
+                      inputs_embeds=None,
+                      encoder_hidden_states=None,
+                      encoder_attention_mask=None,
+                      labels=None,
+                      use_cache=None,
+                      output_attentions=None,
+                      output_hidden_states=None,
+                      return_dict=None,
+                      gpt2_model=None,
+                      src=None,
+                      tgt=None,
+                      src_attn=None,
+                      tgt_attn=None,
+                      cate_batch=None,
+                      cate_attn=None,
+                      **kwargs,
+                      ):
 
-        #{"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
+        # {"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
 
         bsz = input_ids.shape[0]
-        # TODO-LISA
         self.format_mode = 'cat'
         if self.mode_para == 2:
             if self.format_mode == 'cat':
@@ -597,40 +578,41 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
         output = gpt2_model(input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
                             past_key_values=past_key_values, attention_mask=attention_mask,
                             token_type_ids=token_type_ids, position_ids=position_ids,
-                           head_mask=head_mask, inputs_embeds=inputs_embeds, encoder_hidden_states=encoder_hidden_states,
-                           encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
-                           output_attentions=output_attentions, output_hidden_states=output_hidden_states,
-                           return_dict=return_dict, **kwargs)
+                            head_mask=head_mask, inputs_embeds=inputs_embeds,
+                            encoder_hidden_states=encoder_hidden_states,
+                            encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
+                            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+                            return_dict=return_dict, **kwargs)
 
         return output
 
     def forward(self,
-        input_ids=None,
-        weights=None,
-        control_code=None,
-        emb_match=None,
-        past_key_values=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        gpt2_model=None,
-        src=None,
-        tgt=None,
-        src_attn=None,
-        tgt_attn=None,
-        **kwargs,
-        ):
+                input_ids=None,
+                weights=None,
+                control_code=None,
+                emb_match=None,
+                past_key_values=None,
+                attention_mask=None,
+                token_type_ids=None,
+                position_ids=None,
+                head_mask=None,
+                inputs_embeds=None,
+                encoder_hidden_states=None,
+                encoder_attention_mask=None,
+                labels=None,
+                use_cache=None,
+                output_attentions=None,
+                output_hidden_states=None,
+                return_dict=None,
+                gpt2_model=None,
+                src=None,
+                tgt=None,
+                src_attn=None,
+                tgt_attn=None,
+                **kwargs,
+                ):
 
-        #{"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
+        # {"input_ids": batch, "labels": labels, 'src_attn': src_attn, 'tgt_attn':tgt_attn, 'src':src}
 
         bsz = input_ids.shape[0]
 
@@ -646,19 +628,16 @@ class PrefixEmbTuning(GPT2PreTrainedModel):
         if gpt2_model is None:
             assert False, "Didn't specify gpt2 model"
 
+        # TODO: Marker --- this by default
         if self.mode_para == 2 and src_attn is not None and tgt_attn is not None:
             attention_mask = torch.cat([src_attn, tgt_attn], dim=1)
         output = gpt2_model(input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
                             past_key_values=past_key_values, attention_mask=attention_mask,
                             token_type_ids=token_type_ids, position_ids=position_ids,
-                           head_mask=head_mask, inputs_embeds=inputs_embeds, encoder_hidden_states=encoder_hidden_states,
-                           encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
-                           output_attentions=output_attentions, output_hidden_states=output_hidden_states,
-                           return_dict=return_dict, **kwargs)
+                            head_mask=head_mask, inputs_embeds=inputs_embeds,
+                            encoder_hidden_states=encoder_hidden_states,
+                            encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
+                            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+                            return_dict=return_dict, **kwargs)
 
         return output
-
-
-
-
-
