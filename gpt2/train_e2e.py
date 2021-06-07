@@ -54,6 +54,9 @@ if __name__ == '__main__':
     parser.add_argument('--prefix_model_path', type=str, default=None, help='')
     parser.add_argument('--submit', type=str, default='no', help='')
 
+    # Privacy.
+    parser.add_argument('--noise_multiplier', type=float, default=None)
+
     # DISTILLATION
     parser.add_argument('--distill', type=str, default='no', help='')
     parser.add_argument('--finetuned_model_path', type=str,
@@ -315,6 +318,9 @@ if __name__ == '__main__':
     if args.use_custom_teacher_dropout == 'yes':
         app += f' --use_custom_teacher_dropout {args.use_custom_teacher_dropout}'
         app += f' --teacher_dropout {args.dropout}'
+
+    # TODO: Other arguments!
+    app += f" --noise_multiplier {args.noise_multiplier}"
 
     controlprefix = ('yes' if args.tuning_mode == 'prefixtune' else 'no')
 
