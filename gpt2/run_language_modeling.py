@@ -762,6 +762,7 @@ def main():
 
         discri_labels = None
 
+    # --- Not useful for me ---
     elif model_args.tuning_mode == 'finetune-top':
         # print(model.config)
         # print(model)
@@ -834,6 +835,7 @@ def main():
                 total_params += param.numel()
 
         print('the total number of trainable parameters is {}'.format(total_params))
+    # --- Not useful for me ---
 
     ##############################################################
     #################LOADING DATASETS ###########################
@@ -911,14 +913,9 @@ def main():
             data_collator = DataCollatorForLanguageModeling(
                 tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
             )
-        # data_collator = DataCollatorForWeightedLanguageModeling(
-        #     tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-        # )
 
     if (model_args.tuning_mode == 'prefixtune'):
-
         if data_args.distill == 'yes':
-
             trainer = Trainer_Prefix(
                 model=model,
                 tokenizer=tokenizer,
@@ -936,6 +933,8 @@ def main():
             )
 
         else:
+            # TODO: Marker -- instantiate trainer!
+            print("--- Create Trainer Prefix ---")
             trainer = Trainer_Prefix(
                 model=model,
                 tokenizer=tokenizer,
@@ -975,6 +974,8 @@ def main():
         if trainer.is_world_master():
             tokenizer.save_pretrained(training_args.output_dir)
 
+        # TODO: Marker -- training
+        print(f"--- Training ---")
         trainer.train(model_path=model_path)
 
         if 'lowdata' not in training_args.output_dir:
