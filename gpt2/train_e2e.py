@@ -64,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--matching_objective', type=str, default='kl', help='kl or logits')
 
     # Added by MX
-    parser.add_argument('--cache_dir', type=str, default='/u/scr/xlisali/contrast_LM/transformers/examples/control', help='cache dir')
+    parser.add_argument('--cache_dir', type=str, default="/nlp/scr/lxuechen/hfcache/control")
     parser.add_argument('--use_custom_teacher_dropout', type=str, default='no', help='')
 
 
