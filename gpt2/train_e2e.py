@@ -270,7 +270,7 @@ if __name__ == '__main__':
         OLD_MODEL = "gpt2-medium"
 
     app = "--optim_prefix {} --preseqlen {} --prefix_mode {} --format_mode {} " \
-          "--gradient_accumulation_steps {} --learning_rate {} --weight_decay {} --seed {} --disable_tqdm " \
+          "--gradient_accumulation_steps {} --learning_rate {} --weight_decay {} --seed {} " \
           "--mid_dim {} --init_random {} --use_dropout {} --prefix_dropout {} --objective_mode {} ". \
         format(args.optim_prefix, args.preseqlen, args.prefix_mode, args.format_mode,
                args.gradient_accumulation_steps, args.learning_rate, args.weight_decay, args.seed,
