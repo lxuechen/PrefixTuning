@@ -644,8 +644,7 @@ def main():
     print(model_args.tuning_mode)
     print('adapting the size of the model embedding to include [PAD]')
     print('len(tokenizer) = ', len(tokenizer))
-    num_added_tokens = tokenizer.add_special_tokens(
-        {'pad_token': '[PAD]'})
+    num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     embedding_layer = model.resize_token_embeddings(len(tokenizer))
     print('len(tokenizer) = ', len(tokenizer))
     print(tokenizer.eos_token, tokenizer.eos_token_id)
@@ -674,7 +673,7 @@ def main():
             else:
                 assert False, "specify the data_args.finetuned_model_path"
         else:
-            print('Not distilling!!!')
+            print("--- Not distilling ---")
 
         print('loading the prefix model from ', model_args.prefixModel_name_or_path)
         if model_args.optim_prefix == 'yes':
@@ -699,7 +698,7 @@ def main():
 
             elif model_args.prefix_mode == 'activation':
                 # TODO: Marker -- prefix head
-                print(f"Tune by patching activations")
+                print(f"--- Tune by patching activations ---")
                 model = PrefixTuning.from_pretrained(
                     model_args.prefixModel_name_or_path,
                     from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
@@ -756,6 +755,7 @@ def main():
                 model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
 
             elif model_args.prefix_mode == 'activation':
+                print("--- Create the activation tuning head ---")
                 model = PrefixTuning(config_prefix, model_gpt2=gpt2)
             else:
                 assert False, "invalid prefix mode"
