@@ -69,8 +69,9 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
                         this_layer, grad_input, grad_output, loss_reduction, batch_first
                     )
 
+                # TODO: Embedding has no register_full_backward_hook.
                 # Starting with 1.8.0, use `register_full_backward_hook`.
-                handles.append(layer.register_full_backward_hook(this_backward))
+                handles.append(layer.register_backward_hook(this_backward))
         else:
             pass
 
