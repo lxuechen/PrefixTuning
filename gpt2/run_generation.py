@@ -44,7 +44,8 @@ from transformers import (
     GPT2LMHeadModelAdapter,
 )
 import sys, os
-from train_control import PrefixTuning, PrefixEmbTuning
+from train_control import PrefixTuning
+from aux import PrefixEmbTuning
 
 
 logging.basicConfig(

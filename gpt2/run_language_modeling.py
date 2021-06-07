@@ -473,6 +473,7 @@ def main():
                 model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
 
             elif model_args.prefix_mode == 'activation':
+                # TODO: Marker --
                 print("--- Create the activation tuning head ---")
                 model = PrefixTuning(config_prefix, model_gpt2=gpt2)
             else:
