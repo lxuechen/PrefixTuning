@@ -277,7 +277,7 @@ class TrainingArguments:
         default=None, metadata={"help": "An optional descriptor for the run. Notably used for wandb logging."}
     )
     disable_tqdm: Optional[bool] = field(
-        default=None, metadata={"help": "Whether or not to disable the tqdm progress bars."}
+        default=False, metadata={"help": "Whether or not to disable the tqdm progress bars."}
     )
 
     remove_unused_columns: Optional[bool] = field(

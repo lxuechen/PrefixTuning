@@ -352,7 +352,7 @@ if __name__ == '__main__':
     print(COMMANDLINE)
     if args.submit == 'no':
         os.system(COMMANDLINE)  # textattack/roberta-base-ag-news # textattack/roberta-base-imdb
-    # #
+
     elif args.submit == 'yes':
         if args.use_big == 'no':
             full_command = "nlprun -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7," \
