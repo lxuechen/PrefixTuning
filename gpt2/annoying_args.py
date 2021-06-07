@@ -285,3 +285,33 @@ class DataTrainingArguments:
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
     )
+
+
+@dataclass
+class PrivacyArguments:
+    """Arguments for differentially private training."""
+
+    per_example_max_grad_norm: float = field(
+        default=1., metadata={
+            "help": "Clipping 2-norm of per-sample gradients."
+        }
+    )
+    noise_multiplier: float = field(
+        default=None, metadata={
+            "help": "Standard deviation of noise added for privacy; if `target_epsilon` is specified, "
+                    "use the one searched based budget"
+        }
+    )
+    target_epsilon: float = field(
+        default=None, metadata={
+            "help": "Privacy budget; if `None` use the noise multiplier specified."
+        }
+    )
+    target_delta: float = field(
+        default=None, metadata={
+            "help": "Lax probability in approximate differential privacy; if `None` use 1 / len(train_data)."
+        }
+    )
+    nonprivate: bool = field(
+        default=False, metadata={"help": "Train non-privately if True."}
+    )

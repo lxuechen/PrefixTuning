@@ -85,7 +85,7 @@ logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
-from annoying_args import DataTrainingArguments, ModelArguments
+from annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments
 
 
 def get_dataset(
@@ -205,8 +205,8 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments, PrivacyArguments))
+    model_args, data_args, training_args, privacy_args = parser.parse_args_into_dataclasses()
 
     if data_args.eval_data_file is None and training_args.do_eval:
         raise ValueError(
@@ -649,6 +649,12 @@ def main():
             )
 
         else:
+            gpt2_num_params = sum(param.numel() for param in gpt2.parameters())
+            print(f"gpt2 has {gpt2_num_params / 1e6:.6f} million parameters")
+
+            # Vocab size is 50256.
+            # train data size is 42061.
+
             # TODO: Marker -- instantiate trainer!
             print("--- Create Trainer Prefix ---")
             trainer = Trainer_Prefix(
@@ -663,9 +669,26 @@ def main():
                 task_mode=data_args.task_mode,
                 use_dropout=(model_args.use_dropout == 'yes'),
             )
-            print(len(train_dataset))
-            print(train_dataset)
-            # TODO: Create the optimizer here and attach the privacy engine; figure out the batch_size...
+
+            num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
+            num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
+            t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
+            trainer.create_optimizer_and_scheduler(t_total)
+
+            if not privacy_args.nonprivate:
+                import privacy_utils
+                privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
+                    batch_size=training_args.per_device_train_batch_size,
+                    module=model,
+                    sample_size=len(train_dataset),
+                    epochs=training_args.num_train_epochs,
+                    # Privacy specific arguments.
+                    max_grad_norm=privacy_args.per_example_max_grad_norm,
+                    noise_multiplier=privacy_args.noise_multiplier,
+                    target_epsilon=privacy_args.target_epsilon,
+                    target_delta=privacy_args.target_delta,
+                )
+                privacy_engine.attach(trainer.optimizer)
 
     else:
         trainer = Trainer(

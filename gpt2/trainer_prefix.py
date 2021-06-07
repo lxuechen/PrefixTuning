@@ -504,16 +504,10 @@ class Trainer_Prefix:
                 betas=(self.args.adam_beta1, self.args.adam_beta2),
                 eps=self.args.adam_epsilon,
             )
-
-
-            # for n, p in self.model.named_parameters():
-            #     print(n,p.requires_grad)
-            print(self.optimizer.state_dict())
         if self.lr_scheduler is None:
             self.lr_scheduler = get_linear_schedule_with_warmup(
                 self.optimizer, num_warmup_steps=self.args.warmup_steps, num_training_steps=num_training_steps
             )
-
 
     def setup_wandb(self):
         """
@@ -656,7 +650,6 @@ class Trainer_Prefix:
                 torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                 torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
 
-
     def train(self, model_path: Optional[str] = None, trial: Union["optuna.Trial", Dict[str, Any]] = None):
         """
         Main training entry point.
@@ -759,7 +752,6 @@ class Trainer_Prefix:
             # set global_step to global_step of last saved checkpoint from model path
             try:
                 self.global_step = int(model_path.split("-")[-1].split(os.path.sep)[0])
-                # print(model, model.module)
                 if self.args.n_gpu > 1:
                     self.total_flos = getattr(model.module.config, "total_flos", 0)
                 else:
@@ -1601,7 +1593,6 @@ class Trainer_Prefix:
         #     inputs['weights'] = weights
 
         with torch.no_grad():
-            # outputs = model.forward_weighted(**inputs)
             outputs = model(**inputs, gpt2_model=self.gpt2)
             if has_labels:
                 # The .mean() is to reduce in case of distributed training
