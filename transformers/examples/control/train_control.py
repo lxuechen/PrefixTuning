@@ -164,6 +164,9 @@ class PrefixTuning(GPT2PreTrainedModel):
 
         if self.mode_para == 2 and src_attn is not None and tgt_attn is not None:
             attention_mask = torch.cat([src_attn, tgt_attn], dim=1)
+        print(type(gpt2_model))
+        print(gpt2_model)
+        exit()
         output = gpt2_model(
             input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
             past_key_values=past_key_values, attention_mask=attention_mask,

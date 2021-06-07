@@ -442,6 +442,7 @@ def main():
                 model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
             elif model_args.prefix_mode == 'activation':
                 # TODO: Model is created here!
+                print('model created here!')
                 model = PrefixTuning(config_prefix, model_gpt2=gpt2)
             else:
                 assert False, "invalid prefix mode"
