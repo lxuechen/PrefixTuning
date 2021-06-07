@@ -312,6 +312,6 @@ class PrivacyArguments:
             "help": "Lax probability in approximate differential privacy; if `None` use 1 / len(train_data)."
         }
     )
-    nonprivate: bool = field(
-        default=False, metadata={"help": "Train non-privately if True."}
+    nonprivate: str = field(
+        default="no", metadata={"help": "Train non-privately if True."}
     )

@@ -56,6 +56,7 @@ if __name__ == '__main__':
 
     # Privacy.
     parser.add_argument('--noise_multiplier', type=float, default=None)
+    parser.add_argument('--nonprivate', type=str, default="no", choices=('yes', 'no'))
 
     # DISTILLATION
     parser.add_argument('--distill', type=str, default='no', help='')
@@ -321,6 +322,7 @@ if __name__ == '__main__':
 
     # TODO: Other arguments!
     app += f" --noise_multiplier {args.noise_multiplier}"
+    app += f" --nonprivate {args.nonprivate}"
 
     controlprefix = ('yes' if args.tuning_mode == 'prefixtune' else 'no')
 

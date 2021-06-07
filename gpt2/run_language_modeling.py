@@ -675,7 +675,7 @@ def main():
             t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
             trainer.create_optimizer_and_scheduler(t_total)
 
-            if not privacy_args.nonprivate:
+            if privacy_args.nonprivate == "no":
                 import privacy_utils
                 privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
                     batch_size=training_args.per_device_train_batch_size,
