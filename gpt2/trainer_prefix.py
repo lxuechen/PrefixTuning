@@ -808,6 +808,7 @@ class Trainer_Prefix:
                     epoch_pbar.update(1)
                     continue
 
+                # TODO: Marker -- run train step
                 tr_loss += self.training_step(model, inputs)
 
                 self.total_flos += self.floating_point_ops(inputs)
@@ -855,10 +856,6 @@ class Trainer_Prefix:
                         logging_loss_scalar = tr_loss_scalar
 
                         self.log(logs)
-
-                    # print(self.args.evaluation_strategy == EvaluationStrategy.STEPS )
-                    # print(self.global_step % self.args.eval_steps == 0)
-                    # print()
 
                     if (
                         self.args.evaluation_strategy == EvaluationStrategy.STEPS
@@ -1171,6 +1168,7 @@ class Trainer_Prefix:
             if self.distill:
                 loss = self.compute_loss_distill(model, inputs, gpt2_model=self.gpt2)
             else:
+                # TODO: Marker -- compute loss
                 loss = self.compute_loss(model, inputs, gpt2_model=self.gpt2)
 
         if self.args.n_gpu > 1:
@@ -1211,16 +1209,13 @@ class Trainer_Prefix:
             inputs['control_code'] = torch.index_select(k, 0, prompt_lab_)
             del inputs['prompt_lab']
 
+        # TODO: Marker -- forward pass!
+        print(f"--- type of model {type(model)}, type of gpt2 --- {type(gpt2_model)} ---")
         outputs = model(**inputs, gpt2_model=gpt2_model)
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
 
-        # print(outputs[0])
-        # We don't use .loss here since the model may return tuples instead of ModelOutput.
-        # print(outputs[0], outputs.loss)
-        # URGENT
-        # print('compute_loss', outputs[0])
         return outputs[0].mean()
 
     def compute_loss_distill(self, model, inputs, gpt2_model=None):
