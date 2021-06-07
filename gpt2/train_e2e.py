@@ -1,10 +1,12 @@
-import os, sys
 import argparse
+import os
+import sys
 from pathlib import Path
 
 # example: python train_run.py keyword temp_keyword _
 if not sys.warnoptions:
     import warnings
+
     warnings.simplefilter("ignore")
 
 if __name__ == '__main__':
@@ -22,7 +24,6 @@ if __name__ == '__main__':
     parser.add_argument('--lowdata_token', type=str, default='summarize', help='')
     parser.add_argument('--use_lowdata_token', type=str, default='yes', help='')
 
-
     parser.add_argument('--parametrize_emb', type=str, default='MLP', help='')
     parser.add_argument('--adapter_design', type=int, default=1, help='')
     parser.add_argument('--adapter_bottleneck', type=int, default=100, help='')
@@ -34,11 +35,9 @@ if __name__ == '__main__':
     parser.add_argument('--init_shallow', type=str, default='no', help='')
     parser.add_argument('--init_shallow_word', type=str, default='summarize', help='')
 
-
-
     # training parameters.
     parser.add_argument('--use_dropout', type=str, default='no', help='')
-    parser.add_argument('--seed', type=int, default=101, help='') # old is 42
+    parser.add_argument('--seed', type=int, default=101, help='')  # old is 42
     parser.add_argument('--bsz', type=int, default=10, help='')
     parser.add_argument('--use_big', type=str, default='no', help='')
     parser.add_argument('--epoch', type=int, default=5, help='')
@@ -55,7 +54,6 @@ if __name__ == '__main__':
     parser.add_argument('--prefix_model_path', type=str, default=None, help='')
     parser.add_argument('--submit', type=str, default='no', help='')
 
-
     # DISTILLATION
     parser.add_argument('--distill', type=str, default='no', help='')
     parser.add_argument('--finetuned_model_path', type=str,
@@ -65,9 +63,7 @@ if __name__ == '__main__':
 
     # Added by MX
     parser.add_argument('--cache_dir', type=str, default="/nlp/scr/lxuechen/hfcache/control")
-    parser.add_argument('--use_custom_teacher_dropout', type=str, default='no', help='')
-
-
+    parser.add_argument('--use_custom_teacher_dropout', type=str, default='no')
 
     args = parser.parse_args()
 
@@ -82,8 +78,8 @@ if __name__ == '__main__':
     else:
         load_prefix_model = False
 
-    assert  args.mode in ['data2text', 'triples', 'webnlg', 'writingPrompts', 'cnndm', 'xsum', 'sentiment', 'topic',
-                          'classify-sentiment', 'classify-topic']
+    assert args.mode in ['data2text', 'triples', 'webnlg', 'writingPrompts', 'cnndm', 'xsum', 'sentiment', 'topic',
+                         'classify-sentiment', 'classify-topic']
 
     assert args.objective_mode in [0, 1, 2, 3, 4]
     # 0 means the regular token level objective, which is sum / output_len
@@ -91,7 +87,6 @@ if __name__ == '__main__':
     # 2 means our buggy version which is sum/max_batch(input_len +output_len)
     # 3 means our buggy version which is sum/max_batch(output_len)
     # 4 means our buggy version which is sum/(input_len +output_len)
-
 
     if args.tuning_mode == 'adaptertune':
         folder_name = 'baseline_adapter/'
@@ -114,7 +109,6 @@ if __name__ == '__main__':
         else:
             args.notes = args.notes + f'_{key}'
 
-
     if args.mode == 'data2text':
 
         TRAIN_FILE = "../data/e2e_data/src1_train.txt"
@@ -132,15 +126,11 @@ if __name__ == '__main__':
         if args.format_mode == 'infix':
             folder_name = 'ablation_e2e_infix_models/'
 
-
-
         if args.notes is not None and 'lowdata' in args.notes:
             _, temp_seed, temp_size = args.notes.split('_')
             TRAIN_FILE = "/juice/u/xlisali/e2e_lowdata/lowdata_{}_{}_train.txt".format(temp_seed, temp_size)
             TEST_FILE = "/juice/u/xlisali/e2e_lowdata/lowdata_{}_{}_valid.txt".format(temp_seed, temp_size)
-            folder_name = 'e2e_lowdata_models_prefixtune/' # 50, 200
-
-
+            folder_name = 'e2e_lowdata_models_prefixtune/'  # 50, 200
 
             app_special = ' --max_steps {} --eval_steps {} --save_steps -1 ' \
                           '--evaluate_during_training --per_device_eval_batch_size 32 ' \
@@ -152,7 +142,6 @@ if __name__ == '__main__':
             args.notes = args.notes + 'st={}_ev={}_ws={}_t={}'.format(args.max_steps, args.eval_steps,
                                                                       args.warmup_steps, args.lowdata_token)
 
-
         if args.notes is not None and 'datalevels' in args.notes:
             # for example, notes = 'datalevels-1-10
             _, temp_seed, temp_size = args.notes.split('_')
@@ -160,21 +149,18 @@ if __name__ == '__main__':
             TEST_FILE = "/juice/u/xlisali/e2e_datalevels/datalevels_{}_{}_valid.txt".format(temp_seed, temp_size)
             # folder_name = 'e2e_lowdata_models_new/' #100
             # folder_name = 'e2e_lowdata_models_finetune/'
-            folder_name = 'e2e_datalevels_models/' # 50, 200
-
-
-
+            folder_name = 'e2e_datalevels_models/'  # 50, 200
 
             app_special_levels = ' --eval_steps {} --save_steps -1 ' \
-                          '--evaluate_during_training --per_device_eval_batch_size 32 ' \
-                          '--warmup_steps {} --lowdata_token {} ' \
-                          '--use_lowdata_token {} '.format(args.eval_steps,
-                                                           args.warmup_steps, args.lowdata_token,
-                                                           args.use_lowdata_token)
+                                 '--evaluate_during_training --per_device_eval_batch_size 32 ' \
+                                 '--warmup_steps {} --lowdata_token {} ' \
+                                 '--use_lowdata_token {} '.format(args.eval_steps,
+                                                                  args.warmup_steps, args.lowdata_token,
+                                                                  args.use_lowdata_token)
 
             args.notes = args.notes + 'ev={}_ws={}_t={}_u={}'.format(args.eval_steps,
-                                                                      args.warmup_steps, args.lowdata_token,
-                                                                      args.use_lowdata_token)
+                                                                     args.warmup_steps, args.lowdata_token,
+                                                                     args.use_lowdata_token)
 
 
     elif args.mode == 'triples':
@@ -208,8 +194,9 @@ if __name__ == '__main__':
         test_max_target_length = 142
 
         cnndm_app = ' --max_source_length {} --train_max_target_length {} ' \
-                   '--val_max_target_length {} --dataloader_num_workers 4 '.format(max_source_length, max_target_length,
-                                                         val_max_target_length, )
+                    '--val_max_target_length {} --dataloader_num_workers 4 '.format(max_source_length,
+                                                                                    max_target_length,
+                                                                                    val_max_target_length, )
 
         folder_name = "cnndm_models/"
         assert args.optim_prefix == 'yes'
@@ -225,7 +212,7 @@ if __name__ == '__main__':
 
         xsum_app = ' --max_source_length {} --train_max_target_length {} ' \
                    '--val_max_target_length {} --dataloader_num_workers 4 '.format(max_source_length, max_target_length,
-                                                         val_max_target_length, )
+                                                                                   val_max_target_length, )
 
         folder_name = "xsum_models/"
         assert args.optim_prefix == 'yes'
@@ -233,27 +220,24 @@ if __name__ == '__main__':
     if not os.path.isdir(folder_name):
         os.mkdir(folder_name)
 
-
-
     batch_size = args.gradient_accumulation_steps * args.bsz
 
     if args.init_shallow == 'yes':
         if args.notes is not None:
             args.notes = args.notes + '_s={}_w={}'.format(args.init_shallow, args.init_shallow_word)
         else:
-            args.notes ='s={}_w={}'.format(args.init_shallow, args.init_shallow_word)
+            args.notes = 's={}_w={}'.format(args.init_shallow, args.init_shallow_word)
 
     if args.notes is not None:
         args.notes = args.notes + '_o={}'.format(args.objective_mode)
     else:
         args.notes = 'o={}'.format(args.objective_mode)
 
-
     if args.distill == 'yes':
         if args.notes is not None:
             args.notes = args.notes + f'_distill_o={args.matching_objective}'
         else:
-            args.notes =f'distill_o={args.matching_objective}'
+            args.notes = f'distill_o={args.matching_objective}'
 
     if args.notes is not None:
         args.notes = args.notes + '_o={}'.format(args.objective_mode)
@@ -265,7 +249,8 @@ if __name__ == '__main__':
                      '_' + args.prefix_mode[:3] + '_' + args.format_mode[:3] + '_' + \
                      'b={}-'.format(batch_size) + 'e={}_'.format(args.epoch) + 'd={}_'.format(args.dropout) + \
                      'u={}_'.format(args.use_dropout) + 'lr={}_'.format(args.learning_rate) \
-                     + 'w={}_'.format(args.weight_decay) + 's={}'.format(args.seed) + '_r={}'.format(args.init_random[:1]) +\
+                     + 'w={}_'.format(args.weight_decay) + 's={}'.format(args.seed) + '_r={}'.format(
+            args.init_random[:1]) + \
                      '_m={}'.format(args.mid_dim)
     else:
         Model_FILE = dir_name
@@ -279,7 +264,6 @@ if __name__ == '__main__':
     Model_FILE = '{}{}'.format(folder_name, Model_FILE)
     print(Model_FILE)
 
-
     if args.notes is not None and 'large' in args.notes:
         OLD_MODEL = "gpt2-large"
     else:
@@ -287,7 +271,7 @@ if __name__ == '__main__':
 
     app = "--optim_prefix {} --preseqlen {} --prefix_mode {} --format_mode {} " \
           "--gradient_accumulation_steps {} --learning_rate {} --weight_decay {} --seed {} --disable_tqdm " \
-          "--mid_dim {} --init_random {} --use_dropout {} --prefix_dropout {} --objective_mode {} ".\
+          "--mid_dim {} --init_random {} --use_dropout {} --prefix_dropout {} --objective_mode {} ". \
         format(args.optim_prefix, args.preseqlen, args.prefix_mode, args.format_mode,
                args.gradient_accumulation_steps, args.learning_rate, args.weight_decay, args.seed,
                args.mid_dim, args.init_random, args.use_dropout, args.dropout, args.objective_mode)
@@ -315,7 +299,6 @@ if __name__ == '__main__':
     if args.tuning_mode == 'finetune-top':
         app += ' --top_layers {} '.format(args.top_layers)
 
-
     if args.mode == 'xsum':
         app += xsum_app
 
@@ -325,9 +308,9 @@ if __name__ == '__main__':
     if args.init_shallow == 'yes':
         app += ' --init_shallow {} --init_shallow_word {} '.format(args.init_shallow, args.init_shallow_word)
 
-
     if args.distill == 'yes':
-        app += f' --distill {args.distill} --finetuned_model_path {args.finetuned_model_path}  --matching_objective {args.matching_objective}'
+        app += f' --distill {args.distill} --finetuned_model_path {args.finetuned_model_path}  --matching_objective ' \
+               f'{args.matching_objective}'
 
     if args.use_custom_teacher_dropout == 'yes':
         app += f' --use_custom_teacher_dropout {args.use_custom_teacher_dropout}'
@@ -335,7 +318,7 @@ if __name__ == '__main__':
 
     controlprefix = ('yes' if args.tuning_mode == 'prefixtune' else 'no')
 
-    COMMANDLINE="python run_language_modeling.py \
+    COMMANDLINE = "python run_language_modeling.py \
         --output_dir={} \
         --model_type=gpt2 \
         --model_name_or_path={} \
@@ -353,7 +336,8 @@ if __name__ == '__main__':
         --task_mode {} \
         --eval_data_file={}  \
         --tuning_mode {} --logging_dir {} \
-        --train_embs no ".format(Model_FILE, OLD_MODEL, OLD_MODEL, args.bsz, args.bsz, args.epoch, TRAIN_FILE, args.mode, TEST_FILE,
+        --train_embs no ".format(Model_FILE, OLD_MODEL, OLD_MODEL, args.bsz, args.bsz, args.epoch, TRAIN_FILE,
+                                 args.mode, TEST_FILE,
                                  args.tuning_mode, logging_dir)
 
     COMMANDLINE += app
@@ -362,32 +346,31 @@ if __name__ == '__main__':
         LOAD_TRAIN_PREFIX = '/u/scr/xlisali/contrast_LM/transformers/examples/control/med_topic_gen'
         COMMANDLINE += '--prefixModel_name_or_path {} '.format(LOAD_TRAIN_PREFIX)
 
-
-
-
-
-
     with open(Model_FILE + '.sh', 'w') as f:
         print(COMMANDLINE, file=f)
 
-
     print(COMMANDLINE)
     if args.submit == 'no':
-        os.system(COMMANDLINE) # textattack/roberta-base-ag-news # textattack/roberta-base-imdb
+        os.system(COMMANDLINE)  # textattack/roberta-base-ag-news # textattack/roberta-base-imdb
     # #
     elif args.submit == 'yes':
         if args.use_big == 'no':
-            full_command = "nlprun -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7,jagupard8,jagupard28,jagupard29,jagupard11,jagupard12,jagupard10 \'{}\'".format(Model_FILE, COMMANDLINE)
+            full_command = "nlprun -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7," \
+                           "jagupard8,jagupard28,jagupard29,jagupard11,jagupard12,jagupard10 \'{}\'".format(
+                Model_FILE, COMMANDLINE)
             if args.mode == 'cnndm':
-                full_command ="nlprun -a lisa-base-torch -r 20GB -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7,jagupard8 \'{}\'".format(Model_FILE, COMMANDLINE)
+                full_command = "nlprun -a lisa-base-torch -r 20GB -g 1 -n {} -x jagupard4,jagupard5,jagupard6," \
+                               "jagupard7,jagupard8 \'{}\'".format(
+                    Model_FILE, COMMANDLINE)
         elif True:
-            full_command = "nlprun -p high -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7,jagupard8," \
-                           "jagupard10,jagupard11,jagupard12,jagupard13,jagupard14,jagupard15,jagupard16,jagupard17,jagupard18," \
+            full_command = "nlprun -p high -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7," \
+                           "jagupard8," \
+                           "jagupard10,jagupard11,jagupard12,jagupard13,jagupard14,jagupard15,jagupard16,jagupard17," \
+                           "jagupard18," \
                            "jagupard19,jagupard20,jagupard21,jagupard22,jagupard23," \
                            "jagupard24,jagupard25 \'{}\'".format(Model_FILE, COMMANDLINE)
         else:
-            full_command = "nlprun -a lisa-base-torch -m jagupard26 -p high -g 1 -n {} \'{}\'".format(Model_FILE, COMMANDLINE)
+            full_command = "nlprun -a lisa-base-torch -m jagupard26 -p high -g 1 -n {} \'{}\'".format(Model_FILE,
+                                                                                                      COMMANDLINE)
         print(full_command)
         os.system(full_command)
-
-
