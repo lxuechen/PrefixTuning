@@ -325,7 +325,7 @@ if __name__ == '__main__':
 
     controlprefix = ('yes' if args.tuning_mode == 'prefixtune' else 'no')
 
-    COMMANDLINE = "python run_language_modeling.py \
+    COMMANDLINE = "python -m gpt2.run_language_modeling \
         --output_dir={} \
         --model_type=gpt2 \
         --model_name_or_path={} \
@@ -346,7 +346,6 @@ if __name__ == '__main__':
         --train_embs no ".format(Model_FILE, OLD_MODEL, OLD_MODEL, args.bsz, args.bsz, args.epoch, TRAIN_FILE,
                                  args.mode, TEST_FILE,
                                  args.tuning_mode, logging_dir)
-
     COMMANDLINE += app
 
     if load_prefix_model:
