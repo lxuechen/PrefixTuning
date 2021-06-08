@@ -491,15 +491,23 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
+        # TODO: Enable partial eval.
         eval_output = trainer.evaluate(eval_dataset)
         train_output = trainer.evaluate(train_dataset)
 
+        # TODO: Make sure the metric is consistent for full and prefix.
+        # TODO: Test prefix, full, dp, non-dp.
+        # TODO: You also need the trajectory!!!
         results = {
             "train_perplexity": train_output["eval_loss"],
             "eval_perplexity": eval_output["eval_loss"],
         }
         output_eval_file = os.path.join(training_args.output_dir, "results.json")
         utils.jdump(results, output_eval_file)
+
+        logger.info("***** Eval results *****")
+        for key in sorted(results.keys()):
+            logger.info("  %s = %s", key, str(results[key]))
 
 
 def _mp_fn(index):

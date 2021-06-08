@@ -46,7 +46,7 @@ def _get_command(
         --model_name_or_path {model_name_or_path} \
         --tokenizer_name {model_name_or_path} \
         --per_device_train_batch_size 5 \
-        --per_device_eval_batch_size 5 \
+        --per_device_eval_batch_size 10 \
         --save_steps 500000 \
         --num_train_epochs {epochs} \
         --do_train \

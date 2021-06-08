@@ -41,7 +41,6 @@ import six
 import torch
 import torch.autograd.profiler as profiler
 import torch.nn.functional as F
-import torchvision as tv
 import tqdm
 from scipy import stats
 from torch import nn, optim
@@ -2030,6 +2029,8 @@ def get_loader(data_name,
                padding_mode="constant",
                task="density",
                **kwargs):
+    import torchvision as tv
+
     if task not in ("density", "classification", "hybrid"):
         raise ValueError(f"Unknown task: {task}. Expected one of `density`, `classification`, `hybrid`.")
     logging.warning(f"Creating loaders for data: {data_name}, task: {task}")
