@@ -26,7 +26,7 @@ from typing import Optional
 import privacy_utils
 from .train_control import PrefixTuning
 from .trainer_prefix import Trainer_Prefix
-from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments
+from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
 from lxuechen_utils import utils
 
 
@@ -67,7 +67,6 @@ from transformers import (
     PreTrainedTokenizer,
     TextDataset,
     Trainer,
-    TrainingArguments,
     set_seed,
     GPT2LMHeadModel,
 )

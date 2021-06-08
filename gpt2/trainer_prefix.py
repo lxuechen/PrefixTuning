@@ -249,7 +249,7 @@ class Trainer_Prefix:
     def __init__(
         self,
         model: Optional[PreTrainedModel] = None,
-        model_gpt2 : Optional[PreTrainedModel] = None,
+        model_gpt2: Optional[PreTrainedModel] = None,
         args: TrainingArguments = None,
         data_collator: Optional[DataCollator] = None,
         train_dataset: Optional[Dataset] = None,
@@ -1497,7 +1497,7 @@ class Trainer_Prefix:
             self._past = None
 
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
-        for inputs in tqdm(dataloader, desc=description, disable=disable_tqdm):
+        for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
             batch_size = inputs[list(inputs.keys())[0]].shape[0]
             if loss is not None:
@@ -1508,6 +1508,9 @@ class Trainer_Prefix:
                 entropy_losses.extend([(x.exp() * x).sum() for x in temp_logits])
             if labels is not None:
                 label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
+
+            if self.args.max_eval_steps > 0 and batch_idx + 1 >= self.args.max_eval_steps:
+                break
 
         if self.args.past_index and hasattr(self, "_past"):
             # Clean the state at the end of the evaluation loop

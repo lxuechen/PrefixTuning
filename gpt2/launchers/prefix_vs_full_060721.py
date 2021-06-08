@@ -33,6 +33,7 @@ def _get_command(
 
     # Don't modify these easily!
     max_steps=-1,
+    max_eval_steps=-1,
     mode="submit",
     model_type="gpt2",
     model_name_or_path="gpt2-medium",
@@ -76,6 +77,7 @@ def _get_command(
         --nonprivate yes \
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
+        --max_eval_steps {max_eval_steps} \
         --overwrite_output_dir'
     # @formatter:off
 
@@ -105,6 +107,7 @@ def main(
             tuning_mode="prefixtune",
             mode=mode,
             max_steps=max_steps,
+            max_eval_steps=max_steps,
         )
         print(command)
         os.system(command)

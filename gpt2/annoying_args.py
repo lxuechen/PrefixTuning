@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from transformers import MODEL_WITH_LM_HEAD_MAPPING
+import transformers
 
-MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
+MODEL_CONFIG_CLASSES = list(transformers.MODEL_WITH_LM_HEAD_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 
@@ -279,6 +279,11 @@ class DataTrainingArguments:
     )
 
     train_embs: str = field(default="yes")
+
+
+@dataclass
+class TrainingArguments(transformers.TrainingArguments):
+    max_eval_steps: int = field(default=-1, metadata={"help": "Maximum number of evaluation steps to run."})
 
 
 @dataclass
