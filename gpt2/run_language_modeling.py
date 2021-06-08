@@ -27,6 +27,7 @@ import privacy_utils
 from .train_control import PrefixTuning
 from .trainer_prefix import Trainer_Prefix
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments
+from lxuechen_utils import utils
 
 
 from transformers import (
@@ -487,24 +488,18 @@ def main():
             gpt2.save_pretrained(gpt2_dir)
 
     # Evaluation
-    results = {}
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        eval_output = trainer.evaluate(train_dataset)
+        eval_output = trainer.evaluate(eval_dataset)
+        train_output = trainer.evaluate(train_dataset)
 
-        perplexity = eval_output["eval_loss"]
-        result = {"perplexity": perplexity}
-
-        output_eval_file = os.path.join(training_args.output_dir, "eval_results_lm.txt")
-        if trainer.is_world_master():
-            with open(output_eval_file, "w") as writer:
-                logger.info("***** Eval results *****")
-                for key in sorted(result.keys()):
-                    logger.info("  %s = %s", key, str(result[key]))
-                    writer.write("%s = %s\n" % (key, str(result[key])))
-        results.update(result)
-    return results
+        results = {
+            "train_perplexity": train_output["eval_loss"],
+            "eval_perplexity": eval_output["eval_loss"],
+        }
+        output_eval_file = os.path.join(training_args.output_dir, "results.json")
+        utils.jdump(results, output_eval_file)
 
 
 def _mp_fn(index):
