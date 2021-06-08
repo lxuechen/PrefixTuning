@@ -278,6 +278,8 @@ class DataTrainingArguments:
         default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
     )
 
+    train_embs: str = field(default="yes")
+
 
 @dataclass
 class PrivacyArguments:

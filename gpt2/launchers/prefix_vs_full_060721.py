@@ -18,6 +18,8 @@ import os
 
 import fire
 
+from . import wrapper
+
 TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
 TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
 
@@ -30,14 +32,15 @@ def _get_command(
     tuning_mode,
 
     # Don't modify these easily!
+    mode="submit",
     model_type="gpt2",
     model_name_or_path="gpt2-medium",
 ):
     # @formatter:off
-    # TODO: What is train_embs, --init_random no, --objective_mode 1,
     logging_dir = train_dir
     command = f'python -m gpt2.run_language_modeling \
         --output_dir {train_dir} \
+        --task_mode "data2text" \
         --model_type {model_type} \
         --model_name_or_path {model_name_or_path} \
         --tokenizer_name {model_name_or_path} \
@@ -47,6 +50,8 @@ def _get_command(
         --num_train_epochs {epochs} \
         --do_train \
         --do_eval \
+        --line_by_line \
+        --save_total_limit 1 \
         --train_data_file {TRAIN_FILE} \
         --eval_data_file {TEST_FILE} \
         --tuning_mode {tuning_mode} \
@@ -68,9 +73,13 @@ def _get_command(
         --eval_steps 5000 \
         --noise_multiplier 1.0 \
         --nonprivate yes \
-        --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/'
+        --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
+        --overwrite_output_dir'
     # @formatter:off
-    # TODO: Support nlprun.
+
+    if mode == "submit":
+        command = wrapper.mynlprun_wrapper(command, train_dir=train_dir)
+        command += "\n"
     return command
 
 
@@ -89,6 +98,7 @@ def main(
             logging_dir="",
             epochs=1,
             tuning_mode="prefixtune",
+            mode=mode,
         )
         print(command)
         os.system(command)
