@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from packaging import version
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
@@ -35,26 +36,11 @@ from .modeling_auto import MODEL_FOR_QUESTION_ANSWERING_MAPPING
 from .modeling_utils import PreTrainedModel
 from .optimization import AdamW, get_linear_schedule_with_warmup
 from .tokenization_utils_base import PreTrainedTokenizerBase
-from .trainer_utils import (
-    PREFIX_CHECKPOINT_DIR,
-    BestRun,
-    EvalPrediction,
-    EvaluationStrategy,
-    HPSearchBackend,
-    PredictionOutput,
-    TrainOutput,
-    default_compute_objective,
-    default_hp_space,
-    distributed_broadcast_scalars,
-    distributed_concat,
-    nested_concat,
-    nested_numpify,
-    nested_xla_mesh_reduce,
-    set_seed,
-)
+from .trainer_utils import (BestRun, default_compute_objective, default_hp_space, distributed_broadcast_scalars,
+                            distributed_concat, EvalPrediction, EvaluationStrategy, HPSearchBackend, nested_numpify,
+                            nested_xla_mesh_reduce, PredictionOutput, PREFIX_CHECKPOINT_DIR, set_seed, TrainOutput)
 from .training_args import TrainingArguments
 from .utils import logging
-
 
 _use_native_amp = False
 _use_apex = False
@@ -151,7 +137,7 @@ class SequentialDistributedSampler(Sampler):
         ), f"Indices length {len(indices)} and total size {self.total_size} mismatched"
 
         # subsample
-        indices = indices[self.rank * self.num_samples : (self.rank + 1) * self.num_samples]
+        indices = indices[self.rank * self.num_samples: (self.rank + 1) * self.num_samples]
         assert (
             len(indices) == self.num_samples
         ), f"Indices length {len(indices)} and sample number {self.num_samples} mismatched"
@@ -177,7 +163,8 @@ class Trainer:
         model (:class:`~transformers.PreTrainedModel`, `optional`):
             The model to train, evaluate or use for predictions. If not provided, a ``model_init`` must be passed.
         args (:class:`~transformers.TrainingArguments`, `optional`):
-            The arguments to tweak for training. Will default to a basic instance of :class:`~transformers.TrainingArguments`
+            The arguments to tweak for training. Will default to a basic instance of
+            :class:`~transformers.TrainingArguments`
             with the ``output_dir`` set to a directory named `tmp_trainer` in the current directory if not provided.
         data_collator (:obj:`DataCollator`, `optional`):
             The function to use to form a batch from a list of elements of :obj:`train_dataset` or
@@ -231,7 +218,8 @@ class Trainer:
         set_seed(self.args.seed)
         assert (
             model is not None or model_init is not None
-        ), "You must provide a model to use `Trainer`, either by using the `model` argument or the `model_init` argument."
+        ), "You must provide a model to use `Trainer`, either by using the `model` argument or the `model_init` " \
+           "argument."
         if model is None and model_init is not None:
             model = model_init()
         self.model = model.to(args.device) if model is not None else None
@@ -253,7 +241,8 @@ class Trainer:
         self.log_history = []
         if "prediction_loss_only" in kwargs:
             warnings.warn(
-                "Passing `prediction_loss_only` as a keyword argument is deprecated and won't be possible in a future version. Use `args.prediction_loss_only` instead.",
+                "Passing `prediction_loss_only` as a keyword argument is deprecated and won't be possible in a future "
+                "version. Use `args.prediction_loss_only` instead.",
                 FutureWarning,
             )
             self.args.prediction_loss_only = kwargs.pop("prediction_loss_only")
@@ -318,7 +307,8 @@ class Trainer:
         ignored_columns = list(set(dataset.column_names) - set(signature_columns))
         dset_description = "" if description is None else f"in the {description} set "
         logger.info(
-            f"The following columns {dset_description}don't have a corresponding argument in `{self.model.__class__.__name__}.forward` and have been ignored: {', '.join(ignored_columns)}."
+            f"The following columns {dset_description}don't have a corresponding argument in `"
+            f"{self.model.__class__.__name__}.forward` and have been ignored: {', '.join(ignored_columns)}."
         )
         dataset.set_format(type=dataset.format["type"], columns=columns)
 
@@ -432,46 +422,24 @@ class Trainer:
         """
         if self.optimizer is None:
             no_decay = ["bias", "LayerNorm.weight"]
-            # DEBUG
-            # optimizer_grouped_parameters = [
-            #     {
-            #         "params": [p for n, p in self.model.named_parameters() if not any(nd in n for nd in no_decay)],
-            #         "weight_decay": self.args.weight_decay,
-            #     },
-            #     {
-            #         "params": [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)],
-            #         "weight_decay": 0.0,
-            #     },
-            # ]
-            # self.optimizer = AdamW(
-            #     optimizer_grouped_parameters,
-            #     lr=self.args.learning_rate,
-            #     betas=(self.args.adam_beta1, self.args.adam_beta2),
-            #     eps=self.args.adam_epsilon,
-            # )
-
             optimizer_grouped_parameters = [
-            {
-                "params": [p for n, p in self.model.named_parameters() if (not any(nd in n for nd in no_decay)) and p.requires_grad],
-                "weight_decay": self.args.weight_decay,
-            },
-            {
-                "params": [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay) and p.requires_grad],
-                "weight_decay": 0.0,
-            },
+                {
+                    "params": [p for n, p in self.model.named_parameters() if
+                               (not any(nd in n for nd in no_decay)) and p.requires_grad],
+                    "weight_decay": self.args.weight_decay,
+                },
+                {
+                    "params": [p for n, p in self.model.named_parameters() if
+                               any(nd in n for nd in no_decay) and p.requires_grad],
+                    "weight_decay": 0.0,
+                },
             ]
-
             self.optimizer = AdamW(
                 optimizer_grouped_parameters,
                 lr=self.args.learning_rate,
                 betas=(self.args.adam_beta1, self.args.adam_beta2),
                 eps=self.args.adam_epsilon,
             )
-
-
-            # for n, p in self.model.named_parameters():
-            #     print(n,p.requires_grad)
-            print(self.optimizer.state_dict())
         if self.lr_scheduler is None:
             self.lr_scheduler = get_linear_schedule_with_warmup(
                 self.optimizer, num_warmup_steps=self.args.warmup_steps, num_training_steps=num_training_steps
@@ -486,16 +454,19 @@ class Trainer:
 
         Environment:
             WANDB_WATCH:
-                (Optional, ["gradients", "all", "false"]) "gradients" by default, set to "false" to disable gradient logging
+                (Optional, ["gradients", "all", "false"]) "gradients" by default, set to "false" to disable gradient
+                logging
                 or "all" to log gradients and parameters
             WANDB_PROJECT:
-                (Optional): str - "huggingface" by default, set this to a custom string to store results in a different project
+                (Optional): str - "huggingface" by default, set this to a custom string to store results in a
+                different project
             WANDB_DISABLED:
                 (Optional): boolean - defaults to false, set to "true" to disable wandb entirely
         """
         if hasattr(self, "_setup_wandb"):
             warnings.warn(
-                "The `_setup_wandb` method is deprecated and won't be called in a future version, define `setup_wandb` in your subclass.",
+                "The `_setup_wandb` method is deprecated and won't be called in a future version, "
+                "define `setup_wandb` in your subclass.",
                 FutureWarning,
             )
             return self._setup_wandb()
@@ -582,7 +553,8 @@ class Trainer:
         for key, value in params.items():
             if not hasattr(self.args, key):
                 raise AttributeError(
-                    f"Trying to set {key} in the hyperparameter search but there is no corresponding field in `TrainingArguments`."
+                    f"Trying to set {key} in the hyperparameter search but there is no corresponding field in "
+                    f"`TrainingArguments`."
                 )
             old_attr = getattr(self.args, key, None)
             # Casting value to the proper type
@@ -720,7 +692,6 @@ class Trainer:
             # set global_step to global_step of last saved checkpoint from model path
             try:
                 self.global_step = int(model_path.split("-")[-1].split(os.path.sep)[0])
-                # print(model, model.module)
                 if self.args.n_gpu > 1:
                     self.total_flos = getattr(model.module.config, "total_flos", 0)
                 else:
@@ -770,14 +741,6 @@ class Trainer:
                     continue
 
                 tr_loss += self.training_step(model, inputs)
-
-                # print()
-                # # DEBUG
-                # for param in list(model.parameters())[-5:]:
-                #     print(param.requires_grad, end='')
-                #     print(param.mean(), end=' ')
-                # print()
-
                 self.total_flos += self.floating_point_ops(inputs)
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
@@ -831,17 +794,19 @@ class Trainer:
 
                         # URGENT, this is just for the low data setting, False otherwise.
                         #####################################################
-                        if 'lowdata' in self.args.output_dir or 'large' in self.args.output_dir or 'earlystop' in self.args.output_dir:
+                        if 'lowdata' in self.args.output_dir or 'large' in self.args.output_dir or 'earlystop' in \
+                            self.args.output_dir:
                             self.save_based_on_eval = True
                         else:
                             self.save_based_on_eval = False
-                        print('lowdata:', self.global_step, self.curr_best_eval, metrics["eval_loss"],self.save_based_on_eval,
+                        print('lowdata:', self.global_step, self.curr_best_eval, metrics["eval_loss"],
+                              self.save_based_on_eval,
                               'perplexity={}'.format(math.exp(metrics["eval_loss"])))
                         if self.save_based_on_eval and metrics["eval_loss"] < self.curr_best_eval:
                             self.curr_best_eval = metrics["eval_loss"]
                             if hasattr(model, "module"):
                                 assert (
-                                        model.module is self.model
+                                    model.module is self.model
                                 ), f"Module {model.module} should be a reference to self.model"
                             else:
                                 assert model is self.model, f"Model {model} should be a reference to self.model"
@@ -974,8 +939,11 @@ class Trainer:
                 Additional keyword arguments passed along to :obj:`optuna.create_study` or :obj:`ray.tune.run`. For
                 more information see:
 
-                - the documentation of `optuna.create_study <https://optuna.readthedocs.io/en/stable/reference/alias_generated/optuna.create_study.html#optuna.create_study>`__
-                - the documentation of `tune.run <https://docs.ray.io/en/latest/tune/api_docs/execution.html#tune-run>`__
+                - the documentation of `optuna.create_study
+                <https://optuna.readthedocs.io/en/stable/reference/alias_generated/optuna.create_study.html#optuna
+                .create_study>`__
+                - the documentation of `tune.run
+                <https://docs.ray.io/en/latest/tune/api_docs/execution.html#tune-run>`__
 
         Returns:
             :class:`transformers.trainer_utils.BestRun`: All the informations about the best run.
@@ -1028,7 +996,8 @@ class Trainer:
 
         if hasattr(self, "_log"):
             warnings.warn(
-                "The `_log` method is deprecated and won't be called in a future version, define `log` in your subclass.",
+                "The `_log` method is deprecated and won't be called in a future version, define `log` in your "
+                "subclass.",
                 FutureWarning,
             )
             return self._log(logs, iterator=iterator)
@@ -1110,7 +1079,8 @@ class Trainer:
         """
         if hasattr(self, "_training_step"):
             warnings.warn(
-                "The `_training_step` method is deprecated and won't be called in a future version, define `training_step` in your subclass.",
+                "The `_training_step` method is deprecated and won't be called in a future version, "
+                "define `training_step` in your subclass.",
                 FutureWarning,
             )
             return self._training_step(model, inputs, self.optimizer)
@@ -1136,12 +1106,7 @@ class Trainer:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
-            # print(loss)
             loss.backward()
-
-        # print('max allocated_memory:', torch.cuda.max_memory_allocated(0), 'total_memory:',
-        #       torch.cuda.get_device_properties(0).total_memory,
-        #       'percentage', torch.cuda.max_memory_allocated(0) / torch.cuda.get_device_properties(0).total_memory)
 
         return loss.detach()
 
@@ -1156,8 +1121,6 @@ class Trainer:
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
-
-        # print(outputs[0])
         # We don't use .loss here since the model may return tuples instead of ModelOutput.
         return outputs[0]
 
@@ -1366,7 +1329,8 @@ class Trainer:
         """
         if hasattr(self, "_prediction_loop"):
             warnings.warn(
-                "The `_prediction_loop` method is deprecated and won't be called in a future version, define `prediction_loop` in your subclass.",
+                "The `_prediction_loop` method is deprecated and won't be called in a future version, "
+                "define `prediction_loop` in your subclass.",
                 FutureWarning,
             )
             return self._prediction_loop(dataloader, description, prediction_loss_only=prediction_loss_only)
@@ -1400,6 +1364,11 @@ class Trainer:
         label_ids: torch.Tensor = None
         entropy_losses: List[float] = []
         entropy_losses2: List[float] = []
+
+        # My additions.
+        tok_logprobs: List[float] = []
+        lin_logprobs: List[float] = []
+
         model.eval()
 
         if is_torch_tpu_available():
@@ -1411,27 +1380,31 @@ class Trainer:
         prediction_loss_only = False
 
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
-        for inputs in tqdm(dataloader, desc=description, disable=disable_tqdm):
+        for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
-            batch_size = inputs[list(inputs.keys())[0]].shape[0]
-            # print(logits, prediction_loss_only)
             if loss is not None:
-                eval_losses.extend([loss] * batch_size)
+                eval_losses.extend([loss] * logits.size(0))
+
             if logits is not None:
-                # preds = logits if preds is None else nested_concat(preds, logits, dim=0)
-                temp_logits = torch.log_softmax(logits, dim=-1)
-                # print(temp_logits.shape)
-                temp_ = (temp_logits.exp() * temp_logits).sum(dim=-1)#.view(-1)
-                entropy_losses.extend(temp_.view(-1).tolist())
-                print(temp_.shape)
-                label_mask = inputs['labels'] != -100
-                temp_ = temp_[label_mask]
-                print(temp_.shape)
-                entropy_losses2.extend(temp_.tolist())
+                all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
+                entropy = (all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
+                # Entropy at all locations.
+                entropy_losses.extend(entropy.view(-1).tolist())
+                # Entropy at only locations w/ token.
+                entropy_losses2.extend(entropy[inputs['labels'] != -100].tolist())
+
+                logprob = F.cross_entropy(logits.permute(0, 2, 1), labels, reduction="none")  # (B, L).
+                logprob = logprob * (inputs['labels'] != -100)  # (B, L).
+
+                tok_logprobs.extend(logprob.view(-1).tolist())
+                lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
+                del all_log_probs, entropy, logprob
 
             if labels is not None:
                 pass
-                # label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
+
+            if batch_idx + 1 >= self.args.max_eval_steps:
+                break
 
         if self.args.past_index and hasattr(self, "_past"):
             # Clean the state at the end of the evaluation loop
@@ -1466,8 +1439,8 @@ class Trainer:
             if self.args.local_rank != -1:
                 metrics["eval_loss"] = (
                     distributed_broadcast_scalars(eval_losses, num_total_examples=self.num_examples(dataloader))
-                    .mean()
-                    .item()
+                        .mean()
+                        .item()
                 )
             else:
                 metrics["eval_loss"] = np.mean(eval_losses)
@@ -1479,8 +1452,13 @@ class Trainer:
 
         if len(entropy_losses) > 0:
             metrics['entropy'] = np.mean(entropy_losses)
+
+        if len(entropy_losses2) > 0:
             metrics['entropy2'] = np.mean(entropy_losses2)
-            print('entropy', metrics['entropy'],  metrics['entropy2'] )
+
+        if len(logprob) > 0:
+            metrics['tok_logprob'] = np.mean(tok_logprobs)
+            metrics['lin_logprob'] = np.mean(lin_logprobs)
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 
@@ -1515,11 +1493,10 @@ class Trainer:
         if 'weights' in inputs:
             weights = inputs['weights']
             bsz = weights.view(-1).shape[0]
-            weights = (torch.ones(weights.shape)/bsz).to(weights.device)
+            weights = (torch.ones(weights.shape) / bsz).to(weights.device)
             inputs['weights'] = weights
 
         with torch.no_grad():
-            # outputs = model.forward_weighted(**inputs)
             outputs = model(**inputs)
             if has_labels:
                 # The .mean() is to reduce in case of distributed training
@@ -1535,9 +1512,6 @@ class Trainer:
         if prediction_loss_only:
             return (loss, None, None)
 
-        # logits = tuple(logit.detach() for logit in logits)
-        # if len(logits) == 1:
-        #     logits = logits[0]
         logits = logits[0]
 
         if has_labels:
