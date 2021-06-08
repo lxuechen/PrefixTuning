@@ -721,6 +721,8 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             self.finetune_mode = False
         elif config._my_arg_tune_mode == 'finetune-top':
             self.finetune_mode = True
+        elif config._my_arg_tune_mode == 'fulltune':
+            self.finetune_mode = True
         else:
             assert False, "incorrect tune mode"
 
