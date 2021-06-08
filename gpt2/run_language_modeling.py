@@ -19,16 +19,13 @@ GPT, GPT-2 and CTRL are fine-tuned using a causal language modeling (CLM) loss. 
 using a masked language modeling (MLM) loss. XLNet is fine-tuned using a permutation language modeling (PLM) loss.
 """
 
-import glob
 import logging
-import math
 import os
 from typing import Optional
 
-import torch
 import transformers
 
-from aux import PrefixEmbTuning
+import privacy_utils
 from train_control import PrefixTuning
 
 path = os.path.abspath(transformers.__file__)
@@ -38,7 +35,6 @@ from transformers import (
     CONFIG_MAPPING,
     MODEL_WITH_LM_HEAD_MAPPING,
     AutoConfig,
-    AutoModelWithLMHead,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
@@ -75,7 +71,6 @@ from transformers import (
     TrainingArguments,
     set_seed,
     GPT2LMHeadModel,
-    GPT2LMHeadModelAdapter,
 )
 
 from trainer_prefix import Trainer_Prefix
@@ -180,15 +175,6 @@ def get_dataset(
         else:
             return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
 
-        # print(len(dataset))
-        # n = len(dataset) % training_args.per_device_train_batch_size
-        # if n != 0:
-        #     dataset.examples = dataset.examples[:-n]
-        #     dataset.labels = dataset.labels[:-n]
-        #
-        #     if hasattr(dataset, 'emb'):
-        #         dataset.emb = dataset.emb[:-n]
-        # print(len(dataset))
         return dataset
     else:
         return TextDataset(
@@ -284,42 +270,13 @@ def main():
     elif model_args.tuning_mode == 'prefixtune':
         print('objective is {}'.format(config._objective_mode))
 
-    if model_args.tuning_mode == 'adaptertune':
-        config.adapter_design = model_args.adapter_design
-        config.bottleneck = model_args.adapter_bottleneck
-
-        if model_args.model_name_or_path:
-            config.return_dict = True
-            model = GPT2LMHeadModelAdapter.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
-                cache_dir=model_args.cache_dir,
-            )
-        else:
-            logger.info("Training new model from scratch")
-            model = AutoModelWithLMHead.from_config(config)
-
-    else:
-        # Added by MX
-        if model_args.use_custom_teacher_dropout:
-            config.resid_pdrop = model_args.teacher_dropout
-
-        if model_args.model_name_or_path:
-            print('--- Loading Pretrained GPT2LMHead --')
-            config.return_dict = True
-            model = GPT2LMHeadModel.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
-                cache_dir=model_args.cache_dir,
-            )
-        else:
-            logger.info("Training new model from scratch")
-            model = AutoModelWithLMHead.from_config(config)
-
-    # HERE
-    # model.resize_token_embeddings(len(tokenizer))
+    config.return_dict = True
+    model = GPT2LMHeadModel.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        cache_dir=model_args.cache_dir,
+    )
 
     if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
         raise ValueError(
@@ -329,33 +286,8 @@ def main():
 
     if data_args.block_size <= 0:
         data_args.block_size = tokenizer.max_len
-        # Our input block size will be the max possible for the model
     else:
         data_args.block_size = min(data_args.block_size, tokenizer.max_len)
-
-    # ADD SPECIAL TOKENS:
-    # if (model_args.tuning_mode != 'prefixtune') and ('lowdata' not in training_args.output_dir) and (
-    # model_args.tuning_mode != 'adaptertune'):
-    #     print(model_args.tuning_mode)
-    #     print('adapting the size of the model embedding to include [PAD], [BOS], [EOS].')
-    #     print('len(tokenizer) = ', len(tokenizer))
-    #     num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]', 'bos_token':'[BOS]', 'eos_token':'[
-    #     EOS]'})
-    #     embedding_layer = model.resize_token_embeddings(len(tokenizer))
-    #     print('len(tokenizer) = ', len(tokenizer))
-    # elif data_args.dataless == 'yes':
-    #     print(model_args.tuning_mode, 'dataless setting, so no new tokens at all.')
-    #     print('We do not add special tokens to the tokenizer, instead, we just finetune on <|endoftext|>')
-    #
-    #     print(tokenizer.eos_token_id)
-    #     print(tokenizer.eos_token)
-    #     print(tokenizer.pad_token_id)
-    #     tokenizer.pad_token = tokenizer.eos_token
-    #     # tokenizer(['he', 'hello w '], padding=True)
-    #
-    #     # tokenizer.pad_token_id = tokenizer.eos_token_id
-    #     # tokenizer.pad_token = tokenizer.eos_token
-    #     print(tokenizer.pad_token, tokenizer.pad_token_id)
 
     ##############################################################
     ################# ADJUST TOKENIZER ###########################
@@ -370,190 +302,54 @@ def main():
     print(tokenizer.eos_token, tokenizer.eos_token_id)
     print(tokenizer.bos_token, tokenizer.bos_token_id)
 
-    if model_args.tuning_mode == 'prefixtune':  # prefixtune
-        # TODO: Marker -- start running here!
-        print("--- Create prefix tuning model ---")
+    if model_args.tuning_mode == 'prefixtune':
+        gpt2 = model.requires_grad_(False)
+        optim_prefix_bool = {"yes": True, "no": False}[model_args.optim_prefix]
 
-        for param in model.base_model.parameters():
-            param.requires_grad = False
-        gpt2 = model
+        # should clone the config and construct it.
+        config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
+        config_prefix._my_arg_tune_mode = model_args.tuning_mode
+        config_prefix._my_arg_task_mode = data_args.task_mode
+        config_prefix._my_arg_control = True
+        config_prefix.train_weights = data_args.train_embs
+        config_prefix.optim_prefix = optim_prefix_bool
+        config_prefix.preseqlen = model_args.preseqlen
+        config_prefix.use_infix = (data_args.format_mode == 'infix')
+        config_prefix.format_mode = data_args.format_mode
+        config_prefix.prefix_dropout = model_args.prefix_dropout
+        config_prefix.vocab_size = len(tokenizer)
+        config_prefix.lowdata = ('lowdata' in training_args.output_dir)
+        if not config_prefix.lowdata:
+            config_prefix.lowdata = (
+                'datalevels' in training_args.output_dir and data_args.use_lowdata_token == 'yes'
+            )
+        if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
+            config_prefix.lowdata_token = tokenizer(
+                [data_args.lowdata_token], add_prefix_space=True
+            )['input_ids']
+            print(data_args.lowdata_token)
+            print(config_prefix.lowdata_token)
 
-        if data_args.distill == 'yes':
-            # load the teacher finetuned model for the task.
-            if data_args.finetuned_model_path:
-                config.return_dict = True
-                finetuned_gpt2 = GPT2LMHeadModel.from_pretrained(
-                    data_args.finetuned_model_path,
-                    cache_dir=model_args.cache_dir,
-                )
-                for param in finetuned_gpt2.base_model.parameters():
-                    param.requires_grad = False
-
-                finetuned_gpt2.to(training_args.device)
+        # some extra stuff.
+        config_prefix.init_random = model_args.init_random
+        config_prefix.mid_dim = model_args.mid_dim
+        config_prefix.init_shallow = model_args.init_shallow
+        if config_prefix.init_shallow == 'yes':
+            if model_args.init_shallow_word != 'no':
+                config_prefix.init_shallow_word = tokenizer(
+                    [model_args.init_shallow_word],
+                    add_prefix_space=True
+                )['input_ids']
             else:
-                assert False, "specify the data_args.finetuned_model_path"
-        else:
-            print("--- Not distilling ---")
+                config_prefix.init_shallow_word = None
+            print(model_args.init_shallow_word)
+            print(config_prefix.init_shallow_word)
 
-        print('loading the prefix model from ', model_args.prefixModel_name_or_path)
-        if model_args.optim_prefix == 'yes':
-            optim_prefix_bool = True
-        elif model_args.optim_prefix == 'no':
-            optim_prefix_bool = False
-        else:
-            assert False, "model_args.optim_prefix should be either yes or no"
-
-        if model_args.prefixModel_name_or_path is not None:
-            pass
-            # config2 = AutoConfig.from_pretrained(model_args.prefixModel_name_or_path, cache_dir=model_args.cache_dir)
-            #
-            # if model_args.prefix_mode == 'embedding':
-            #     model = PrefixEmbTuning.from_pretrained(
-            #         model_args.prefixModel_name_or_path,
-            #         from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-            #         config=config2,
-            #         cache_dir=model_args.cache_dir,
-            #         model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-            #         use_infix=(data_args.format_mode == 'infix')
-            #     )
-            # elif model_args.prefix_mode == 'activation':
-            #     model = PrefixTuning.from_pretrained(
-            #         model_args.prefixModel_name_or_path,
-            #         from_tf=bool(".ckpt" in model_args.prefixModel_name_or_path),
-            #         config=config2,
-            #         cache_dir=model_args.cache_dir,
-            #         model_gpt2=gpt2, optim_prefix=optim_prefix_bool, preseqlen=model_args.preseqlen,
-            #         use_infix=(data_args.format_mode == 'infix')
-            #     )
-            # else:
-            #     assert False, "invalid prefix mode"
-
-        else:
-
-            # should clone the config and construct it.
-            config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
-            config_prefix._my_arg_tune_mode = model_args.tuning_mode
-            config_prefix._my_arg_task_mode = data_args.task_mode
-            config_prefix._my_arg_control = True
-            config_prefix.train_weights = data_args.train_embs
-            config_prefix.optim_prefix = optim_prefix_bool
-            config_prefix.preseqlen = model_args.preseqlen
-            config_prefix.use_infix = (data_args.format_mode == 'infix')
-            config_prefix.format_mode = data_args.format_mode
-            config_prefix.prefix_dropout = model_args.prefix_dropout
-            config_prefix.vocab_size = len(tokenizer)
-            config_prefix.lowdata = ('lowdata' in training_args.output_dir)
-            if not config_prefix.lowdata:
-                config_prefix.lowdata = (
-                    'datalevels' in training_args.output_dir and data_args.use_lowdata_token == 'yes')
-            if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
-                config_prefix.lowdata_token = tokenizer([data_args.lowdata_token],
-                                                        add_prefix_space=True)['input_ids']  # return_tensors='np',
-                print(data_args.lowdata_token)
-                print(config_prefix.lowdata_token)
-
-            # some extra stuff.
-            config_prefix.init_random = model_args.init_random
-            config_prefix.mid_dim = model_args.mid_dim
-            config_prefix.init_shallow = model_args.init_shallow
-            if config_prefix.init_shallow == 'yes':
-                if model_args.init_shallow_word != 'no':
-                    config_prefix.init_shallow_word = tokenizer(
-                        [model_args.init_shallow_word],
-                        add_prefix_space=True
-                    )['input_ids']
-                else:
-                    config_prefix.init_shallow_word = None
-                print(model_args.init_shallow_word)
-                print(config_prefix.init_shallow_word)
-
-            print('training the prefix model from scratch. ')
-            if model_args.prefix_mode == 'embedding':
-                # specific parametrization for embedding.
-                config_prefix.parametrize_emb = model_args.parametrize_emb
-                model = PrefixEmbTuning(config_prefix, model_gpt2=gpt2)
-
-            elif model_args.prefix_mode == 'activation':
-                # TODO: Marker --
-                print("--- Create the activation tuning head ---")
-                model = PrefixTuning(config_prefix, model_gpt2=gpt2)
-            else:
-                assert False, "invalid prefix mode"
-
-    # --- Not useful for me ---
-    elif model_args.tuning_mode == 'finetune-top':
-        # print(model.config)
-        # print(model)
-        for param in model.base_model.parameters():
-            param.requires_grad = False
-
-        top_layers = model_args.top_layers
-        total_params = 0
-        if top_layers == 0:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name:
-                    print(name)
-                    param.requires_grad = True
-                    total_params += param.numel()
-        elif top_layers == 1:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name or 'transformer.h.23.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    total_params += param.numel()
-
-        elif top_layers == 2:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.wte' in name or 'transformer.h.23.' in name or \
-                    'transformer.h.22.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 22:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.h.23.' in name or \
-                    'transformer.h.22.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 11:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name or 'transformer.h.23.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-
-        elif top_layers == 00:
-            for name, param in model.named_parameters():
-                if 'transformer.ln_f.' in name:
-                    print(name)
-                    param.requires_grad = True
-                    print(param.shape, param.numel())
-                    total_params += param.numel()
-        print('the total number of trainable parameters is {}'.format(total_params))
-
-
-    elif model_args.tuning_mode == 'adaptertune':
-        print(model_args.tuning_mode)
-
-        for param in model.base_model.parameters():
-            param.requires_grad = False
-
-        total_params = 0
-        for name, param in model.named_parameters():
-            if 'adapter_block' in name:
-                print(name, end=' ')
-                param.requires_grad = True
-                print(param.shape, param.numel())
-                total_params += param.numel()
-
-        print('the total number of trainable parameters is {}'.format(total_params))
-    # --- Not useful for me ---
+        model = PrefixTuning(config_prefix, model_gpt2=gpt2)
+    elif model_args.tuning_mode == "full":
+        model.requires_grad_(True)
+    else:
+        raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
     ##############################################################
     #################LOADING DATASETS ###########################
@@ -561,7 +357,7 @@ def main():
 
     train_dataset = (
         get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, training_args=training_args,
-                    finetune_mode=(model_args.tuning_mode == 'finetune'))  # if training_args.do_train else None
+                    finetune_mode=(model_args.tuning_mode == 'finetune'))
     )
     eval_dataset = (
         get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
@@ -576,7 +372,6 @@ def main():
             max_span_length=data_args.max_span_length,
         )
     else:
-
         if data_args.task_mode == 'embMatch':
             data_collator = DataCollatorForEmbMatchLanguageModeling(
                 tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
@@ -632,67 +427,25 @@ def main():
                 tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
             )
 
-    if (model_args.tuning_mode == 'prefixtune'):
-        if data_args.distill == 'yes':
-            trainer = Trainer_Prefix(
-                model=model,
-                tokenizer=tokenizer,
-                model_gpt2=gpt2,
-                args=training_args,
-                prediction_loss_only=True,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                data_collator=data_collator,
-                task_mode=data_args.task_mode,
-                use_dropout=(model_args.use_dropout == 'yes'),
-                distill=True,
-                matching_objective=data_args.matching_objective,
-                finetuned_gpt2=finetuned_gpt2
-            )
+    if model_args.tuning_mode == 'prefixtune':
+        # Vocab size is 50256, train data size is 42061.
+        trainer = Trainer_Prefix(
+            model=model,
+            tokenizer=tokenizer,
+            model_gpt2=gpt2,
+            args=training_args,
+            prediction_loss_only=True,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            data_collator=data_collator,
+            task_mode=data_args.task_mode,
+            use_dropout=(model_args.use_dropout == 'yes'),
+        )
 
-        else:
-            gpt2_num_params = sum(param.numel() for param in gpt2.parameters())
-            print(f"gpt2 has {gpt2_num_params / 1e6:.6f} million parameters")
-
-            # Vocab size is 50256.
-            # train data size is 42061.
-
-            # TODO: Marker -- instantiate trainer!
-            print("--- Create Trainer Prefix ---")
-            trainer = Trainer_Prefix(
-                model=model,
-                tokenizer=tokenizer,
-                model_gpt2=gpt2,
-                args=training_args,
-                prediction_loss_only=True,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                data_collator=data_collator,
-                task_mode=data_args.task_mode,
-                use_dropout=(model_args.use_dropout == 'yes'),
-            )
-
-            num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
-            num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
-            t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
-            trainer.create_optimizer_and_scheduler(t_total)
-
-            if privacy_args.nonprivate == "no":
-                import privacy_utils
-                privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
-                    batch_size=training_args.per_device_train_batch_size,
-                    module=model,
-                    sample_size=len(train_dataset),
-                    epochs=training_args.num_train_epochs,
-                    # Privacy specific arguments.
-                    max_grad_norm=privacy_args.per_example_max_grad_norm,
-                    noise_multiplier=privacy_args.noise_multiplier,
-                    target_epsilon=privacy_args.target_epsilon,
-                    target_delta=privacy_args.target_delta,
-                )
-                privacy_engine.attach(trainer.optimizer)
-                print("--- Privacy!!! ---")
-                print(privacy_engine)
+        num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
+        num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
+        t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
+        trainer.create_optimizer_and_scheduler(t_total)
 
     else:
         trainer = Trainer(
@@ -705,8 +458,21 @@ def main():
             prediction_loss_only=True,
         )
 
-    # Training
+    if privacy_args.nonprivate == "no":
+        privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
+            batch_size=training_args.per_device_train_batch_size,
+            module=model,
+            sample_size=len(train_dataset),
+            epochs=training_args.num_train_epochs,
+            # Privacy specific arguments.
+            max_grad_norm=privacy_args.per_example_max_grad_norm,
+            noise_multiplier=privacy_args.noise_multiplier,
+            target_epsilon=privacy_args.target_epsilon,
+            target_delta=privacy_args.target_delta,
+        )
+        privacy_engine.attach(trainer.optimizer)
 
+    # Training
     if training_args.do_train:
         model_path = (
             model_args.model_name_or_path
@@ -719,24 +485,14 @@ def main():
         if trainer.is_world_master():
             tokenizer.save_pretrained(training_args.output_dir)
 
-        # TODO: Marker -- training
-        print(f"--- Training ---")
+        # TODO: Make sure this saving is correct across both cases!
         trainer.train(model_path=model_path)
-
-        if 'lowdata' not in training_args.output_dir:
-            trainer.save_model()
-
-            if model_args.tuning_mode == 'bothtune':
-                gpt2_dir = os.path.join(training_args.output_dir, 'gpt2')
-                gpt2.save_pretrained(gpt2_dir)
-
-        # # For convenience, we also re-save the tokenizer to the same directory,
-        # # so that you can share your model easily on huggingface.co/models =)
-        # if trainer.is_world_master():
-        #     tokenizer.save_pretrained(training_args.output_dir)
+        trainer.save_model()
+        if model_args.tuning_mode == 'bothtune':
+            gpt2_dir = os.path.join(training_args.output_dir, 'gpt2')
+            gpt2.save_pretrained(gpt2_dir)
 
     # Evaluation
-    # TODO: Marker -- Evaluation.
     results = {}
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
@@ -753,127 +509,7 @@ def main():
                 for key in sorted(result.keys()):
                     logger.info("  %s = %s", key, str(result[key]))
                     writer.write("%s = %s\n" % (key, str(result[key])))
-
         results.update(result)
-
-    # --- Useless for me ---
-    if 'lowdata' in training_args.output_dir:
-        print('evaluating the PPL on full dev data. ')
-        data_args.eval_data_file = "/u/scr/xlisali/e2e_data/src1_valid.txt"
-        eval_dataset = (
-            get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
-                        training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
-            if training_args.do_eval
-            else None
-        )
-        print(len(eval_dataset))
-        eval_output = trainer.evaluate(eval_dataset)
-        perplexity = math.exp(eval_output["eval_loss"])
-        print('                full_dev_perplexity = {}'.format(perplexity))
-
-        del model
-        del trainer
-        torch.cuda.empty_cache()
-        # gpt2 = gpt2.cpu()
-        elem = os.path.abspath(training_args.output_dir)
-        checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
-        assert len(checkpoint_path) == 1
-        checkpoint_path = checkpoint_path[0]
-
-        print('running evaluation on ', checkpoint_path)
-
-        # os.system('python gen.py data2text yes valid {} no'.format(checkpoint_path))
-        # os.system('python gen.py data2text yes test {} no'.format(checkpoint_path))
-
-    elif data_args.task_mode == 'data2text':
-        del model
-        del trainer
-        if model_args.tuning_mode == 'prefixtune' or model_args.tuning_mode == 'bothtune':
-            del gpt2
-        torch.cuda.empty_cache()
-        elem = os.path.abspath(training_args.output_dir)
-        checkpoint_path = elem
-
-        print('running evaluation on ', checkpoint_path)
-        print('suggested code:')
-        print('python gen.py data2text yes valid {} no'.format(checkpoint_path))
-        print('python gen.py data2text yes test {} no'.format(checkpoint_path))
-
-        os.system('python gen.py data2text yes valid {} no'.format(checkpoint_path))
-        os.system('python gen.py data2text yes test {} no'.format(checkpoint_path))
-
-        if 'earlystop' in training_args.output_dir:
-            elem = os.path.abspath(training_args.output_dir)
-            checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
-            assert len(checkpoint_path) == 1
-            checkpoint_path = checkpoint_path[0]
-
-            print('running early stopping evaluation on ', checkpoint_path)
-
-            os.system('python gen.py data2text yes valid {} no'.format(checkpoint_path))
-            os.system('python gen.py data2text yes test {} no'.format(checkpoint_path))
-
-
-
-    elif data_args.task_mode == 'webnlg':
-        del model
-        del trainer
-        if model_args.tuning_mode == 'prefixtune':
-            del gpt2
-        torch.cuda.empty_cache()
-        elem = os.path.abspath(training_args.output_dir)
-        checkpoint_path = elem
-
-        print('running evaluation on ', checkpoint_path)
-
-        print('python gen.py webnlg yes valid {} no'.format(checkpoint_path))
-        print('python gen.py webnlg yes test {} no'.format(checkpoint_path))
-        os.system('python gen.py webnlg yes valid {} no'.format(checkpoint_path))
-        os.system('python gen.py webnlg yes test {} no'.format(checkpoint_path))
-
-        # also run for early stopping:
-        if 'earlystop' in training_args.output_dir:
-            elem = os.path.abspath(training_args.output_dir)
-            checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
-            assert len(checkpoint_path) == 1
-            checkpoint_path = checkpoint_path[0]
-
-            print('running early stopping evaluation on ', checkpoint_path)
-
-            print('python gen.py webnlg yes valid {} no'.format(checkpoint_path))
-            print('python gen.py webnlg yes test {} no'.format(checkpoint_path))
-            os.system('python gen.py webnlg yes valid {} no'.format(checkpoint_path))
-            os.system('python gen.py webnlg yes test {} no'.format(checkpoint_path))
-
-
-    elif data_args.task_mode == 'triples':
-        del model
-        del trainer
-        if model_args.tuning_mode == 'prefixtune':
-            del gpt2
-        torch.cuda.empty_cache()
-        elem = os.path.abspath(training_args.output_dir)
-        checkpoint_path = elem
-
-        print('running evaluation on ', checkpoint_path)
-
-        print('python gen.py triples yes valid {} no'.format(checkpoint_path))
-        os.system('python gen.py triples yes valid {} no'.format(checkpoint_path))
-        os.system('python gen.py triples yes test {} no'.format(checkpoint_path))
-
-        if 'earlystop' in training_args.output_dir:
-            elem = os.path.abspath(training_args.output_dir)
-            checkpoint_path = glob.glob(os.path.join(elem, '*checkpoint*'))
-            assert len(checkpoint_path) == 1
-            checkpoint_path = checkpoint_path[0]
-
-            print('running early stopping evaluation on ', checkpoint_path)
-
-            os.system('python gen.py triples yes valid {} no'.format(checkpoint_path))
-            os.system('python gen.py triples yes test {} no'.format(checkpoint_path))
-
-    # --- Useless for me ---
-
     return results
 
 
