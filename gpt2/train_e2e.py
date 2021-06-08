@@ -1,3 +1,4 @@
+# TODO: Deprecate this file!
 import argparse
 import os
 import sys
@@ -261,8 +262,6 @@ if __name__ == '__main__':
 
     if args.notes is not None:
         Model_FILE += '_{}'.format(args.notes)
-
-    # Model_FILE = 'save_e2e_models/{}'.format(Model_FILE)
 
     logging_dir = os.path.join(folder_name, 'runs', Model_FILE)
     Model_FILE = '{}{}'.format(folder_name, Model_FILE)
