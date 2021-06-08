@@ -458,9 +458,10 @@ def main():
             config_prefix.init_shallow = model_args.init_shallow
             if config_prefix.init_shallow == 'yes':
                 if model_args.init_shallow_word != 'no':
-                    config_prefix.init_shallow_word = tokenizer([model_args.init_shallow_word],
-                                                                add_prefix_space=True)[
-                        'input_ids']  # return_tensors='np',
+                    config_prefix.init_shallow_word = tokenizer(
+                        [model_args.init_shallow_word],
+                        add_prefix_space=True
+                    )['input_ids']
                 else:
                     config_prefix.init_shallow_word = None
                 print(model_args.init_shallow_word)
