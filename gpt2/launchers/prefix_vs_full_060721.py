@@ -88,12 +88,15 @@ def _get_command(
 def main(
     seeds=(0, 1, 2),  # Seeds over which to randomize.
     mode="local",
+    max_steps=None,
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
     jobs_in_queue=0,  # Number of jobs in the queue.
 ):
     if mode == "local":
+        if max_steps is None:
+            max_steps = 1
         command = _get_command(
             seed=0,
             train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
@@ -101,7 +104,7 @@ def main(
             epochs=1,
             tuning_mode="prefixtune",
             mode=mode,
-            max_steps=100,
+            max_steps=max_steps,
         )
         print(command)
         os.system(command)
