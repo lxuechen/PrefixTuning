@@ -13,6 +13,7 @@ class PrefixTuning(GPT2PreTrainedModel):
         self.match_n_embd = config.n_embd // config.n_head
         self.n_embd = config.n_embd
 
+        # TODO: What's this arg doing???
         if hasattr(config, 'optim_prefix'):
             self.optim_prefix = config.optim_prefix
         else:

@@ -253,10 +253,6 @@ class DataTrainingArguments:
                           "for the initialization trick.  "}
     )
 
-    train_embs: Optional[str] = field(
-        default='no', metadata={"help": "whether the train word embeddings"}
-    )
-
     max_source_length: Optional[int] = field(
         default=512, metadata={"help": "the max source length of summarization data. "}
     )
@@ -268,10 +264,6 @@ class DataTrainingArguments:
     val_max_target_length: Optional[int] = field(
         default=100, metadata={"help": "the max target length for dev data. "}
     )
-
-    # controlprefix: Optional[str] = field(
-    #     default="yes", metadata={"help": "The control mode"}
-    # )
 
     block_size: int = field(
         default=-1,

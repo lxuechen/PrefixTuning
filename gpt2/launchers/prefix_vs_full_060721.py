@@ -5,37 +5,104 @@ new experiments helps with organization and avoids the messiness once there are
 many experiments.
 
 date:
-    TODO: Put the date (e.g. 052021)
+    060721
 purpose:
-    TODO: Put why you run this experiment
+    Compare prefix-tuning and full-tuning.
 notes:
-    TODO: Put additional notes (e.g. is this a patch of something?)
+    NA
 run:
-    TODO: Put the command to generate the .sh script
+    python -m gpt2.launchers.prefix_vs_full_060721
 """
 
 import os
 
 import fire
 
+TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
+TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
 
-def _get_command():
-    pass
+
+def _get_command(
+    seed,
+    train_dir,
+    logging_dir,
+    epochs,
+    tuning_mode,
+
+    # Don't modify these easily!
+    model_type="gpt2",
+    model_name_or_path="gpt2-medium",
+):
+    # @formatter:off
+    # TODO: What is train_embs, --init_random no, --objective_mode 1,
+    logging_dir = train_dir
+    command = f'python -m gpt2.run_language_modeling \
+        --output_dir {train_dir} \
+        --model_type {model_type} \
+        --model_name_or_path {model_name_or_path} \
+        --tokenizer_name {model_name_or_path} \
+        --per_device_train_batch_size 5 \
+        --per_device_eval_batch_size 5 \
+        --save_steps 500000 \
+        --num_train_epochs {epochs} \
+        --do_train \
+        --do_eval \
+        --train_data_file {TRAIN_FILE} \
+        --eval_data_file {TEST_FILE} \
+        --tuning_mode {tuning_mode} \
+        --logging_dir {logging_dir} \
+        --optim_prefix yes \
+        --preseqlen 5 \
+        --prefix_mode activation \
+        --format_mode cat \
+        --gradient_accumulation_steps 1 \
+        --learning_rate 5e-05 \
+        --weight_decay 0.0 \
+        --seed {seed} \
+        --mid_dim 512 \
+        --init_random no \
+        --use_dropout no \
+        --prefix_dropout 0.0 \
+        --objective_mode 1 \
+        --evaluate_during_training \
+        --eval_steps 5000 \
+        --noise_multiplier 1.0 \
+        --nonprivate yes \
+        --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/'
+    # @formatter:off
+    # TODO: Support nlprun.
+    return command
 
 
 def main(
     seeds=(0, 1, 2),  # Seeds over which to randomize.
+    mode="local",
+
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
     jobs_in_queue=0,  # Number of jobs in the queue.
 ):
-    commands = "#!/bin/bash\n"
-    for seed in seeds:
-        pass
+    if mode == "local":
+        command = _get_command(
+            seed=0,
+            train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
+            logging_dir="",
+            epochs=1,
+            tuning_mode="prefixtune",
+        )
+        print(command)
+        os.system(command)
 
-    script_path = os.path.join('.', 'private_finetuning', 'scripts', f'glue_051921.sh')
-    with open(script_path, 'w') as f:
-        f.write(commands)
+    elif mode == "submit":
+        commands = "#!/bin/bash\n"
+        for seed in seeds:
+            pass
+
+        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_060721.sh')
+        with open(script_path, 'w') as f:
+            f.write(commands)
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
 
 
 if __name__ == "__main__":
