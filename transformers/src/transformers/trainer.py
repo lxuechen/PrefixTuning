@@ -1377,8 +1377,6 @@ class Trainer:
         if self.args.past_index >= 0:
             self._past = None
 
-        prediction_loss_only = False
-
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
         for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)

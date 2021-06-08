@@ -490,15 +490,15 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
+        trainer.args.prediction_loss_only = False
         eval_output = trainer.evaluate(eval_dataset)
         train_output = trainer.evaluate(train_dataset)
 
-        # TODO: Make sure the metric is consistent for full and prefix.
-        # TODO: Test prefix, full, dp, non-dp.
-        # TODO: You also need the trajectory!!!
+        # TODO: Ensure memory is okay with full
+        # TODO:
         results = {
-            "train_perplexity": train_output["eval_loss"],
-            "eval_perplexity": eval_output["eval_loss"],
+            "train_eval_loss": train_output["eval_loss"],
+            "eval_lin_logprob": eval_output["lin_logprob"],
         }
         output_eval_file = os.path.join(training_args.output_dir, "results.json")
         utils.jdump(results, output_eval_file)
