@@ -9,9 +9,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from nltk import word_tokenize
 import numpy as np
 import torch
+import torch.nn.functional as F
 from packaging import version
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
@@ -19,9 +19,6 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from tqdm.auto import tqdm, trange
-from torch.nn.utils.rnn import pad_sequence
-import random
-
 from transformers.data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
 from transformers.file_utils import is_datasets_available, is_torch_tpu_available
 from transformers.integrations import (
@@ -36,28 +33,15 @@ from transformers.integrations import (
 )
 from transformers.modeling_auto import MODEL_FOR_QUESTION_ANSWERING_MAPPING
 from transformers.modeling_utils import PreTrainedModel
-from transformers.optimization import AdamW, get_linear_schedule_with_warmup, get_constant_schedule_with_warmup
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers.trainer_utils import (
-    PREFIX_CHECKPOINT_DIR,
-    BestRun,
-    EvalPrediction,
-    EvaluationStrategy,
-    HPSearchBackend,
-    PredictionOutput,
-    TrainOutput,
-    default_compute_objective,
-    default_hp_space,
-    distributed_broadcast_scalars,
-    distributed_concat,
-    nested_concat,
-    nested_numpify,
-    nested_xla_mesh_reduce,
-    set_seed,
-)
+from transformers.trainer_utils import (BestRun, default_compute_objective, default_hp_space,
+                                        distributed_broadcast_scalars, distributed_concat, EvalPrediction,
+                                        EvaluationStrategy, HPSearchBackend, nested_concat, nested_numpify,
+                                        nested_xla_mesh_reduce, PredictionOutput, PREFIX_CHECKPOINT_DIR, set_seed,
+                                        TrainOutput)
 from transformers.training_args import TrainingArguments
 from transformers.utils import logging
-
 
 _use_native_amp = False
 _use_apex = False
@@ -65,7 +49,7 @@ EPS = 1e-12
 INIT_GUMBEL_TEMP = 5.0
 
 control_lst = ['positive', 'negative', 'neutral']
-Control_Temp = {'positive': 3967, 'negative':4633, 'neutral':8500}
+Control_Temp = {'positive': 3967, 'negative': 4633, 'neutral': 8500}
 control_Map = [torch.LongTensor([3967]), torch.LongTensor([4633]), torch.LongTensor([8500])]
 sst_lst = [(0, 2), (1, 3), (4,)]
 sst_standard = ["positive", "negative", "very positive", "very negative", "neutral"]
@@ -108,7 +92,6 @@ if is_optuna_available():
 if is_ray_available():
     from ray import tune
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -126,6 +109,7 @@ def torch_distributed_zero_first(local_rank: int):
     if local_rank == 0:
         torch.distributed.barrier()
 
+
 def helper_token2bpe(offsets):
     full_lst = []
     for example_offset in offsets:
@@ -133,7 +117,7 @@ def helper_token2bpe(offsets):
         token2bpe = []
         token_idx = -1
         # print(example_offset)
-        for bpe_idx, (a,b) in enumerate(example_offset):
+        for bpe_idx, (a, b) in enumerate(example_offset):
             # print(token2bpe, a, b, bpe_idx)
             if b - a > 0:
                 if a == 0:
@@ -150,6 +134,7 @@ def helper_token2bpe(offsets):
                 bpe2token.append(None)
         full_lst.append((bpe2token, token2bpe))
     return full_lst
+
 
 class SequentialDistributedSampler(Sampler):
     """
@@ -188,7 +173,7 @@ class SequentialDistributedSampler(Sampler):
         ), f"Indices length {len(indices)} and total size {self.total_size} mismatched"
 
         # subsample
-        indices = indices[self.rank * self.num_samples : (self.rank + 1) * self.num_samples]
+        indices = indices[self.rank * self.num_samples: (self.rank + 1) * self.num_samples]
         assert (
             len(indices) == self.num_samples
         ), f"Indices length {len(indices)} and sample number {self.num_samples} mismatched"
@@ -214,7 +199,8 @@ class Trainer_Prefix:
         model (:class:`~transformers.PreTrainedModel`, `optional`):
             The model to train, evaluate or use for predictions. If not provided, a ``model_init`` must be passed.
         args (:class:`~transformers.TrainingArguments`, `optional`):
-            The arguments to tweak for training. Will default to a basic instance of :class:`~transformers.TrainingArguments`
+            The arguments to tweak for training. Will default to a basic instance of
+            :class:`~transformers.TrainingArguments`
             with the ``output_dir`` set to a directory named `tmp_trainer` in the current directory if not provided.
         data_collator (:obj:`DataCollator`, `optional`):
             The function to use to form a batch from a list of elements of :obj:`train_dataset` or
@@ -262,7 +248,7 @@ class Trainer_Prefix:
         task_mode: Optional[str] = None,
         use_dropout: Optional[bool] = False,
         distill: Optional[bool] = False,
-        matching_objective:Optional[str]= None,
+        matching_objective: Optional[str] = None,
         finetuned_gpt2: Optional[PreTrainedModel] = None,
         **kwargs,
     ):
@@ -274,7 +260,8 @@ class Trainer_Prefix:
         set_seed(self.args.seed)
         assert (
             model is not None or model_init is not None
-        ), "You must provide a model to use `Trainer`, either by using the `model` argument or the `model_init` argument."
+        ), "You must provide a model to use `Trainer`, either by using the `model` argument or the `model_init` " \
+           "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
         self.gpt2 = model_gpt2.to(args.device) if model_gpt2 is not None else None
@@ -305,7 +292,8 @@ class Trainer_Prefix:
         self.log_history = []
         if "prediction_loss_only" in kwargs:
             warnings.warn(
-                "Passing `prediction_loss_only` as a keyword argument is deprecated and won't be possible in a future version. Use `args.prediction_loss_only` instead.",
+                "Passing `prediction_loss_only` as a keyword argument is deprecated and won't be possible in a future "
+                "version. Use `args.prediction_loss_only` instead.",
                 FutureWarning,
             )
             self.args.prediction_loss_only = kwargs.pop("prediction_loss_only")
@@ -370,7 +358,8 @@ class Trainer_Prefix:
         ignored_columns = list(set(dataset.column_names) - set(signature_columns))
         dset_description = "" if description is None else f"in the {description} set "
         logger.info(
-            f"The following columns {dset_description}don't have a corresponding argument in `{self.model.__class__.__name__}.forward` and have been ignored: {', '.join(ignored_columns)}."
+            f"The following columns {dset_description}don't have a corresponding argument in `"
+            f"{self.model.__class__.__name__}.forward` and have been ignored: {', '.join(ignored_columns)}."
         )
         dataset.set_format(type=dataset.format["type"], columns=columns)
 
@@ -488,14 +477,16 @@ class Trainer_Prefix:
         if self.optimizer is None:
             no_decay = ["bias", "LayerNorm.weight"]
             optimizer_grouped_parameters = [
-            {
-                "params": [p for n, p in self.model.named_parameters() if (not any(nd in n for nd in no_decay)) and p.requires_grad],
-                "weight_decay": self.args.weight_decay,
-            },
-            {
-                "params": [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay) and p.requires_grad],
-                "weight_decay": 0.0,
-            },
+                {
+                    "params": [p for n, p in self.model.named_parameters() if
+                               (not any(nd in n for nd in no_decay)) and p.requires_grad],
+                    "weight_decay": self.args.weight_decay,
+                },
+                {
+                    "params": [p for n, p in self.model.named_parameters() if
+                               any(nd in n for nd in no_decay) and p.requires_grad],
+                    "weight_decay": 0.0,
+                },
             ]
 
             self.optimizer = AdamW(
@@ -518,16 +509,19 @@ class Trainer_Prefix:
 
         Environment:
             WANDB_WATCH:
-                (Optional, ["gradients", "all", "false"]) "gradients" by default, set to "false" to disable gradient logging
+                (Optional, ["gradients", "all", "false"]) "gradients" by default, set to "false" to disable gradient
+                logging
                 or "all" to log gradients and parameters
             WANDB_PROJECT:
-                (Optional): str - "huggingface" by default, set this to a custom string to store results in a different project
+                (Optional): str - "huggingface" by default, set this to a custom string to store results in a
+                different project
             WANDB_DISABLED:
                 (Optional): boolean - defaults to false, set to "true" to disable wandb entirely
         """
         if hasattr(self, "_setup_wandb"):
             warnings.warn(
-                "The `_setup_wandb` method is deprecated and won't be called in a future version, define `setup_wandb` in your subclass.",
+                "The `_setup_wandb` method is deprecated and won't be called in a future version, "
+                "define `setup_wandb` in your subclass.",
                 FutureWarning,
             )
             return self._setup_wandb()
@@ -614,7 +608,8 @@ class Trainer_Prefix:
         for key, value in params.items():
             if not hasattr(self.args, key):
                 raise AttributeError(
-                    f"Trying to set {key} in the hyperparameter search but there is no corresponding field in `TrainingArguments`."
+                    f"Trying to set {key} in the hyperparameter search but there is no corresponding field in "
+                    f"`TrainingArguments`."
                 )
             old_attr = getattr(self.args, key, None)
             # Casting value to the proper type
@@ -832,7 +827,6 @@ class Trainer_Prefix:
                     self.global_step += 1
                     self.epoch = epoch + (step + 1) / len(epoch_iterator)
 
-
                     if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
                         self.global_step == 1 and self.args.logging_first_step
                     ):
@@ -868,7 +862,7 @@ class Trainer_Prefix:
                             self.curr_best_eval = metrics["eval_loss"]
                             if hasattr(model, "module"):
                                 assert (
-                                        model.module is self.model
+                                    model.module is self.model
                                 ), f"Module {model.module} should be a reference to self.model"
                             else:
                                 assert model is self.model, f"Model {model} should be a reference to self.model"
@@ -1002,8 +996,11 @@ class Trainer_Prefix:
                 Additional keyword arguments passed along to :obj:`optuna.create_study` or :obj:`ray.tune.run`. For
                 more information see:
 
-                - the documentation of `optuna.create_study <https://optuna.readthedocs.io/en/stable/reference/alias_generated/optuna.create_study.html#optuna.create_study>`__
-                - the documentation of `tune.run <https://docs.ray.io/en/latest/tune/api_docs/execution.html#tune-run>`__
+                - the documentation of `optuna.create_study
+                <https://optuna.readthedocs.io/en/stable/reference/alias_generated/optuna.create_study.html#optuna
+                .create_study>`__
+                - the documentation of `tune.run
+                <https://docs.ray.io/en/latest/tune/api_docs/execution.html#tune-run>`__
 
         Returns:
             :class:`transformers.trainer_utils.BestRun`: All the informations about the best run.
@@ -1056,7 +1053,8 @@ class Trainer_Prefix:
 
         if hasattr(self, "_log"):
             warnings.warn(
-                "The `_log` method is deprecated and won't be called in a future version, define `log` in your subclass.",
+                "The `_log` method is deprecated and won't be called in a future version, define `log` in your "
+                "subclass.",
                 FutureWarning,
             )
             return self._log(logs, iterator=iterator)
@@ -1114,7 +1112,7 @@ class Trainer_Prefix:
                 inputs[k] = v.to(self.args.device)
 
         if self.args.past_index >= 0 and self._past is not None:
-            assert  False
+            assert False
             inputs["mems"] = self._past
 
         return inputs
@@ -1139,7 +1137,8 @@ class Trainer_Prefix:
         """
         if hasattr(self, "_training_step"):
             warnings.warn(
-                "The `_training_step` method is deprecated and won't be called in a future version, define `training_step` in your subclass.",
+                "The `_training_step` method is deprecated and won't be called in a future version, "
+                "define `training_step` in your subclass.",
                 FutureWarning,
             )
             return self._training_step(model, inputs, self.optimizer)
@@ -1178,15 +1177,11 @@ class Trainer_Prefix:
             # print(loss)
             loss.backward()
 
-        # print('max allocated_memory:', torch.cuda.max_memory_allocated(0), 'total_memory:', torch.cuda.get_device_properties(0).total_memory,
+        # print('max allocated_memory:', torch.cuda.max_memory_allocated(0), 'total_memory:',
+        # torch.cuda.get_device_properties(0).total_memory,
         #       'percentage', torch.cuda.max_memory_allocated(0)/torch.cuda.get_device_properties(0).total_memory)
 
-
         return loss.detach()
-
-
-
-
 
     def compute_loss(self, model, inputs, gpt2_model=None):
         """
@@ -1228,12 +1223,12 @@ class Trainer_Prefix:
 
         if self.matching_objective == 'kl':
             # distrib_finetuned=torch.log_softmax(output_finetuned.logits[:,:,:-2], dim=-1)  #bsz, seqlen, vocab
-            distrib_finetuned=torch.log_softmax(output_finetuned.logits, dim=-1)  #bsz, seqlen, vocab
+            distrib_finetuned = torch.log_softmax(output_finetuned.logits, dim=-1)  # bsz, seqlen, vocab
             distrib_prefix = torch.log_softmax(outputs.logits, dim=-1)  # bsz, seqlen, vocab
-            loss = torch.sum(distrib_finetuned.exp() * (distrib_finetuned - distrib_prefix), dim=-1) #bsz, seqlen
+            loss = torch.sum(distrib_finetuned.exp() * (distrib_finetuned - distrib_prefix), dim=-1)  # bsz, seqlen
 
         elif self.matching_objective == 'logits':
-            loss = torch.norm(output_finetuned.logits - outputs.logits, dim=-1)  #bsz, seqlen
+            loss = torch.norm(output_finetuned.logits - outputs.logits, dim=-1)  # bsz, seqlen
             # loss = torch.norm(output_finetuned.logits[:,:,:-2] - outputs.logits, dim=-1)  #bsz, seqlen
 
         elif self.matching_objective == 'last_layer':
@@ -1242,7 +1237,7 @@ class Trainer_Prefix:
         else:
             assert False, "invalid matching_objective"
 
-        return  loss.sum(dim=-1).mean()
+        return loss.sum(dim=-1).mean()
 
     def is_local_master(self) -> bool:
         """
@@ -1413,8 +1408,6 @@ class Trainer_Prefix:
 
         return output.metrics
 
-
-
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
         """
         Run prediction and returns predictions and potential metrics.
@@ -1450,7 +1443,8 @@ class Trainer_Prefix:
         """
         if hasattr(self, "_prediction_loop"):
             warnings.warn(
-                "The `_prediction_loop` method is deprecated and won't be called in a future version, define `prediction_loop` in your subclass.",
+                "The `_prediction_loop` method is deprecated and won't be called in a future version, "
+                "define `prediction_loop` in your subclass.",
                 FutureWarning,
             )
             return self._prediction_loop(dataloader, description, prediction_loss_only=prediction_loss_only)
@@ -1487,8 +1481,9 @@ class Trainer_Prefix:
         if self.gpt2 is not None:
             self.gpt2.eval()
 
-        print(model.training)
-        print(self.gpt2.training)
+        # My additions.
+        tok_logprobs: List[float] = []
+        lin_logprobs: List[float] = []
 
         if is_torch_tpu_available():
             dataloader = pl.ParallelLoader(dataloader, [self.args.device]).per_device_loader(self.args.device)
@@ -1506,6 +1501,14 @@ class Trainer_Prefix:
                 preds = logits if preds is None else nested_concat(preds, logits, dim=0)
                 temp_logits = [torch.log_softmax(x) for x in logits]
                 entropy_losses.extend([(x.exp() * x).sum() for x in temp_logits])
+
+                logprob = F.cross_entropy(logits.permute(0, 2, 1), labels, reduction="none")  # (B, L).
+                logprob = logprob * (inputs['labels'] != -100)  # (B, L).
+
+                tok_logprobs.extend(logprob.view(-1).tolist())
+                lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
+                del logprob
+
             if labels is not None:
                 label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
 
@@ -1545,8 +1548,8 @@ class Trainer_Prefix:
             if self.args.local_rank != -1:
                 metrics["eval_loss"] = (
                     distributed_broadcast_scalars(eval_losses, num_total_examples=self.num_examples(dataloader))
-                    .mean()
-                    .item()
+                        .mean()
+                        .item()
                 )
             else:
                 metrics["eval_loss"] = np.mean(eval_losses)
@@ -1557,7 +1560,12 @@ class Trainer_Prefix:
                 metrics[f"eval_{key}"] = metrics.pop(key)
         if len(entropy_losses) > 0:
             metrics['entropy'] = np.mean(entropy_losses)
-            print('entropy', metrics['entropy'] )
+
+        if len(tok_logprobs) > 0:
+            metrics['tok_logprob'] = np.mean(tok_logprobs)
+
+        if len(lin_logprobs) > 0:
+            metrics['lin_logprob'] = np.mean(lin_logprobs)
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 

@@ -1403,7 +1403,7 @@ class Trainer:
             if labels is not None:
                 pass
 
-            if batch_idx + 1 >= self.args.max_eval_steps:
+            if self.args.max_eval_steps > 0 and batch_idx + 1 >= self.args.max_eval_steps:
                 break
 
         if self.args.past_index and hasattr(self, "_past"):
@@ -1456,8 +1456,10 @@ class Trainer:
         if len(entropy_losses2) > 0:
             metrics['entropy2'] = np.mean(entropy_losses2)
 
-        if len(logprob) > 0:
+        if len(tok_logprobs) > 0:
             metrics['tok_logprob'] = np.mean(tok_logprobs)
+
+        if len(lin_logprobs) > 0:
             metrics['lin_logprob'] = np.mean(lin_logprobs)
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
