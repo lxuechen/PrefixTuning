@@ -92,6 +92,9 @@ def main(
     mode="local",
     max_steps=None,
 
+    # Don't modify these!
+    tuning_mode="prefixtune",
+
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
     jobs_in_queue=0,  # Number of jobs in the queue.
@@ -104,7 +107,7 @@ def main(
             train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
             logging_dir="",
             epochs=1,
-            tuning_mode="prefixtune",
+            tuning_mode=tuning_mode,
             mode=mode,
             max_steps=max_steps,
             max_eval_steps=max_steps,

@@ -415,7 +415,7 @@ def main():
             print(config_prefix.init_shallow_word)
 
         model = PrefixTuning(config_prefix, model_gpt2=gpt2)
-    elif model_args.tuning_mode == "full":
+    elif model_args.tuning_mode == "fulltune":
         model.requires_grad_(True)
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
@@ -490,7 +490,6 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        # TODO: Enable partial eval.
         eval_output = trainer.evaluate(eval_dataset)
         train_output = trainer.evaluate(train_dataset)
 
