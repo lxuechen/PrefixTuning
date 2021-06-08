@@ -1491,6 +1491,8 @@ class Trainer_Prefix:
         if self.args.past_index >= 0:
             self._past = None
 
+        # TODO: This is a hack.
+        prediction_loss_only = True
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
         for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
@@ -1558,6 +1560,9 @@ class Trainer_Prefix:
         for key in list(metrics.keys()):
             if not key.startswith("eval_"):
                 metrics[f"eval_{key}"] = metrics.pop(key)
+
+        metrics['lin_logprob'] = metrics["eval_loss"]
+
         if len(entropy_losses) > 0:
             metrics['entropy'] = np.mean(entropy_losses)
 
