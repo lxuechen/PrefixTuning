@@ -1474,16 +1474,18 @@ class Trainer_Prefix:
         logger.info("  Num examples = %d", self.num_examples(dataloader))
         logger.info("  Batch size = %d", batch_size)
         eval_losses: List[float] = []
-        preds: torch.Tensor = None
-        label_ids: torch.Tensor = None
+        preds: Optional[torch.Tensor] = None
+        label_ids: Optional[torch.Tensor] = None
         entropy_losses: List[float] = []
-        model.eval()
-        if self.gpt2 is not None:
-            self.gpt2.eval()
+        entropy_losses2: List[float] = []
 
         # My additions.
         tok_logprobs: List[float] = []
         lin_logprobs: List[float] = []
+
+        model.eval()
+        if self.gpt2 is not None:
+            self.gpt2.eval()
 
         if is_torch_tpu_available():
             dataloader = pl.ParallelLoader(dataloader, [self.args.device]).per_device_loader(self.args.device)
@@ -1491,25 +1493,29 @@ class Trainer_Prefix:
         if self.args.past_index >= 0:
             self._past = None
 
-        # TODO: This is a hack.
-        prediction_loss_only = True
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
         for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
-            batch_size = inputs[list(inputs.keys())[0]].shape[0]
+
             if loss is not None:
-                eval_losses.extend([loss] * batch_size)
+                eval_losses.extend([loss] * logits.size(0))
+
             if logits is not None:
-                preds = logits if preds is None else nested_concat(preds, logits, dim=0)
-                temp_logits = [torch.log_softmax(x) for x in logits]
-                entropy_losses.extend([(x.exp() * x).sum() for x in temp_logits])
+                valid_locations = (inputs['labels'] != -100)
+                all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
+
+                entropy = (all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
+                entropy_losses.extend(entropy.view(-1).tolist())
+                entropy_losses2.extend(entropy[valid_locations].tolist())
 
                 logprob = F.cross_entropy(logits.permute(0, 2, 1), labels, reduction="none")  # (B, L).
-                logprob = logprob * (inputs['labels'] != -100)  # (B, L).
+                logprob = logprob * valid_locations  # (B, L).
 
                 tok_logprobs.extend(logprob.view(-1).tolist())
                 lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
-                del logprob
+
+                preds = logits if preds is None else nested_concat(preds, logits, dim=0)
+                del logprob, entropy, all_log_probs, valid_locations
 
             if labels is not None:
                 label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
@@ -1561,8 +1567,6 @@ class Trainer_Prefix:
             if not key.startswith("eval_"):
                 metrics[f"eval_{key}"] = metrics.pop(key)
 
-        metrics['lin_logprob'] = metrics["eval_loss"]
-
         if len(entropy_losses) > 0:
             metrics['entropy'] = np.mean(entropy_losses)
 
@@ -1602,22 +1606,16 @@ class Trainer_Prefix:
 
         with torch.no_grad():
             outputs = model(**inputs, gpt2_model=self.gpt2)
-            if has_labels:
-                # The .mean() is to reduce in case of distributed training
-                loss = outputs[0].mean().item()
-                logits = outputs[1:]
-            else:
-                loss = None
-                # Slicing so we get a tuple even if `outputs` is a `ModelOutput`.
-                logits = outputs[:]
+            loss = outputs.loss
+            if has_labels:  # The .mean() is to reduce in case of distributed training
+                loss = loss.mean().item()
+            logits = outputs.logits
+
             if self.args.past_index >= 0:
                 self._past = outputs[self.args.past_index if has_labels else self.args.past_index - 1]
 
         if prediction_loss_only:
-            return (loss, None, None)
-
-        # TODO: Fix this better... Seems all activations are returned.
-        logits = logits[0]
+            return loss, None, None
 
         if has_labels:
             labels = tuple(inputs.get(name).detach() for name in self.args.label_names)
@@ -1626,7 +1624,7 @@ class Trainer_Prefix:
         else:
             labels = None
 
-        return (loss, logits, labels)
+        return loss, logits, labels
 
     def floating_point_ops(self, inputs: Dict[str, Union[torch.Tensor, Any]]):
         """

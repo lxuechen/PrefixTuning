@@ -494,8 +494,6 @@ def main():
         eval_output = trainer.evaluate(eval_dataset)
         train_output = trainer.evaluate(train_dataset)
 
-        # TODO: Ensure memory is okay with full
-        # TODO:
         results = {
             "train_eval_loss": train_output["eval_loss"],
             "eval_lin_logprob": eval_output["lin_logprob"],
