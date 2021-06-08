@@ -1595,14 +1595,6 @@ class Trainer_Prefix:
         has_labels = all(inputs.get(k) is not None for k in self.args.label_names)
         inputs = self._prepare_inputs(inputs)
 
-        # At eval time, set the weights to 1/bsz. and see the results..
-
-        # if 'weights' in inputs:
-        #     weights = inputs['weights']
-        #     bsz = weights.view(-1).shape[0]
-        #     weights = (torch.ones(weights.shape)/bsz).to(weights.device)
-        #     inputs['weights'] = weights
-
         with torch.no_grad():
             outputs = model(**inputs, gpt2_model=self.gpt2)
             if has_labels:
@@ -1619,9 +1611,8 @@ class Trainer_Prefix:
         if prediction_loss_only:
             return (loss, None, None)
 
-        logits = tuple(logit.detach() for logit in logits)
-        if len(logits) == 1:
-            logits = logits[0]
+        # TODO: Fix this better... Seems all activations are returned.
+        logits = logits[0]
 
         if has_labels:
             labels = tuple(inputs.get(name).detach() for name in self.args.label_names)
