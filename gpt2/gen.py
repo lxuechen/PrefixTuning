@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 # example: python train_run.py keyword temp_keyword _
 if __name__ == '__main__':
@@ -10,8 +11,7 @@ if __name__ == '__main__':
     MODEL_FILE = sys.argv[4]
     submit_job = (sys.argv[5] == 'yes')
 
-
-    if mode =='data2text':
+    if mode == 'data2text':
 
         Token_FILE = MODEL_FILE
 
@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
         sub_model_name = os.path.basename(MODEL_FILE)
         if 'checkpoint-' in sub_model_name:
-            sub_model_name =  MODEL_FILE
+            sub_model_name = MODEL_FILE
 
         if 'finetune' in sub_model_name:
             tuning_mode = 'finetune'
@@ -183,10 +183,8 @@ if __name__ == '__main__':
 
         if 'o=' in sub_model_name:
             o_idx = sub_model_name.index('o=')
-            num_idx = sub_model_name[o_idx+2]
+            num_idx = sub_model_name[o_idx + 2]
             print(num_idx)
-
-
 
         if 'finetune' in MODEL_FILE:
             tuning_mode = 'finetune'
@@ -259,8 +257,6 @@ if __name__ == '__main__':
             tuning_mode = 'adaptertune'
             app = ''
 
-
-
     COMMANDLINE = "python run_generation.py \
         --model_type=gpt2 \
         --length 100 \
@@ -280,13 +276,12 @@ if __name__ == '__main__':
     else:
         name = os.path.basename(MODEL_FILE)
 
-
+    # TODO: This is really user-dependent!
     if MODEL_FILE == 'gpt2-large':
-        COMMANDLINE += ' --cache_dir /u/scr/xlisali/contrast_LM/transformers/examples/control/gpt2-large-s3 '
+        COMMANDLINE += ' --cache_dir /nlp/scr/lxuechen/hfcache/transformers/examples/control/gpt2-large-s3 '
 
     if MODEL_FILE == 'gpt2-medium':
-        COMMANDLINE += ' --cache_dir /u/scr/xlisali/contrast_LM/transformers/examples/control/gpt2-medium-s3 '
-
+        COMMANDLINE += ' --cache_dir /nlp/scr/lxuechen/hfcache/transformers/examples/control/gpt2-medium-s3 '
 
     print(COMMANDLINE)
 
@@ -296,7 +291,8 @@ if __name__ == '__main__':
         # name = 'e2e_results_lowdata/{}'.format(name)
         # name = 'e2e_results_lowdata_finetune/{}'.format(name)
         name = os.path.join(gen_dir, name)
-        full_command = "nlprun -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7,jagupard8,jagupard28,jagupard29 \'{}\'".format(name,COMMANDLINE)
+        full_command = "nlprun -a lisa-base-torch -g 1 -n {} -x jagupard4,jagupard5,jagupard6,jagupard7,jagupard8," \
+                       "jagupard28,jagupard29 \'{}\'".format(
+            name, COMMANDLINE)
         print(full_command)
         os.system(full_command)
-
