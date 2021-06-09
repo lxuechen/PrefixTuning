@@ -1507,7 +1507,7 @@ class Trainer_Prefix:
                 valid_locations = (inputs['labels'] != -100)
                 all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
 
-                entropy = (all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
+                entropy = -(all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
                 entropy_losses.extend(entropy.view(-1).tolist())
                 entropy_losses2.extend(entropy[valid_locations].tolist())
 
@@ -1577,6 +1577,10 @@ class Trainer_Prefix:
 
         if len(lin_logprobs) > 0:
             metrics['lin_logprob'] = np.mean(lin_logprobs)
+
+        if hasattr(self.optimizer, 'privacy_engine'):
+            privacy_metrics = self.optimizer.privacy_engine.get_privacy_spent()
+            metrics = {**metrics, **privacy_metrics}
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 

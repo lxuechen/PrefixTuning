@@ -486,21 +486,18 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        trainer.args.prediction_loss_only = False
         eval_output = trainer.evaluate(eval_dataset)
+        eval_file = os.path.join(training_args.output_dir, "eval_results.json")
+        utils.jdump(eval_output, eval_file)
+
         train_output = trainer.evaluate(train_dataset)
+        train_file = os.path.join(training_args.output_dir, "train_results.json")
+        utils.jdump(train_output, train_file)
 
         results = {
             "train_eval_loss": train_output["eval_loss"],
             "eval_lin_logprob": eval_output["lin_logprob"],
         }
-        if privacy_args.nonprivate == "no":
-            privacy_results = privacy_engine.get_privacy_spent()
-            results = {**results, **privacy_results}
-
-        output_eval_file = os.path.join(training_args.output_dir, "results.json")
-        utils.jdump(results, output_eval_file)
-
         logger.info("***** Eval results *****")
         for key in sorted(results.keys()):
             logger.info("  %s = %s", key, str(results[key]))
