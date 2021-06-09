@@ -102,6 +102,7 @@ def main(
     tuning_mode="prefixtune",
     nonprivate="yes",
     max_steps=1,
+    max_eval_steps=20,
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
@@ -116,7 +117,7 @@ def main(
             tuning_mode=tuning_mode,
             mode=mode,
             max_steps=max_steps,
-            max_eval_steps=max_steps,
+            max_eval_steps=max_eval_steps,
             nonprivate=nonprivate,
             **kwargs,
         )
