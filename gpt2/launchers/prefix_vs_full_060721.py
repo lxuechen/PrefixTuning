@@ -60,7 +60,7 @@ def _get_command(
             gradient_accumulation_steps = 5
             gpu = "3090"  # This stupid thing needs a lot of memory!!!
 
-        if nonprivate == "yes":
+        if nonprivate == "no":
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune"
@@ -171,6 +171,7 @@ def main(
                     seed=seed,
                     nonprivate=nonprivate,
                     tuning_mode=tuning_mode,
+                    mode=mode,
                 )
             del nonprivate, tuning_mode
 
@@ -184,6 +185,7 @@ def main(
                             tuning_mode=tuning_mode,
                             noise_multiplier=noise_multiplier,
                             per_example_max_grad_norm=max_grad_norm,
+                            mode=mode,
                         )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_060721.sh')

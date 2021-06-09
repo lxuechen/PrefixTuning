@@ -33,15 +33,14 @@ def mynlprun_wrapper(
             f"-p {priority} "
             f"--memory {memory} "
         )
+        if gpu is not None:
+            wrapped_command += f"-d {gpu} "
         if job_name is not None:
             # Suffix with uid just in case you get a job name collision!
             this_id = uuid.uuid4().hex[:salt_length]
             job_name = f"{job_name}-{this_id}"
             wrapped_command += f"--job_name {job_name} "
         wrapped_command += f"'{command}'"
-
-        if gpu is not None:
-            wrapped_command += f"-d {gpu}"
 
         if train_dir is not None:
             # First mkdir, then execute the command.
