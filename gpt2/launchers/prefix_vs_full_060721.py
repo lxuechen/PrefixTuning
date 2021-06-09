@@ -32,6 +32,7 @@ def _get_command(
     nonprivate,
 
     # Don't modify these easily!
+    gradient_accumulation_steps=1,
     per_example_max_grad_norm=1,
     noise_multiplier=0.8,
     eval_steps=100,
@@ -69,7 +70,7 @@ def _get_command(
         --preseqlen {preseqlen} \
         --prefix_mode activation \
         --format_mode cat \
-        --gradient_accumulation_steps 1 \
+        --gradient_accumulation_steps {gradient_accumulation_steps} \
         --learning_rate {learning_rate} \
         --weight_decay 0.0 \
         --seed {seed} \
