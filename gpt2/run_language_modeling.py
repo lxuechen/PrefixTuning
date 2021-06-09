@@ -476,7 +476,12 @@ def main():
         if trainer.is_world_master():
             tokenizer.save_pretrained(training_args.output_dir)
 
-        # TODO: Make sure this saving is correct across both cases!
+        logger.info("*** Train ***")
+        logger.info(
+            f"Training set size: {len(train_dataset)}, "
+            f"per_device_train_batch_size: {training_args.per_device_train_batch_size}, "
+            f"gradient_accumulation_steps: {training_args.gradient_accumulation_steps}"
+        )
         trainer.train(model_path=model_path)
         trainer.save_model()
         if model_args.tuning_mode == 'bothtune':

@@ -15,10 +15,17 @@ run:
 """
 
 import os
+from enum import Enum
 
 import fire
 
 from . import wrapper
+
+
+class Mode(Enum):
+    submit = "submit"
+    local = "local"
+
 
 TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
 TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
@@ -32,20 +39,42 @@ def _get_command(
     nonprivate,
 
     # Don't modify these easily!
+    per_device_train_batch_size=6,
     gradient_accumulation_steps=1,
     per_example_max_grad_norm=1,
     noise_multiplier=0.8,
+    learning_rate=1e-05,
+
     eval_steps=100,
-    per_device_train_batch_size=5,
     max_steps=-1,
     max_eval_batches=-1,
-    learning_rate=1e-05,
     mid_dim=512,
     preseqlen=5,
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
 ):
+    if mode == Mode.submit:
+        if tuning_mode == "fulltune" and nonprivate == "no":
+            per_device_train_batch_size = 2
+            gradient_accumulation_steps = 3
+        else:
+            per_device_train_batch_size = 6
+
+        per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
+        noise_multiplier_str = wrapper.float2str(noise_multiplier)
+        learning_rate_str = wrapper.float2str(learning_rate)
+        # @formatter:off
+        train_dir = (
+            f"/nlp/scr/lxuechen/prefixtune"
+            f"/nonprivate_{nonprivate}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
+            f"/{seed}"
+        )
+        # @formatter:on
+    else:
+        # Don't do anything for now.
+        pass
+
     # @formatter:off
     logging_dir = train_dir
     command = f'python -m gpt2.run_language_modeling \
@@ -98,7 +127,7 @@ def _get_command(
 
 def main(
     seeds=(0, 1, 2),  # Seeds over which to randomize.
-    mode="local",
+    mode=Mode.local,
 
     # For local testing; don't modify these defaults!
     tuning_mode="prefixtune",
@@ -111,7 +140,7 @@ def main(
     jobs_in_queue=0,  # Number of jobs in the queue.
     **kwargs,
 ):
-    if mode == "local":
+    if mode == Mode.local:
         command = _get_command(
             seed=0,
             train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
