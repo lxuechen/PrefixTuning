@@ -1468,11 +1468,7 @@ class Trainer:
         if hasattr(self.optimizer, 'privacy_engine'):
             pe = self.optimizer.privacy_engine
             privacy_metrics = pe.get_privacy_spent()
-            privacy_stats = {
-                "med_clip": pe.med_clip,
-                "max_clip": pe.max_clip,
-                "min_clip": pe.min_clip,
-            }
+            privacy_stats = pe.get_privacy_stats()
             metrics = {**metrics, **privacy_metrics, **privacy_stats}
 
         metrics["lr"] = [pg["lr"] for pg in self.optimizer.param_groups]

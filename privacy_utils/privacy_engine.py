@@ -313,6 +313,18 @@ class PrivacyEngine(object):
 
         return privacy_results
 
+    def get_privacy_stats(self):
+        """Get the clipping, signal, and noise status."""
+        return {
+            "med_clip": self.med_clip,
+            "max_clip": self.max_clip,
+            "min_clip": self.min_clip,
+            "snr": self.snr,
+            "signal": self.signal,
+            "noise": self.noise,
+            "noise_limit": self.noise_limit,
+        }
+
     def __repr__(self):
         return (
             f"PrivacyEngine(\n"
