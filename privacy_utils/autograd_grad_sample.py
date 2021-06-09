@@ -72,8 +72,6 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
                 # TODO: Embedding has no register_full_backward_hook.
                 # Starting with 1.8.0, use `register_full_backward_hook`.
                 handles.append(layer.register_backward_hook(this_backward))
-        else:
-            pass
 
     model.__dict__.setdefault("autograd_grad_sample_hooks", []).extend(handles)
 

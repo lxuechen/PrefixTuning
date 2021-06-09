@@ -301,6 +301,21 @@ def _compute_embedding_grad_sample(
     _create_or_extend_grad_sample(layer.weight, grad_sample, batch_dim, notes="embedding")
 
 
+def _custom_compute_conv1d_grad_sample(
+    layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
+):
+    gs = torch.einsum("n...i,n...j->n...ij", B, A)
+    _create_or_extend_grad_sample(
+        layer.weight, torch.einsum("n...ij->nji", gs), batch_dim
+    )
+    if layer.bias is not None:
+        _create_or_extend_grad_sample(
+            layer.bias,
+            torch.einsum("n...k->nk", B),
+            batch_dim,
+        )
+
+
 _supported_layers_grad_samplers = {
     "CounterEmbedding": _compute_embedding_grad_sample,  # Purely for debugging.
     "Embedding": _compute_embedding_grad_sample,
@@ -317,5 +332,5 @@ _supported_layers_grad_samplers = {
     "SequenceBias": _compute_sequence_bias_grad_sample,
 
     # Open-AI GPT-2.
-    "Conv1D": _compute_linear_grad_sample,
+    "Conv1D": _custom_compute_conv1d_grad_sample,
 }  # Supported layer class types
