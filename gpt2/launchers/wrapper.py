@@ -16,6 +16,7 @@ def mynlprun_wrapper(
     salt_length=8,
     conda_env="lxuechen-torch",
     memory="16g",
+    gpu=None,
 ):
     if mynlprun:
         if train_dir is not None:
@@ -38,6 +39,9 @@ def mynlprun_wrapper(
             job_name = f"{job_name}-{this_id}"
             wrapped_command += f"--job_name {job_name} "
         wrapped_command += f"'{command}'"
+
+        if gpu is not None:
+            wrapped_command += f"-d {gpu}"
 
         if train_dir is not None:
             # First mkdir, then execute the command.
@@ -69,3 +73,19 @@ def float2str(x, precision=8):
 
 def int2str(x, leading_zeros=8):
     return f"{x:{leading_zeros}0d}"
+
+
+class ContainerMeta(type):
+    def all(cls):
+        return sorted(getattr(cls, x) for x in dir(cls) if not x.startswith('__'))
+
+    def __str__(cls):
+        return str(cls.all())
+
+    def __contains__(cls, item):
+        return item in cls.all()
+
+
+class Mode(metaclass=ContainerMeta):
+    submit = "submit"
+    local = "local"

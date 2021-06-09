@@ -15,17 +15,11 @@ run:
 """
 
 import os
-from enum import Enum
 
 import fire
 
 from . import wrapper
-
-
-class Mode(Enum):
-    submit = "submit"
-    local = "local"
-
+from .wrapper import Mode
 
 TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
 TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
@@ -33,13 +27,12 @@ TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
 
 def _get_command(
     seed,
-    train_dir,
-    epochs,
     tuning_mode,
     nonprivate,
 
     # Don't modify these easily!
-    per_device_train_batch_size=6,
+    epochs=5,
+    per_device_train_batch_size=5,
     gradient_accumulation_steps=1,
     per_example_max_grad_norm=1,
     noise_multiplier=0.8,
@@ -53,27 +46,39 @@ def _get_command(
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
+    gpu=None,  # Randomly grab.
 ):
+    # Standardize.
+    learning_rate_str = wrapper.float2str(learning_rate)
+    per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
+    noise_multiplier_str = wrapper.float2str(noise_multiplier)
+
+    # Check mode.
     if mode == Mode.submit:
         if tuning_mode == "fulltune" and nonprivate == "no":
-            per_device_train_batch_size = 2
-            gradient_accumulation_steps = 3
-        else:
-            per_device_train_batch_size = 6
+            per_device_train_batch_size = 1
+            gradient_accumulation_steps = 5
+            gpu = "3090"  # This stupid thing needs a lot of memory!!!
 
-        per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
-        noise_multiplier_str = wrapper.float2str(noise_multiplier)
-        learning_rate_str = wrapper.float2str(learning_rate)
-        # @formatter:off
-        train_dir = (
-            f"/nlp/scr/lxuechen/prefixtune"
-            f"/nonprivate_{nonprivate}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
-            f"/{seed}"
-        )
-        # @formatter:on
+        if nonprivate == "yes":
+            # @formatter:off
+            train_dir = (
+                f"/nlp/scr/lxuechen/prefixtune"
+                f"/nonprivate_{nonprivate}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
+                f"/{seed}"
+            )
+            # @formatter:on
+        else:
+            # @formatter:off
+            train_dir = (
+                f"/nlp/scr/lxuechen/prefixtune"
+                f"/nonprivate_{nonprivate}_learning_rate_{learning_rate_str}"
+                f"/{seed}"
+            )
+            # @formatter:on
     else:
-        # Don't do anything for now.
-        pass
+        # Local debugging.
+        train_dir = "/nlp/scr/lxuechen/tests/prefix-tuning",
 
     # @formatter:off
     logging_dir = train_dir
@@ -119,15 +124,18 @@ def _get_command(
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --overwrite_output_dir'
     # @formatter:off
-    if mode == "submit":
-        command = wrapper.mynlprun_wrapper(command, train_dir=train_dir)
+
+    if mode == Mode.submit:
+        command = wrapper.mynlprun_wrapper(command, train_dir=train_dir, gpu=gpu)
         command += "\n"
     return command
 
 
 def main(
-    seeds=(0, 1, 2),  # Seeds over which to randomize.
+    seeds=(0, ),  # Seeds over which to randomize.
     mode=Mode.local,
+    max_grad_norms=(1, 3,),
+    noise_multipliers=(0.1, 0.75,),
 
     # For local testing; don't modify these defaults!
     tuning_mode="prefixtune",
@@ -143,7 +151,6 @@ def main(
     if mode == Mode.local:
         command = _get_command(
             seed=0,
-            train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
             epochs=1,
             tuning_mode=tuning_mode,
             mode=mode,
@@ -155,12 +162,29 @@ def main(
         print(command)
         os.system(command)
 
-    elif mode == "submit":
+    elif mode == Mode.submit:
         commands = "#!/bin/bash\n"
         for seed in seeds:
-            # TODO: 3090, titanrtx,
-            # TODO: 1) Gradient accumulation for private full, 2) private full needs better GPUs
-            pass
+            nonprivate = "yes"
+            for tuning_mode in ("fulltune", "prefixtune"):
+                commands += _get_command(
+                    seed=seed,
+                    nonprivate=nonprivate,
+                    tuning_mode=tuning_mode,
+                )
+            del nonprivate, tuning_mode
+
+            nonprivate = "no"
+            for tuning_mode in ("fulltune", "prefixtune"):
+                for max_grad_norm in max_grad_norms:
+                    for noise_multiplier in noise_multipliers:
+                        commands += _get_command(
+                            seed=seed,
+                            nonprivate=nonprivate,
+                            tuning_mode=tuning_mode,
+                            noise_multiplier=noise_multiplier,
+                            per_example_max_grad_norm=max_grad_norm,
+                        )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_060721.sh')
         with open(script_path, 'w') as f:
