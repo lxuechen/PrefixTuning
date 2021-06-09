@@ -1466,8 +1466,16 @@ class Trainer:
             metrics['lin_logprob'] = np.mean(lin_logprobs)
 
         if hasattr(self.optimizer, 'privacy_engine'):
-            privacy_metrics = self.optimizer.privacy_engine.get_privacy_spent()
-            metrics = {**metrics, **privacy_metrics}
+            pe = self.optimizer.privacy_engine
+            privacy_metrics = pe.get_privacy_spent()
+            privacy_stats = {
+                "med_clip": pe.med_clip,
+                "max_clip": pe.max_clip,
+                "min_clip": pe.min_clip,
+            }
+            metrics = {**metrics, **privacy_metrics, **privacy_stats}
+
+        metrics["lr"] = [pg["lr"] for pg in self.optimizer.param_groups]
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 
