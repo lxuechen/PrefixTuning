@@ -1522,7 +1522,7 @@ class Trainer_Prefix:
             if labels is not None:  # Flatten then concat.
                 pass
 
-            if self.args.max_eval_steps > 0 and batch_idx + 1 >= self.args.max_eval_steps:
+            if self.args.max_eval_batches > 0 and batch_idx + 1 >= self.args.max_eval_batches:
                 break
 
         if self.args.past_index and hasattr(self, "_past"):

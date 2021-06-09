@@ -283,7 +283,7 @@ class DataTrainingArguments:
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
-    max_eval_steps: int = field(default=-1, metadata={"help": "Maximum number of evaluation steps to run."})
+    max_eval_batches: int = field(default=-1, metadata={"help": "Maximum number of evaluation steps to run."})
 
 
 @dataclass

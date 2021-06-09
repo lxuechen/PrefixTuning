@@ -36,7 +36,7 @@ def _get_command(
     per_device_train_batch_size=5,
     noise_multiplier=1,
     max_steps=-1,
-    max_eval_steps=-1,
+    max_eval_batches=-1,
     learning_rate=5e-05,
     mid_dim=512,
     preseqlen=5,
@@ -83,7 +83,7 @@ def _get_command(
         --nonprivate {nonprivate} \
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
-        --max_eval_steps {max_eval_steps} \
+        --max_eval_batches {max_eval_batches} \
         --evaluation_strategy "steps" \
         --overwrite_output_dir'
     # @formatter:off
@@ -102,7 +102,7 @@ def main(
     tuning_mode="prefixtune",
     nonprivate="yes",
     max_steps=1,
-    max_eval_steps=20,
+    max_eval_batches=20,
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
@@ -117,7 +117,7 @@ def main(
             tuning_mode=tuning_mode,
             mode=mode,
             max_steps=max_steps,
-            max_eval_steps=max_eval_steps,
+            max_eval_batches=max_eval_batches,
             nonprivate=nonprivate,
             **kwargs,
         )
