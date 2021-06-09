@@ -758,7 +758,6 @@ class Trainer:
                     else:
                         torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
 
-                    # TODO: Use virtual step here as well!
                     if is_torch_tpu_available():
                         xm.optimizer_step(self.optimizer)
                     elif self.args.fp16 and _use_native_amp:
@@ -867,6 +866,9 @@ class Trainer:
                         elif self.is_world_process_zero():
                             torch.save(self.optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                             torch.save(self.lr_scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                else:
+                    if hasattr(self.optimizer, 'virtual_step'):
+                        self.optimizer.virtual_step()
 
                 epoch_pbar.update(1)
                 if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
