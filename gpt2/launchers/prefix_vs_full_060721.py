@@ -32,12 +32,13 @@ def _get_command(
     nonprivate,
 
     # Don't modify these easily!
+    per_example_max_grad_norm=1,
+    noise_multiplier=0.8,
     eval_steps=100,
     per_device_train_batch_size=5,
-    noise_multiplier=1,
     max_steps=-1,
     max_eval_batches=-1,
-    learning_rate=5e-05,
+    learning_rate=1e-05,
     mid_dim=512,
     preseqlen=5,
     mode="submit",
@@ -85,9 +86,9 @@ def _get_command(
         --max_steps {max_steps} \
         --max_eval_batches {max_eval_batches} \
         --evaluation_strategy "steps" \
+        --per_example_max_grad_norm {per_example_max_grad_norm} \
         --overwrite_output_dir'
     # @formatter:off
-    # TODO: Fix eval_steps
     if mode == "submit":
         command = wrapper.mynlprun_wrapper(command, train_dir=train_dir)
         command += "\n"
