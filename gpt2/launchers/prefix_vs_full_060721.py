@@ -11,7 +11,7 @@ purpose:
 notes:
     NA
 run:
-    python -m gpt2.launchers.prefix_vs_full_060721
+    python -m gpt2.launchers.prefix_vs_full_060721 --mode "submit"
 """
 
 import os
@@ -65,7 +65,7 @@ def _get_command(
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune"
-                f"/nonprivate_{nonprivate}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
+                f"/nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
                 f"/{seed}"
             )
             # @formatter:on
@@ -73,7 +73,7 @@ def _get_command(
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune"
-                f"/nonprivate_{nonprivate}_learning_rate_{learning_rate_str}"
+                f"/nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}"
                 f"/{seed}"
             )
             # @formatter:on
