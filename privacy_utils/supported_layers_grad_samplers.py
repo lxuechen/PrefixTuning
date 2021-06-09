@@ -315,4 +315,7 @@ _supported_layers_grad_samplers = {
     "InstanceNorm2d": _compute_norm_grad_sample,
     "InstanceNorm3d": _compute_norm_grad_sample,
     "SequenceBias": _compute_sequence_bias_grad_sample,
+
+    # Open-AI GPT-2.
+    "Conv1D": _compute_linear_grad_sample,
 }  # Supported layer class types

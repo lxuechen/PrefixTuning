@@ -1070,6 +1070,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         return model
 
 
+# This is stupid! Why create a new layer type???
 class Conv1D(nn.Module):
     """
     1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).

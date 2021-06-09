@@ -245,7 +245,8 @@ class PrivacyEngine(object):
             # https://github.com/huggingface/transformers/blob/3d339ee6595b9e42925559ae21a0f6e77f032873/src
             # /transformers/trainer.py#L1523
             try:
-                # TODO: What if there's no grad_sample, but required grads?
+                # WARNING: This will raise an error if a parameter in the
+                #  computational graph requires gradients but is not used.
                 param.grad_sample *= self.gradient_accumulation_steps
             except AttributeError as attribute_error:
                 # Clear instructions on what is wrong!

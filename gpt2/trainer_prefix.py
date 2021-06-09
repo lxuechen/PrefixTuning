@@ -1519,8 +1519,8 @@ class Trainer_Prefix:
 
                 del all_log_probs, valid_locations, entropy, logprob
 
-            if labels is not None:
-                label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)
+            if labels is not None:  # Flatten then concat.
+                pass
 
             if self.args.max_eval_steps > 0 and batch_idx + 1 >= self.args.max_eval_steps:
                 break

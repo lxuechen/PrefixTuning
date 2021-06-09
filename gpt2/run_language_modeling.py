@@ -430,7 +430,6 @@ def main():
             tokenizer=tokenizer,
             model_gpt2=gpt2,
             args=training_args,
-            prediction_loss_only=True,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
@@ -445,7 +444,6 @@ def main():
             data_collator=data_collator,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            prediction_loss_only=True,
         )
     num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)

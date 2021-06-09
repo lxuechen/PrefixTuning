@@ -30,13 +30,16 @@ def _get_command(
     logging_dir,
     epochs,
     tuning_mode,
+    nonprivate,
 
     # Don't modify these easily!
+    per_device_train_batch_size=5,
+    noise_multiplier=1,
     max_steps=-1,
     max_eval_steps=-1,
     mode="submit",
     model_type="gpt2",
-    model_name_or_path="gpt2-medium",
+    model_name_or_path="distilgpt2",  # 80+million
 ):
     # @formatter:off
     logging_dir = train_dir
@@ -46,7 +49,7 @@ def _get_command(
         --model_type {model_type} \
         --model_name_or_path {model_name_or_path} \
         --tokenizer_name {model_name_or_path} \
-        --per_device_train_batch_size 5 \
+        --per_device_train_batch_size {per_device_train_batch_size} \
         --per_device_eval_batch_size 10 \
         --save_steps 500000 \
         --num_train_epochs {epochs} \
@@ -73,14 +76,16 @@ def _get_command(
         --objective_mode 1 \
         --evaluate_during_training \
         --eval_steps 5000 \
-        --noise_multiplier 1.0 \
-        --nonprivate yes \
+        --noise_multiplier {noise_multiplier} \
+        --nonprivate {nonprivate} \
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
         --max_eval_steps {max_eval_steps} \
+        --evaluation_strategy "steps" \
+        --eval_steps 1 \
         --overwrite_output_dir'
     # @formatter:off
-
+    # TODO: Fix eval_steps
     if mode == "submit":
         command = wrapper.mynlprun_wrapper(command, train_dir=train_dir)
         command += "\n"
@@ -92,12 +97,14 @@ def main(
     mode="local",
     max_steps=None,
 
-    # Don't modify these!
+    # For local testing; don't modify these defaults!
     tuning_mode="prefixtune",
+    nonprivate="yes",
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
     jobs_in_queue=0,  # Number of jobs in the queue.
+    **kwargs,
 ):
     if mode == "local":
         if max_steps is None:
@@ -111,6 +118,8 @@ def main(
             mode=mode,
             max_steps=max_steps,
             max_eval_steps=max_steps,
+            nonprivate=nonprivate,
+            **kwargs,
         )
         print(command)
         os.system(command)
