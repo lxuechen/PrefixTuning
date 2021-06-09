@@ -37,6 +37,9 @@ def _get_command(
     noise_multiplier=1,
     max_steps=-1,
     max_eval_steps=-1,
+    learning_rate=5e-05,
+    mid_dim=512,
+    preseqlen=5,
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
@@ -62,14 +65,14 @@ def _get_command(
         --tuning_mode {tuning_mode} \
         --logging_dir {logging_dir} \
         --optim_prefix yes \
-        --preseqlen 5 \
+        --preseqlen {preseqlen} \
         --prefix_mode activation \
         --format_mode cat \
         --gradient_accumulation_steps 1 \
-        --learning_rate 5e-05 \
+        --learning_rate {learning_rate} \
         --weight_decay 0.0 \
         --seed {seed} \
-        --mid_dim 512 \
+        --mid_dim {mid_dim} \
         --init_random no \
         --use_dropout no \
         --prefix_dropout 0.0 \
