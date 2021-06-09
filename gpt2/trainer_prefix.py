@@ -299,7 +299,9 @@ class Trainer_Prefix:
             self.args.prediction_loss_only = kwargs.pop("prediction_loss_only")
         assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
 
-        if tb_writer is None and is_tensorboard_available() and self.is_world_process_zero():
+        if (tb_writer is None and
+            is_tensorboard_available() and self.is_world_process_zero() and not self.args.disable_tb
+        ):
             self.tb_writer = SummaryWriter(log_dir=self.args.logging_dir)
         if not is_tensorboard_available():
             logger.warning(
@@ -1498,7 +1500,8 @@ class Trainer_Prefix:
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
 
             if loss is not None:
-                eval_losses.extend([loss] * logits.size(0))
+                batch_size = inputs['input_ids'].size(0)
+                eval_losses.extend([loss] * batch_size)
 
             if logits is not None:
                 valid_locations = (inputs['labels'] != -100)
@@ -1514,8 +1517,7 @@ class Trainer_Prefix:
                 tok_logprobs.extend(logprob.view(-1).tolist())
                 lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
 
-                preds = logits if preds is None else nested_concat(preds, logits, dim=0)
-                del logprob, entropy, all_log_probs, valid_locations
+                del all_log_probs, valid_locations, entropy, logprob
 
             if labels is not None:
                 label_ids = labels if label_ids is None else nested_concat(label_ids, labels, dim=0)

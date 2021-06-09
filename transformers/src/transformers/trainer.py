@@ -248,7 +248,9 @@ class Trainer:
             self.args.prediction_loss_only = kwargs.pop("prediction_loss_only")
         assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
 
-        if tb_writer is None and is_tensorboard_available() and self.is_world_process_zero():
+        if (tb_writer is None and 
+            is_tensorboard_available() and self.is_world_process_zero() and not self.args.disable_tb
+        ):
             self.tb_writer = SummaryWriter(log_dir=self.args.logging_dir)
         if not is_tensorboard_available():
             logger.warning(
@@ -1362,8 +1364,8 @@ class Trainer:
         eval_losses: List[float] = []
         preds: torch.Tensor = None
         label_ids: torch.Tensor = None
-        entropy_losses: List[float] = []
-        entropy_losses2: List[float] = []
+        entropy_losses: List[float] = []  # Entropy at all locations; token-wise.
+        entropy_losses2: List[float] = []  # Entropy at valid locations; token-wise.
 
         # My additions.
         tok_logprobs: List[float] = []
@@ -1380,23 +1382,25 @@ class Trainer:
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
         for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
             loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
+
             if loss is not None:
-                eval_losses.extend([loss] * logits.size(0))
+                batch_size = inputs['input_ids'].size(0)
+                eval_losses.extend([loss] * batch_size)
 
             if logits is not None:
+                valid_locations = (inputs['labels'] != -100)
                 all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
+
                 entropy = (all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
-                # Entropy at all locations.
                 entropy_losses.extend(entropy.view(-1).tolist())
-                # Entropy at only locations w/ token.
-                entropy_losses2.extend(entropy[inputs['labels'] != -100].tolist())
+                entropy_losses2.extend(entropy[valid_locations].tolist())
 
                 logprob = F.cross_entropy(logits.permute(0, 2, 1), labels, reduction="none")  # (B, L).
-                logprob = logprob * (inputs['labels'] != -100)  # (B, L).
+                logprob = logprob * valid_locations  # (B, L).
 
                 tok_logprobs.extend(logprob.view(-1).tolist())
                 lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
-                del all_log_probs, entropy, logprob
+                del all_log_probs, valid_locations, entropy, logprob
 
             if labels is not None:
                 pass

@@ -286,6 +286,9 @@ class TrainingArguments:
     label_names: Optional[List[str]] = field(
         default=None, metadata={"help": "The list of keys in your dictionary of inputs that correspond to the labels."}
     )
+    disable_tb :Optional[bool] = field(
+        default=True, metadata={"help": "Disable tensorboard."}
+    )
 
     def __post_init__(self):
         if self.disable_tqdm is None:
