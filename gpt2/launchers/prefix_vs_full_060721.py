@@ -27,12 +27,12 @@ TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
 def _get_command(
     seed,
     train_dir,
-    logging_dir,
     epochs,
     tuning_mode,
     nonprivate,
 
     # Don't modify these easily!
+    eval_steps=100,
     per_device_train_batch_size=5,
     noise_multiplier=1,
     max_steps=-1,
@@ -75,14 +75,13 @@ def _get_command(
         --prefix_dropout 0.0 \
         --objective_mode 1 \
         --evaluate_during_training \
-        --eval_steps 5000 \
+        --eval_steps {eval_steps} \
         --noise_multiplier {noise_multiplier} \
         --nonprivate {nonprivate} \
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
         --max_eval_steps {max_eval_steps} \
         --evaluation_strategy "steps" \
-        --eval_steps 1 \
         --overwrite_output_dir'
     # @formatter:off
     # TODO: Fix eval_steps
@@ -95,11 +94,11 @@ def _get_command(
 def main(
     seeds=(0, 1, 2),  # Seeds over which to randomize.
     mode="local",
-    max_steps=None,
 
     # For local testing; don't modify these defaults!
     tuning_mode="prefixtune",
     nonprivate="yes",
+    max_steps=1,
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
     sleep_seconds=3600,  # Seconds to sleep before launching the next batch of jobs.
@@ -107,12 +106,9 @@ def main(
     **kwargs,
 ):
     if mode == "local":
-        if max_steps is None:
-            max_steps = 1
         command = _get_command(
             seed=0,
             train_dir="/nlp/scr/lxuechen/tests/prefix-tuning",
-            logging_dir="",
             epochs=1,
             tuning_mode=tuning_mode,
             mode=mode,
@@ -127,6 +123,8 @@ def main(
     elif mode == "submit":
         commands = "#!/bin/bash\n"
         for seed in seeds:
+            # TODO: 3090, titanrtx,
+            # TODO: 1) Gradient accumulation for private full, 2) private full needs better GPUs
             pass
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_060721.sh')

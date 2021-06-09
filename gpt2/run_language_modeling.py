@@ -494,6 +494,10 @@ def main():
             "train_eval_loss": train_output["eval_loss"],
             "eval_lin_logprob": eval_output["lin_logprob"],
         }
+        if privacy_args.nonprivate == "no":
+            privacy_results = privacy_engine.get_privacy_spent()
+            results = {**results, **privacy_results}
+
         output_eval_file = os.path.join(training_args.output_dir, "results.json")
         utils.jdump(results, output_eval_file)
 
