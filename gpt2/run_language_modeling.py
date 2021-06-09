@@ -101,7 +101,6 @@ def get_dataset(
                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                   eos_tok=tokenizer.eos_token)
         elif args.task_mode == 'keyword':
-            print(file_path)
             dataset = LineByLineKeywordTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                    block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                    eos_tok=tokenizer.eos_token)
@@ -471,7 +470,6 @@ def main():
             if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path)
             else None
         )
-
         # For convenience, we also re-save the tokenizer to the same directory,
         # so that you can share your model easily on huggingface.co/models =)
         if trainer.is_world_master():
