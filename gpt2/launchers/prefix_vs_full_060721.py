@@ -101,6 +101,7 @@ def _get_command(
         --eval_data_file {TEST_FILE} \
         --tuning_mode {tuning_mode} \
         --logging_dir {logging_dir} \
+        --logging_steps -1 \
         --optim_prefix yes \
         --preseqlen {preseqlen} \
         --prefix_mode activation \
