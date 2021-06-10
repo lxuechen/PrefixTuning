@@ -683,10 +683,6 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         self.transformer = GPT2Model(config)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
-        # self.emb_trans = nn.Sequential(nn.Linear(1024, config.n_layer * config.n_embd),
-        #                                nn.Tanh(),
-        #                                nn.Linear(config.n_layer * config.n_embd, config.n_layer * 2 * config.n_embd))
-
         self.match_n_layer = config.n_layer
         self.match_n_head = config.n_head
         self.match_n_embd = config.n_embd//config.n_head
@@ -737,46 +733,10 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         # 3 means our buggy version which is sum/max_batch(output_len)
         # 4 means our buggy version which is sum/(input_len +output_len)
 
-        # TODAYFIX.
-        # if hasattr(config, '_my_arg_task_mode') and config._my_arg_task_mode == 'embMatch':
-        #     print('embMatch mode is on.')
-        #     if self.finetune_mode:
-        #         assert False, 'should not happen'
-        #     self.emb_match = True
-        #     self.prefix_control = False
-        #     if self.MEAN_METHOD:
-        #         self.emb_trans = nn.Sequential(nn.Linear(1024, config.n_layer * 2 * config.n_embd), nn.Tanh())
-        #     else:
-        #         self.numlayer = 5
-        #         self.emb_trans = nn.Sequential(nn.Linear(1024*self.numlayer, config.n_layer * 2 * config.n_embd), nn.Tanh())
-        #
-        # elif hasattr(config, '_my_arg_control') and config._my_arg_control:
-        #     print('control mode is on.')
-        #     if self.finetune_mode:
-        #         assert False, 'should not happen'
-        #     self.prefix_control = True
-        #     self.emb_match = False
-        #     self.preseqlen = 5
-        #     self.control_trans = nn.Sequential(nn.Linear(config.n_embd, self.preseqlen * config.n_layer * 2 * config.n_embd), nn.Tanh())
-        # else:
-        #     self.prefix_control = False
-        #     self.emb_match = False
-
-
-
         self.init_weights()
 
     def get_output_embeddings(self):
         return self.lm_head
-
-    # def prepare_inputs_for_generation2(self, input_ids, **kwargs):
-    #     """
-    #     Implement in subclasses of :class:`~transfomers.PreTrainedModel` for custom behavior to prepare inputs in the
-    #     generate method.
-    #     """
-    #     # print(kwargs)
-    #     return {"input_ids": input_ids, 'emb_match':kwargs['emb_match'],
-    #             'control_code':kwargs['control_code'], 'past_key_values':kwargs['past_key_values']}
 
 
     def prepare_inputs_for_generation(self, input_ids, past=None, **kwargs):

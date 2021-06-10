@@ -466,6 +466,18 @@ def main():
 
     # Training
     if training_args.do_train:
+        all_args = {
+            **training_args.__dict__,
+            **data_args.__dict__,
+            **model_args.__dict__,
+            **privacy_args.__dict__,
+        }
+        utils.jdump(
+            all_args,
+            os.path.join(training_args.output_dir, 'argparse.json'),
+            default=lambda x: str(x),
+        )
+
         model_path = (
             model_args.model_name_or_path
             if model_args.model_name_or_path is not None and os.path.isdir(model_args.model_name_or_path)

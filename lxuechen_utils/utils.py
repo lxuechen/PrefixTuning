@@ -64,7 +64,7 @@ def average_over_seed(seq_of_seq):
     return seq_of_seq.mean(0), seq_of_seq.std(0)
 
 
-def jdump(obj: Union[str, dict], f: str, mode="w", indent=4, to_gcs=False):
+def jdump(obj: Union[str, dict], f: str, mode="w", indent=4, to_gcs=False, default=None):
     """Dump a str or dictionary to a file in json format.
 
     Args:
@@ -73,6 +73,7 @@ def jdump(obj: Union[str, dict], f: str, mode="w", indent=4, to_gcs=False):
         mode: Mode for opening the file.
         indent: Indent for storing json dictionaries.
         to_gcs: Upload the file to cloud storage.
+        default: A function to handle non-serializable entries; defaults to `None`.
 
     Returns:
         None.
@@ -80,7 +81,7 @@ def jdump(obj: Union[str, dict], f: str, mode="w", indent=4, to_gcs=False):
     os.makedirs(os.path.dirname(f), exist_ok=True)
     with open(f, mode=mode) as file:
         if isinstance(obj, dict):
-            json.dump(obj, file, indent=indent)
+            json.dump(obj, file, indent=indent, default=default)
         elif isinstance(obj, str):
             file.write(obj)
         else:
