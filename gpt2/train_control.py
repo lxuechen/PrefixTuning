@@ -254,13 +254,22 @@ class PrefixTuning(GPT2PreTrainedModel):
         if self.mode_para == 2 and src_attn is not None and tgt_attn is not None:
             attention_mask = torch.cat([src_attn, tgt_attn], dim=1)
         output = gpt2_model(
-            input_ids=input_ids, control_code=None, weights=weights, emb_match=emb_match,
-            past_key_values=past_key_values, attention_mask=attention_mask,
-            token_type_ids=token_type_ids, position_ids=position_ids,
-            head_mask=head_mask, inputs_embeds=inputs_embeds,
+            input_ids=input_ids,
+            control_code=None,
+            weights=weights,
+            emb_match=emb_match,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
             encoder_hidden_states=encoder_hidden_states,
-            encoder_attention_mask=encoder_attention_mask, labels=labels, use_cache=use_cache,
-            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            labels=labels,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             **kwargs
         )

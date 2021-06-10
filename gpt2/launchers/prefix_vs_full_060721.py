@@ -37,6 +37,9 @@ def _get_command(
     per_example_max_grad_norm=1,
     noise_multiplier=0.8,
     learning_rate=1e-05,
+    # TODO: Artificially truncating since cannot avoid OOM with full + private...
+    # TODO: This arg has only been tested for `data2text` so far...
+    max_seq_len=96,
 
     eval_steps=100,
     max_steps=-1,
@@ -124,6 +127,7 @@ def _get_command(
         --max_eval_batches {max_eval_batches} \
         --evaluation_strategy "steps" \
         --per_example_max_grad_norm {per_example_max_grad_norm} \
+        --max_seq_len {max_seq_len} \
         --overwrite_output_dir'
     # @formatter:off
 

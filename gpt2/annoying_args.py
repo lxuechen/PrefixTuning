@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -279,6 +280,8 @@ class DataTrainingArguments:
     )
 
     train_embs: str = field(default="yes")
+
+    max_seq_len: Optional[int] = field(default=sys.maxsize)
 
 
 @dataclass

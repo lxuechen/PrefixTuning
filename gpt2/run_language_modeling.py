@@ -110,7 +110,8 @@ def get_dataset(
                                                      eos_tok=tokenizer.eos_token,
                                                      lowdata_token=args.lowdata_token if (
                                                          'lowdata' in training_args.output_dir and finetune_mode)
-                                                     else None)
+                                                     else None,
+                                                     max_seq_len=args.max_seq_len)
 
         elif args.task_mode == 'triples':
             dataset = LineByLineTriplesTextDataset(tokenizer=tokenizer, file_path=file_path,

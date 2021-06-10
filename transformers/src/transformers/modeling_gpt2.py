@@ -233,8 +233,6 @@ class Attention(nn.Module):
         value = self.split_heads(value)
         if layer_past is not None:
             past_key, past_value = layer_past[0].transpose(-2, -1), layer_past[1]  # transpose back cf below
-            # print(past_key.shape, key.shape)
-            # print(past_value.shape, value.shape)
             key = torch.cat((past_key, key), dim=-1)
             value = torch.cat((past_value, value), dim=-2)
 

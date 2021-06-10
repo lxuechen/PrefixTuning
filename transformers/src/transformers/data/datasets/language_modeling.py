@@ -1,23 +1,22 @@
+import ast
+import copy
+import json
+import linecache
 import os
 import pickle
 import random
 import time
-import copy
-import json
+from pathlib import Path
 from typing import Dict, List, Optional
-import ast
+import sys
 import torch
+from filelock import FileLock
 from torch.utils.data.dataset import Dataset
 
-from filelock import FileLock
-
+from ...modeling_bert import BertModel
+from ...tokenization_bert import BertTokenizerFast
 from ...tokenization_utils import PreTrainedTokenizer
 from ...utils import logging
-from ...modeling_bert import BertForMaskedLM, BertModel
-from ...tokenization_bert import BertTokenizer, BertTokenizerFast
-
-from pathlib import Path
-import linecache
 
 # from transformers import BertTokenizer, BertForMaskedLM, BertModel, BertTokenizerFast
 # from transformers import BertTokenizer,  BertTokenizerFast
@@ -76,7 +75,7 @@ class TextDataset(Dataset):
 
                 for i in range(0, len(tokenized_text) - block_size + 1, block_size):  # Truncate in block of block_size
                     self.examples.append(
-                        tokenizer.build_inputs_with_special_tokens(tokenized_text[i : i + block_size])
+                        tokenizer.build_inputs_with_special_tokens(tokenized_text[i: i + block_size])
                     )
                 # Note that we are losing the last truncated example here for the sake of simplicity (no padding)
                 # If your dataset is small, first you should loook for a bigger one :-) and second you
@@ -121,6 +120,7 @@ class LineByLineTextDataset(Dataset):
     def __getitem__(self, i) -> torch.Tensor:
         return torch.tensor(self.examples[i], dtype=torch.long)
 
+
 class LineByLineWithWeightTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
@@ -137,7 +137,7 @@ class LineByLineWithWeightTextDataset(Dataset):
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('|||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
                                                                              and ('||||' not in line)
-                                                                             and len(line.split('|||')) ==3 )]
+                                                                             and len(line.split('|||')) == 3)]
         # temp = list(zip(*lines))
         sents, lm_score, discri_score = list(zip(*lines))
         sents = list(sents)
@@ -162,12 +162,11 @@ class LineByLineWithWeightTextDataset(Dataset):
                 new_sents.append(sents[idx])
                 new_discri_score.append(discri_score[idx])
                 new_lm_score.append([lm_score[idx]])
-        print(len(todel), len(sents), len(todel)/len(sents))
+        print(len(todel), len(sents), len(todel) / len(sents))
 
         sents = new_sents
         discri_score = new_discri_score
         lm_score = new_lm_score
-
 
         for i, x in enumerate(sents):
             sents[i] = '[BOS] {} [EOS]'.format(x[6:])
@@ -189,10 +188,9 @@ class LineByLineWithWeightTextDataset(Dataset):
 
         print('investigate an easy thing about porportion of GPT2 generation: ')
         idx = torch.max(torch.tensor(self.discri_score), dim=1).indices
-        print((idx == 0).sum(), (idx == 1).sum(), (idx == 2).sum(), (idx==3).sum())
+        print((idx == 0).sum(), (idx == 1).sum(), (idx == 2).sum(), (idx == 3).sum())
         print((idx == 0).sum() / len(self.labels), (idx == 1).sum() / len(self.labels),
               (idx == 2).sum() / len(self.labels), (idx == 3).sum() / len(self.labels))
-
 
     def __len__(self):
         return len(self.examples)
@@ -200,8 +198,9 @@ class LineByLineWithWeightTextDataset(Dataset):
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),
-            self.lm_score[i], self.discri_score[i])
+                torch.tensor(self.labels[i], dtype=torch.long),
+                self.lm_score[i], self.discri_score[i])
+
 
 class LineByLineWithWeightTextDataset_Old(Dataset):
     """
@@ -218,7 +217,7 @@ class LineByLineWithWeightTextDataset_Old(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('###') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('###')) ==3 )]
+                                                                             and len(line.split('###')) == 3)]
         temp = list(zip(*lines))
         print(len(temp))
         print(temp[0][:5], temp[1][:5])
@@ -237,15 +236,14 @@ class LineByLineWithWeightTextDataset_Old(Dataset):
         self.weight = [float(w) for w in weight]
         print(self.weight[i])
 
-
     def __len__(self):
         return len(self.examples)
 
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),
-            self.weight[i])
+                torch.tensor(self.labels[i], dtype=torch.long),
+                self.weight[i])
 
 
 class LineByLineText2DataTextDataset(Dataset):
@@ -254,7 +252,7 @@ class LineByLineText2DataTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -263,7 +261,7 @@ class LineByLineText2DataTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
@@ -277,18 +275,15 @@ class LineByLineText2DataTextDataset(Dataset):
                                    is_split_into_words=False)
         self.examples = batch_encoding["input_ids"]
 
-
         separator = tokenizer('[BOS]', add_special_tokens=False)['input_ids'][0]
         self.labels = copy.deepcopy(self.examples)
         for i, elem in enumerate(self.labels):
             sep_idx = elem.index(separator) + 1
             self.labels[i][:sep_idx] = [-100] * sep_idx
 
-
         print(self.labels[0])
         print(self.examples[0])
         print(edited_sents[0])
-
 
     def __len__(self):
         return len(self.examples)
@@ -296,7 +291,7 @@ class LineByLineText2DataTextDataset(Dataset):
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),)
+                torch.tensor(self.labels[i], dtype=torch.long),)
 
 
 # URGENT.
@@ -306,7 +301,7 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -315,7 +310,7 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
@@ -339,8 +334,7 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
             ssl_lst.append(ssl)
 
         self.src_cat = tokenizer(ssl_lst, add_special_tokens=True, truncation=True, max_length=block_size,
-                            is_split_into_words=True)['input_ids']
-
+                                 is_split_into_words=True)['input_ids']
 
         self.src_sent = []
         self.tgt_sent = []
@@ -348,10 +342,9 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
             separator = tokenizer(' summarize', add_special_tokens=False)['input_ids'][0]
             for i, elem in enumerate(self.labels):
                 sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1])
-                self.tgt_sent.append(self.examples[i][sep_idx-1:])
+                self.src_sent.append(self.examples[i][:sep_idx - 1])
+                self.tgt_sent.append(self.examples[i][sep_idx - 1:])
                 self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -360,7 +353,6 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
         print(self.tgt_sent[0])
         print(self.src_cat[0])
         assert len(self.src_cat) == len(self.examples)
-
 
     def __len__(self):
         return len(self.examples)
@@ -375,13 +367,23 @@ class LineByLineData2TextTextDataset_Sum(Dataset):
 
                 )
 
+
 class LineByLineData2TextTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str, lowdata_token:str):
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizer,
+        file_path: str,
+        block_size: int,
+        bos_tok: str,
+        eos_tok: str,
+        lowdata_token: str,
+        max_seq_len=sys.maxsize,
+    ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -389,8 +391,12 @@ class LineByLineData2TextTextDataset(Dataset):
         logger.info("Creating features from dataset file at %s", file_path)
 
         with open(file_path, encoding="utf-8") as f:
-            lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+            lines = [
+                line.split('||')
+                for line in f.read().splitlines() if (
+                    len(line) > 0 and not line.isspace() and len(line.split('||')) == 2
+                )
+            ]
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
@@ -406,22 +412,42 @@ class LineByLineData2TextTextDataset(Dataset):
                 sent = ' {} {} {} '.format(lowdata_token, src, bos_tok) + tgt + ' {}'.format(eos_tok)
                 edited_sents.append(sent)
 
-        batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
-                                   is_split_into_words=False)
-        self.examples = batch_encoding["input_ids"]
+        # --- Filter out super long sentences ---
+        new_src_lines, new_tgt_lines, new_edited_sents = [], [], []
+        for src_line, tgt_line, edited_sent in zip(src_lines, tgt_lines, edited_sents):
+            tokenized_edited_sent = tokenizer.tokenize(edited_sent)
+            if len(tokenized_edited_sent) <= max_seq_len:
+                new_src_lines.append(src_line)
+                new_tgt_lines.append(tgt_line)
+                new_edited_sents.append(edited_sent)
+            del src_line, tgt_line, edited_sent
+        src_lines, tgt_lines, edited_sents = new_src_lines, new_tgt_lines, new_edited_sents
+        # ---------------------------------------
 
+        batch_encoding = tokenizer(
+            edited_sents,
+            add_special_tokens=True,
+            truncation=True,
+            max_length=block_size,
+            is_split_into_words=False,
+        )
+
+        self.examples = batch_encoding["input_ids"]
         self.labels = copy.deepcopy(self.examples)
 
         # split into category words:
         ssl_lst = []
         for ss in src_lines:
             ssl = [la.split(':')[0].strip() for la in ss.split('|')]
-            # print(ssl)
             ssl_lst.append(ssl)
 
-        self.src_cat = tokenizer(ssl_lst, add_special_tokens=True, truncation=True, max_length=block_size,
-                            is_split_into_words=True)['input_ids']
-
+        self.src_cat = tokenizer(
+            ssl_lst,
+            add_special_tokens=True,
+            truncation=True,
+            max_length=block_size,
+            is_split_into_words=True
+        )['input_ids']
 
         self.src_sent = []
         self.tgt_sent = []
@@ -429,23 +455,20 @@ class LineByLineData2TextTextDataset(Dataset):
         temp_src_len = 0
         temp_tgt_len = 0
         temp_count = 0
-        if True:
-            separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
-            for i, elem in enumerate(self.labels):
-                sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1])
-                self.tgt_sent.append(self.examples[i][sep_idx-1:])
-                self.labels[i][:sep_idx] = [-100] * sep_idx
-                temp_src_len += sep_idx-1
-                temp_tgt_len += len(elem) - (sep_idx-1)
-                temp_count += 1
+
+        separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
+        for i, elem in enumerate(self.labels):
+            sep_idx = elem.index(separator) + 1
+            self.src_sent.append(self.examples[i][:sep_idx - 1])
+            self.tgt_sent.append(self.examples[i][sep_idx - 1:])
+            self.labels[i][:sep_idx] = [-100] * sep_idx  # Doesn't contribute to loss.
+            temp_src_len += sep_idx - 1
+            temp_tgt_len += len(elem) - (sep_idx - 1)
+            temp_count += 1
 
         print('tgt_avg: ', temp_tgt_len / temp_count)
         print('src_avg: ', temp_src_len / temp_count)
-        print('ratios: ', temp_src_len/temp_tgt_len)
-
-
-
+        print('ratios: ', temp_src_len / temp_tgt_len)
 
         print(self.labels[0])
         print(self.examples[0])
@@ -455,19 +478,18 @@ class LineByLineData2TextTextDataset(Dataset):
         print(self.src_cat[0])
         assert len(self.src_cat) == len(self.examples)
 
-
     def __len__(self):
         return len(self.examples)
 
-    # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
-        return (torch.tensor(self.examples[i], dtype=torch.long),
-                torch.tensor(self.labels[i], dtype=torch.long),
-                torch.tensor(self.src_sent[i], dtype=torch.long),
-                torch.tensor(self.tgt_sent[i], dtype=torch.long),
-                torch.tensor(self.src_cat[i], dtype=torch.long),
+        return (
+            torch.tensor(self.examples[i], dtype=torch.long),
+            torch.tensor(self.labels[i], dtype=torch.long),
+            torch.tensor(self.src_sent[i], dtype=torch.long),
+            torch.tensor(self.tgt_sent[i], dtype=torch.long),
+            torch.tensor(self.src_cat[i], dtype=torch.long),
+        )
 
-                )
 
 class LineByLineWritingPromptsTextDataset(Dataset):
     """
@@ -475,7 +497,7 @@ class LineByLineWritingPromptsTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -484,7 +506,7 @@ class LineByLineWritingPromptsTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('|||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('|||')) ==2 )]
+                                                                             and len(line.split('|||')) == 2)]
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
@@ -493,14 +515,12 @@ class LineByLineWritingPromptsTextDataset(Dataset):
             src_lines[i] = x.replace("-lrb-", "(")
             src_lines[i] = x.replace("-rrb-", ")")
 
-
         tgt_lines = [x.replace("<newline>", "\n") for x in tgt_lines]
 
         edited_sents = []
         for src, tgt in zip(src_lines, tgt_lines):
             sent = ' {} {} '.format(src, bos_tok) + tgt + ' {}'.format(eos_tok)
             edited_sents.append(sent)
-
 
         # batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
         #                            is_split_into_words=False)
@@ -509,13 +529,11 @@ class LineByLineWritingPromptsTextDataset(Dataset):
                                        is_split_into_words=False)
         else:
             batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
-                                                                  is_split_into_words=False)
+                                       is_split_into_words=False)
 
         self.examples = batch_encoding["input_ids"]
 
         self.labels = copy.deepcopy(self.examples)
-
-
 
         self.src_sent = []
         self.tgt_sent = []
@@ -523,10 +541,9 @@ class LineByLineWritingPromptsTextDataset(Dataset):
             separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
             for i, elem in enumerate(self.labels):
                 sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1])
-                self.tgt_sent.append(self.examples[i][sep_idx-1:])
+                self.src_sent.append(self.examples[i][:sep_idx - 1])
+                self.tgt_sent.append(self.examples[i][sep_idx - 1:])
                 self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -534,7 +551,6 @@ class LineByLineWritingPromptsTextDataset(Dataset):
         print(self.src_sent[0])
         print(self.tgt_sent[0])
         # assert len(self.src_cat) == len(self.examples)
-
 
     def __len__(self):
         return len(self.examples)
@@ -548,16 +564,14 @@ class LineByLineWritingPromptsTextDataset(Dataset):
                 )
 
 
-
-
 class LineByLineSumTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str,
-                 max_source_length:int, max_target_length:int, ):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str,
+                 max_source_length: int, max_target_length: int, ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -579,8 +593,6 @@ class LineByLineSumTextDataset(Dataset):
         self.tokenizer = tokenizer
         return
 
-
-
         src_lines = []
         with open(self.src_file, encoding="utf-8") as f:
             for line in f:
@@ -599,7 +611,7 @@ class LineByLineSumTextDataset(Dataset):
         assert len(tgt_lines) == len(src_lines)
 
         src_encoding = tokenizer(src_lines, add_special_tokens=True, truncation=True, max_length=max_source_length,
-                                                              is_split_into_words=False)['input_ids']
+                                 is_split_into_words=False)['input_ids']
 
         tgt_encoding = tokenizer(tgt_lines, add_special_tokens=True, truncation=True, max_length=max_target_length,
                                  is_split_into_words=False)['input_ids']
@@ -621,18 +633,15 @@ class LineByLineSumTextDataset(Dataset):
 
         self.labels = copy.deepcopy(self.examples)
 
-
-
         self.src_sent = []
         self.tgt_sent = []
         if True:
             separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
             for i, elem in enumerate(self.labels):
                 sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1])
-                self.tgt_sent.append(self.examples[i][sep_idx-1:])
+                self.src_sent.append(self.examples[i][:sep_idx - 1])
+                self.tgt_sent.append(self.examples[i][sep_idx - 1:])
                 self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -640,9 +649,6 @@ class LineByLineSumTextDataset(Dataset):
         print(self.src_sent[0])
         print(self.tgt_sent[0])
         # assert len(self.src_cat) == len(self.examples)
-
-
-
 
     def __len__(self):
         return len(self.length)
@@ -663,10 +669,10 @@ class LineByLineSumTextDataset(Dataset):
         assert tgt_line, f"empty tgt line for index {index}"
 
         src = self.tokenizer(source_line, add_special_tokens=True, truncation=True, max_length=self.max_source_length,
-                                 is_split_into_words=False)['input_ids']
+                             is_split_into_words=False)['input_ids']
 
         tgt = self.tokenizer(tgt_line, add_special_tokens=True, truncation=True, max_length=self.max_target_length,
-                                 is_split_into_words=False)['input_ids']
+                             is_split_into_words=False)['input_ids']
 
         # print(src, tgt)
         sent = src + [self.bos_idx] + tgt + [self.eos_idx]
@@ -697,8 +703,8 @@ class LineByLineSumBatchGenTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str,
-                 max_source_length:int, max_target_length:int, ):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str,
+                 max_source_length: int, max_target_length: int, ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -720,9 +726,6 @@ class LineByLineSumBatchGenTextDataset(Dataset):
         self.tokenizer = tokenizer
         return
 
-
-
-
     def __len__(self):
         return len(self.length)
 
@@ -743,11 +746,12 @@ class LineByLineSumBatchGenTextDataset(Dataset):
 
         if modegen == 0:
 
-            src = self.tokenizer(source_line, add_special_tokens=True, truncation=True, max_length=self.max_source_length,
-                                     is_split_into_words=False)['input_ids']
+            src = \
+            self.tokenizer(source_line, add_special_tokens=True, truncation=True, max_length=self.max_source_length,
+                           is_split_into_words=False)['input_ids']
 
             tgt = self.tokenizer(tgt_line, add_special_tokens=True, truncation=True, max_length=self.max_target_length,
-                                     is_split_into_words=False)['input_ids']
+                                 is_split_into_words=False)['input_ids']
 
             # print(src, tgt)
             sent = src + [self.bos_idx] + tgt + [self.eos_idx]
@@ -775,20 +779,18 @@ class LineByLineSumBatchGenTextDataset(Dataset):
             return (source_line, tgt_line)
 
 
-
 class LineByLineWebNLGTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
         # `tokenizers` repo everywhere =)
         logger.info("Creating features from dataset file at %s", file_path)
-
 
         with open(file_path) as f:
             lines_dict = json.load(f)
@@ -815,11 +817,8 @@ class LineByLineWebNLGTextDataset(Dataset):
                     full_src_lst.append(temp_triples)
                     full_rela_lst.append(rela_lst)
 
-
-
         assert len(full_rela_lst) == len(full_src_lst)
         assert len(full_rela_lst) == len(full_tgt_lst)
-
 
         edited_sents = []
         for src, tgt in zip(full_src_lst, full_tgt_lst):
@@ -836,8 +835,7 @@ class LineByLineWebNLGTextDataset(Dataset):
         ssl_lst = full_rela_lst
 
         self.src_cat = tokenizer(ssl_lst, add_special_tokens=True, truncation=True, max_length=block_size,
-                            is_split_into_words=True)['input_ids']
-
+                                 is_split_into_words=True)['input_ids']
 
         self.src_sent = []
         self.tgt_sent = []
@@ -849,8 +847,8 @@ class LineByLineWebNLGTextDataset(Dataset):
             separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
             for i, elem in enumerate(self.labels):
                 sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1]) # does not contain the BOS separator
-                self.tgt_sent.append(self.examples[i][sep_idx-1:]) # contains the BOS separator.
+                self.src_sent.append(self.examples[i][:sep_idx - 1])  # does not contain the BOS separator
+                self.tgt_sent.append(self.examples[i][sep_idx - 1:])  # contains the BOS separator.
                 self.labels[i][:sep_idx] = [-100] * sep_idx
                 temp_src_len += sep_idx - 1
                 temp_tgt_len += len(elem) - (sep_idx - 1)
@@ -859,9 +857,6 @@ class LineByLineWebNLGTextDataset(Dataset):
         print('tgt_avg: ', temp_tgt_len / temp_count)
         print('src_avg: ', temp_src_len / temp_count)
         print('ratios: ', temp_src_len / temp_tgt_len)
-
-
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -877,7 +872,6 @@ class LineByLineWebNLGTextDataset(Dataset):
         print(self.tgt_sent[1])
         print(self.src_cat[1])
         assert len(self.src_cat) == len(self.examples)
-
 
     def __len__(self):
         return len(self.examples)
@@ -899,13 +893,12 @@ class LineByLineTriplesTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
         # `tokenizers` repo everywhere =)
         logger.info("Creating features from dataset file at %s", file_path)
-
 
         with open(file_path) as f:
             lines_dict = json.load(f)
@@ -929,10 +922,8 @@ class LineByLineTriplesTextDataset(Dataset):
                 full_src_lst.append(temp_triples)
                 full_rela_lst.append(rela_lst)
 
-
         assert len(full_rela_lst) == len(full_src_lst)
         assert len(full_rela_lst) == len(full_tgt_lst)
-
 
         edited_sents = []
         for src, tgt in zip(full_src_lst, full_tgt_lst):
@@ -949,8 +940,7 @@ class LineByLineTriplesTextDataset(Dataset):
         ssl_lst = full_rela_lst
 
         self.src_cat = tokenizer(ssl_lst, add_special_tokens=True, truncation=True, max_length=block_size,
-                            is_split_into_words=True)['input_ids']
-
+                                 is_split_into_words=True)['input_ids']
 
         self.src_sent = []
         self.tgt_sent = []
@@ -961,8 +951,8 @@ class LineByLineTriplesTextDataset(Dataset):
             separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
             for i, elem in enumerate(self.labels):
                 sep_idx = elem.index(separator) + 1
-                self.src_sent.append(self.examples[i][:sep_idx-1]) # does not contain the BOS separator
-                self.tgt_sent.append(self.examples[i][sep_idx-1:]) # contains the BOS separator.
+                self.src_sent.append(self.examples[i][:sep_idx - 1])  # does not contain the BOS separator
+                self.tgt_sent.append(self.examples[i][sep_idx - 1:])  # contains the BOS separator.
                 self.labels[i][:sep_idx] = [-100] * sep_idx
 
                 temp_src_len += sep_idx - 1
@@ -973,7 +963,6 @@ class LineByLineTriplesTextDataset(Dataset):
         print('src_avg: ', temp_src_len / temp_count)
         print('ratios: ', temp_src_len / temp_tgt_len)
 
-
         print(self.labels[0])
         print(self.examples[0])
         print(edited_sents[0])
@@ -981,7 +970,6 @@ class LineByLineTriplesTextDataset(Dataset):
         print(self.tgt_sent[0])
         print(self.src_cat[0])
         assert len(self.src_cat) == len(self.examples)
-
 
     def __len__(self):
         return len(self.examples)
@@ -996,13 +984,14 @@ class LineByLineTriplesTextDataset(Dataset):
 
                 )
 
+
 class LineByLineLemma2TextTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok:str, eos_tok:str):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1011,7 +1000,7 @@ class LineByLineLemma2TextTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==3 )]
+                                                                            and len(line.split('||')) == 3)]
         src_lines, mid_word, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
@@ -1034,11 +1023,9 @@ class LineByLineLemma2TextTextDataset(Dataset):
                 sep_idx = elem.index(separator) + 1
                 self.labels[i][:sep_idx] = [-100] * sep_idx
 
-
         print(self.labels[0])
         print(self.examples[0])
         print(edited_sents[0])
-
 
     def __len__(self):
         return len(self.examples)
@@ -1046,7 +1033,7 @@ class LineByLineLemma2TextTextDataset(Dataset):
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),)
+                torch.tensor(self.labels[i], dtype=torch.long),)
 
 
 class LineByLineClassificationSentimentTextDataset(Dataset):
@@ -1055,8 +1042,8 @@ class LineByLineClassificationSentimentTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 prefix_ctrl:bool=True, bos_tok='[BOS]', eos_tok='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 prefix_ctrl: bool = True, bos_tok='[BOS]', eos_tok='[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1065,7 +1052,7 @@ class LineByLineClassificationSentimentTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('|||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('|||')) ==2 )]
+                                                                             and len(line.split('|||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1075,7 +1062,8 @@ class LineByLineClassificationSentimentTextDataset(Dataset):
         edited_sents = []
         new_wordlst = []
         for sent, word_temp in zip(sents, word_lst):
-            sent = ' {} {} '.format(sent, bos_tok) + word_temp + '{}'.format(eos_tok) # could swap and change to the sentiment is ...
+            sent = ' {} {} '.format(sent, bos_tok) + word_temp + '{}'.format(
+                eos_tok)  # could swap and change to the sentiment is ...
             edited_sents.append(sent)
             new_wordlst.append([word_temp.strip()])
 
@@ -1088,13 +1076,11 @@ class LineByLineClassificationSentimentTextDataset(Dataset):
         #     self.control_code = tokenizer(new_wordlst, truncation=True, max_length=block_size,
         #                                   is_split_into_words=True)["input_ids"]
 
-
         separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
         self.labels = copy.deepcopy(self.examples)
         for i, elem in enumerate(self.labels):
             sep_idx = elem.index(separator) + 1
             self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -1121,8 +1107,8 @@ class LineByLineSentimentTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 prefix_ctrl:bool=True, bos_tok='[BOS]', eos_tok='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 prefix_ctrl: bool = True, bos_tok='[BOS]', eos_tok='[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1131,7 +1117,7 @@ class LineByLineSentimentTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('|||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('|||')) ==2 )]
+                                                                             and len(line.split('|||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1154,13 +1140,11 @@ class LineByLineSentimentTextDataset(Dataset):
             self.control_code = tokenizer(new_wordlst, truncation=True, max_length=block_size,
                                           is_split_into_words=True)["input_ids"]
 
-
         separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
         self.labels = copy.deepcopy(self.examples)
         for i, elem in enumerate(self.labels):
             sep_idx = elem.index(separator) + 1
             self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -1179,7 +1163,8 @@ class LineByLineSentimentTextDataset(Dataset):
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
                 torch.tensor(self.labels[i], dtype=torch.long),
-                torch.tensor(self.control_code[i], dtype=torch.long) )
+                torch.tensor(self.control_code[i], dtype=torch.long))
+
 
 class LineByLineClassificationTopicTextDataset(Dataset):
     """
@@ -1187,8 +1172,8 @@ class LineByLineClassificationTopicTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 prefix_ctrl:bool=True, bos_tok='[BOS]', eos_tok='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 prefix_ctrl: bool = True, bos_tok='[BOS]', eos_tok='[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1197,7 +1182,7 @@ class LineByLineClassificationTopicTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1213,21 +1198,15 @@ class LineByLineClassificationTopicTextDataset(Dataset):
                                    is_split_into_words=False)
         self.examples = batch_encoding["input_ids"]
 
-
-
-
         separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
         self.labels = copy.deepcopy(self.examples)
         for i, elem in enumerate(self.labels):
             sep_idx = elem.index(separator) + 1
             self.labels[i][:sep_idx] = [-100] * sep_idx
 
-
         print(self.labels[0])
         print(self.examples[0])
         print(edited_sents[0])
-
-
 
     def __len__(self):
         return len(self.examples)
@@ -1237,14 +1216,15 @@ class LineByLineClassificationTopicTextDataset(Dataset):
         return (torch.tensor(self.examples[i], dtype=torch.long),
                 torch.tensor(self.labels[i], dtype=torch.long))
 
+
 class LineByLineTopicTextDataset(Dataset):
     """
     This will be superseded by a framework-agnostic approach
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 prefix_ctrl:bool=True, bos_tok='[BOS]', eos_tok='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 prefix_ctrl: bool = True, bos_tok='[BOS]', eos_tok='[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1253,7 +1233,7 @@ class LineByLineTopicTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1275,13 +1255,11 @@ class LineByLineTopicTextDataset(Dataset):
             self.control_code = tokenizer(new_wordlst, truncation=True, max_length=block_size,
                                           is_split_into_words=True)["input_ids"]
 
-
         separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
         self.labels = copy.deepcopy(self.examples)
         for i, elem in enumerate(self.labels):
             sep_idx = elem.index(separator) + 1
             self.labels[i][:sep_idx] = [-100] * sep_idx
-
 
         print(self.labels[0])
         print(self.examples[0])
@@ -1300,7 +1278,7 @@ class LineByLineTopicTextDataset(Dataset):
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
                 torch.tensor(self.labels[i], dtype=torch.long),
-                torch.tensor(self.control_code[i], dtype=torch.long) )
+                torch.tensor(self.control_code[i], dtype=torch.long))
 
 
 class LineByLineLengthTextDataset(Dataset):
@@ -1310,7 +1288,7 @@ class LineByLineLengthTextDataset(Dataset):
     """
 
     def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
-                 prefix_ctrl:bool=True):
+                 prefix_ctrl: bool = True):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1354,7 +1332,6 @@ class LineByLineLengthTextDataset(Dataset):
         batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
                                    is_split_into_words=False)
 
-
         self.examples = batch_encoding["input_ids"]
 
         separator = tokenizer('[BOS]', add_special_tokens=False)['input_ids'][0]
@@ -1384,10 +1361,11 @@ class LineByLineKeywordTextDataset(Dataset):
     This will be superseded by a framework-agnostic approach
     soon.
     """
+
     # <|endoftext|>
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 prefix_ctrl:bool=True, bos_tok:str='[BOS]', eos_tok:str='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 prefix_ctrl: bool = True, bos_tok: str = '[BOS]', eos_tok: str = '[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1396,7 +1374,7 @@ class LineByLineKeywordTextDataset(Dataset):
 
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1414,7 +1392,7 @@ class LineByLineKeywordTextDataset(Dataset):
         self.prefix_ctrl = prefix_ctrl
         if prefix_ctrl:
             self.control_code = tokenizer(new_wordlst, add_special_tokens=True, truncation=True, max_length=block_size,
-                                       is_split_into_words=True)["input_ids"]
+                                          is_split_into_words=True)["input_ids"]
 
         separator = tokenizer(bos_tok, add_special_tokens=False)['input_ids'][0]
         print(separator)
@@ -1429,15 +1407,15 @@ class LineByLineKeywordTextDataset(Dataset):
             print(self.control_code[0])
         print(edited_sents[0])
 
-
     def __len__(self):
         return len(self.examples)
 
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),
-            torch.tensor(self.control_code[i], dtype=torch.long) if self.prefix_ctrl else None,)
+                torch.tensor(self.labels[i], dtype=torch.long),
+                torch.tensor(self.control_code[i], dtype=torch.long) if self.prefix_ctrl else None,)
+
 
 class LineByLineEmbMatchTextDataset(Dataset):
     """
@@ -1445,8 +1423,8 @@ class LineByLineEmbMatchTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer:int=1,
-                 add_bracket:bool = False, bos_tok:str='[BOS]', eos_tok:str='[EOS]'):
+    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, num_layer: int = 1,
+                 add_bracket: bool = False, bos_tok: str = '[BOS]', eos_tok: str = '[EOS]'):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -1455,7 +1433,7 @@ class LineByLineEmbMatchTextDataset(Dataset):
         self.add_bracket = add_bracket
         with open(file_path, encoding="utf-8") as f:
             lines = [line.split('||') for line in f.read().splitlines() if (len(line) > 0 and not line.isspace()
-                                                                             and len(line.split('||')) ==2 )]
+                                                                            and len(line.split('||')) == 2)]
         word_lst, sents = list(zip(*lines))
         sents = list(sents)
         word_lst = list(word_lst)
@@ -1478,9 +1456,8 @@ class LineByLineEmbMatchTextDataset(Dataset):
         print(self.labels[0])
         print(self.examples[0])
         print(edited_sents[0])
-        self.emb = torch.split(full_score, 1) # (1, num_layer, 1024) or (1, 1024)
+        self.emb = torch.split(full_score, 1)  # (1, num_layer, 1024) or (1, 1024)
         print(self.emb[i].shape)
-
 
     def __len__(self):
         return len(self.examples)
@@ -1488,8 +1465,8 @@ class LineByLineEmbMatchTextDataset(Dataset):
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i], dtype=torch.long),
-            self.emb[i])
+                torch.tensor(self.labels[i], dtype=torch.long),
+                self.emb[i])
 
     def get_emb(self, sent_lst, word_lst, num_layer, bos_tok, eos_tok):
         # load bert
@@ -1506,21 +1483,21 @@ class LineByLineEmbMatchTextDataset(Dataset):
             mid_ = 300
             full_score = []
             while computed_ < len(sent_lst):
-                temp_sent = sent_lst[computed_:computed_+mid_]
-                temp_word = word_lst[computed_:computed_+mid_]
+                temp_sent = sent_lst[computed_:computed_ + mid_]
+                temp_word = word_lst[computed_:computed_ + mid_]
                 temp_input = tokenizer_bert(temp_sent, return_tensors="pt", padding=True,
-                                       is_split_into_words=False, return_offsets_mapping=True, add_special_tokens=True)
+                                            is_split_into_words=False, return_offsets_mapping=True,
+                                            add_special_tokens=True)
                 input_ids = temp_input["input_ids"]
                 mask_input = temp_input['attention_mask']
                 bsz, seqlen = input_ids.shape
 
                 # print(input_ids.shape)
 
-
                 cand_idx = tokenizer_bert(temp_word, add_special_tokens=False)['input_ids']
                 # print(cand_idx)
                 # if BPE has multiple subwords.
-                cand_idx = torch.tensor([i[-1] for i in cand_idx]) #bsz
+                cand_idx = torch.tensor([i[-1] for i in cand_idx])  # bsz
                 # print(cand_idx)
                 cand_idx2 = cand_idx.unsqueeze(1).expand(bsz, seqlen)
 
@@ -1537,20 +1514,19 @@ class LineByLineEmbMatchTextDataset(Dataset):
                 # print(mask.nonzero())
                 mask_idx = mask.nonzero()
 
-
                 # print(input_ids.shape)
 
                 edit_temp = []
                 keep_mask = []
-                for i, (sent1, word1)  in enumerate(zip(temp_sent, temp_word)):
+                for i, (sent1, word1) in enumerate(zip(temp_sent, temp_word)):
                     # TODO: could check against the offests and make final changes!
-                    temp_idx1 = temp_input["offset_mapping"][i][mask_idx[i,1]]
+                    temp_idx1 = temp_input["offset_mapping"][i][mask_idx[i, 1]]
                     # print(word1, sent1)
                     # print(sent1[temp_idx1[0]:temp_idx1[1]])
                     sent1 = sent1.split()
                     widx = sent1.index(word1)
                     by_tokenl = sum([len(l) + 1 for l in sent1[:widx]])
-                    by_tokenr = sum([len(l) + 1 for l in sent1[:widx+1]]) - 1
+                    by_tokenr = sum([len(l) + 1 for l in sent1[:widx + 1]]) - 1
                     # print(by_tokenl, by_tokenr, temp_idx1)
                     if by_tokenl != temp_idx1[0].item() and by_tokenr != temp_idx1[1].item():
                         # print('dangerous')
@@ -1562,7 +1538,8 @@ class LineByLineEmbMatchTextDataset(Dataset):
                         keep_mask.append(True)
 
                     if self.add_bracket:
-                        new_sent = [word1, bos_tok] + sent1[:widx] + ['[' , sent1[widx], ']'] + sent1[widx+1:] + [eos_tok]
+                        new_sent = [word1, bos_tok] + sent1[:widx] + ['[', sent1[widx], ']'] + sent1[widx + 1:] + [
+                            eos_tok]
                         assert len(new_sent) == len(sent1) + 5
                     else:
                         new_sent = [word1, bos_tok] + sent1[:widx] + [sent1[widx]] + sent1[widx + 1:] + [eos_tok]
@@ -1598,13 +1575,13 @@ class LineByLineEmbMatchTextDataset(Dataset):
                     last_hidden_states = outputs.last_hidden_state
                     hidden_layer = last_hidden_states[mask].unsqueeze(1)
 
-
                 computed_ += mid_
                 full_score.append(hidden_layer.cpu())
 
             full_score = torch.cat(full_score, dim=0)
 
         return full_score, edited_sent
+
 
 class LineByLineWithWeightTextDataset2(Dataset):
     """
@@ -1625,7 +1602,7 @@ class LineByLineWithWeightTextDataset2(Dataset):
         sents = list(sents)
         for ii, x in enumerate(sents):
             separator = x.find(':')
-            sents[ii] = x[:separator] + ' [BOS] ' + x[separator+1:] + ' [EOS]'
+            sents[ii] = x[:separator] + ' [BOS] ' + x[separator + 1:] + ' [EOS]'
         batch_encoding = tokenizer(sents, add_special_tokens=True, truncation=True, max_length=block_size)
         self.examples = batch_encoding["input_ids"]
         separator = tokenizer('[BOS]', add_special_tokens=False)['input_ids'][0]
@@ -1637,8 +1614,7 @@ class LineByLineWithWeightTextDataset2(Dataset):
         print(self.labels[i])
         print(self.examples[i])
         self.weight = [float(w) for w in weight]
-        print( self.weight[i])
-
+        print(self.weight[i])
 
     def __len__(self):
         return len(self.examples)
@@ -1646,8 +1622,9 @@ class LineByLineWithWeightTextDataset2(Dataset):
     # def __getitem__(self, i) -> torch.Tensor:
     def __getitem__(self, i):
         return (torch.tensor(self.examples[i], dtype=torch.long),
-            torch.tensor(self.labels[i]),
-            self.weight[i])
+                torch.tensor(self.labels[i]),
+                self.weight[i])
+
 
 class LineByLineWithSOPTextDataset(Dataset):
     """
