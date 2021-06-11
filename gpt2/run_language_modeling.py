@@ -464,6 +464,7 @@ def main():
             target_delta=privacy_args.target_delta,
         )
         privacy_engine.attach(trainer.optimizer)
+        print(privacy_engine)
 
     # Training
     if training_args.do_train:

@@ -11,7 +11,10 @@ purpose:
 notes:
     NA
 run:
-    python -m gpt2.launchers.prefix_vs_full_060721 --mode "submit"
+    to generate running scripts:
+        python -m gpt2.launchers.prefix_vs_full_060721 --mode "submit"
+    to run local:
+        python -m gpt2.launchers.prefix_vs_full_060721 --mode "local"
 """
 
 import os
