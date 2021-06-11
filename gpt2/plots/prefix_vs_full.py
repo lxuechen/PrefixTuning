@@ -73,6 +73,7 @@ def main(
             for this_dict in record:
                 x.append(this_dict[xaxis])
                 y.append(this_dict[metric])
+
             linestyle = {
                 'prefixtune': '-',
                 'fulltune': '-.'
@@ -86,7 +87,7 @@ def main(
         'lin_logprob': "line cross entropy",
     }[metric]
     xlabel = {
-        'steps': 'Steps',
+        'step': 'Step',
         'eps_rdp': '$\epsilon$'
     }[xaxis]
     img_path = os.path.join('.', 'gpt2', 'plots', 'prefix_vs_full', f'{metric}.png')
