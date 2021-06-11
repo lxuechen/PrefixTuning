@@ -451,6 +451,7 @@ def main():
     trainer.create_optimizer_and_scheduler(t_total)
 
     if privacy_args.nonprivate == "no":
+        # TODO: Why does the per_example_max_grad_norm not affect things by much???
         actual_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
         privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
             batch_size=actual_batch_size,
