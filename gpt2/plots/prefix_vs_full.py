@@ -13,7 +13,7 @@ base_dir = "/Users/xuechenli/Desktop/dump/prefixtune"
 
 def main(
     metric="tok_logprob",
-    xaxis="steps",
+    xaxis="step",
 ):
     max_grad_norms = (1,)
     # noise_multipliers = (0.1, 0.75,)
@@ -23,6 +23,7 @@ def main(
     learning_rate = 1e-5
 
     plots = []
+    vlines = []
     for tuning_mode in ("fulltune", "prefixtune"):
         for max_grad_norm in max_grad_norms:
             for noise_multiplier in noise_multipliers:
@@ -56,6 +57,13 @@ def main(
                      'linestyle': linestyle},
                 )
 
+                eps_rdp = this_dict["eps_rdp"]
+                x = this_dict[xaxis]
+                vlines.append({'x': x, 'ymin': 3, 'ymax': 20, 'label': f"$\epsilon={eps_rdp}$"})
+                del this_dict
+    vlines = vlines[:1]
+
+    learning_rate = 1e-6
     if xaxis != "eps_rdp":
         nonprivate = "yes"
         for tuning_mode in ("fulltune", "prefixtune"):
@@ -94,6 +102,7 @@ def main(
     utils.plot(
         img_path=img_path,
         plots=plots,
+        vlines=vlines,
         options={'ylabel': f"Test set {ylabel}", 'yscale': 'log', 'xlabel': xlabel, 'xscale': 'log'},
     )
 

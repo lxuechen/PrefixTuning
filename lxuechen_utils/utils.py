@@ -1214,21 +1214,23 @@ def ema_update(ema_model: nn.Module, model: nn.Module, gamma: Optional[float] = 
 
 # Plotting.
 def plot(
-    img_path=None,
-    plots: Optional[Sequence] = (),
-    scatters: Optional[Sequence] = (),
-    hists: Optional[Sequence] = (),
-    errorbars: Optional[Sequence] = (),
-    bars: Optional[Sequence] = (),
-    fill_betweens: Optional[Sequence] = (),
+    img_path: Optional[str] = None,
+    plots: Sequence = (),
+    vlines: Sequence = (),
+    scatters: Sequence = (),
+    hists: Sequence = (),
+    errorbars: Sequence = (),
+    bars: Sequence = (),
+    fill_betweens: Sequence = (),
     options: Optional[Dict] = None,
 
-    plots2: Optional[Sequence] = (),
-    scatters2: Optional[Sequence] = (),
-    hists2: Optional[Sequence] = (),
-    errorbars2: Optional[Sequence] = (),
-    bars2: Optional[Sequence] = (),
-    fill_betweens2: Optional[Sequence] = (),
+    plots2: Sequence = (),
+    vlines2: Sequence = (),
+    scatters2: Sequence = (),
+    hists2: Sequence = (),
+    errorbars2: Sequence = (),
+    bars2: Sequence = (),
+    fill_betweens2: Sequence = (),
     options2: Optional[Dict] = None,
 
     legend_options: Optional[Dict] = None,
@@ -1245,6 +1247,7 @@ def plot(
     Args:
         img_path (str): A path to the place where the image should be written.
         plots (list of dict, optional): A list of curves that needs `plt.plot`.
+        vlines (list of dict, optional): A list of vertical lines that needs `plt.vline`.
         scatters (list of dict, optional): A list of scatter plots that needs `plt.scatter`.
         hists (list of histograms, optional): A list of histograms that needs `plt.hist`.
         errorbars (list of errorbars, optional): A list of errorbars that needs `plt.errorbar`.
@@ -1253,6 +1256,7 @@ def plot(
         options (dict, optional): A dictionary of optional arguments, such as title, xlabel, ylabel, etc.
 
         plots2: Same format as above, but for twin plot.
+        vlines2 (list of dict, optional): A list of vertical lines that needs `plt.vline`.
         scatters2: Same format as above, but for twin plot.
         hists2: Same format as above, but for twin plot.
         errorbars2: Same format as above, but for twin plot.
@@ -1283,6 +1287,7 @@ def plot(
     _plot(
         ax=ax,
         plots=plots,
+        vlines=vlines,
         errorbars=errorbars,
         scatters=scatters,
         hists=hists,
@@ -1296,6 +1301,7 @@ def plot(
         _plot(
             ax=ax2,
             plots=plots2,
+            vlines=vlines2,
             scatters=scatters2,
             hists=hists2,
             errorbars=errorbars2,
@@ -1336,7 +1342,7 @@ def _feed_args(options, key, func):
             func(params)
 
 
-def _plot(ax, plots, errorbars, scatters, hists, bars, fill_betweens, options):
+def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, options):
     if options is None: options = {}
 
     _feed_args(options, 'xscale', ax.set_xscale)
@@ -1358,6 +1364,10 @@ def _plot(ax, plots, errorbars, scatters, hists, bars, fill_betweens, options):
         kwargs = {key: entry[key] for key in entry if key != 'x' and key != 'y'}
         kwargs.pop('aux', None)
         ax.plot(entry['x'], entry['y'], **kwargs)
+    for entry in vlines:
+        kwargs = {key: entry[key] for key in entry if key not in ('x', 'ymin', 'ymax')}
+        kwargs.pop('aux', None)
+        ax.vlines(entry['x'], entry['ymin'], entry['ymax'], **kwargs)
     for entry in errorbars:
         kwargs = {key: entry[key] for key in entry if key != 'x' and key != 'y'}
         kwargs.pop('aux', None)
