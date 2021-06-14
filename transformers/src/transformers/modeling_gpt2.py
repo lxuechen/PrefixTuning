@@ -805,28 +805,18 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         lm_logits = self.lm_head(hidden_states)
 
         if labels is not None:
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
-            loss_fct = CrossEntropyLoss(reduction="none")
-            bsz, seqlen, vocab_size = shift_logits.shape
+            shift_logits = lm_logits[..., :-1, :].permute(0, 2, 1)  # (batch_size, vocab_size, seq_len).
+            shift_labels = labels[..., 1:]
+            criterion = CrossEntropyLoss(reduction="none")
 
             if self._objective_mode == 0:
-                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+                loss = criterion(shift_logits, shift_labels)
                 loss = loss.mean(dim=1)
             elif self._objective_mode == 1:
-                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                loss = loss.view(bsz, seqlen).sum(dim=1)
-            elif self._objective_mode == 2:
-                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                loss = loss.view(bsz, seqlen).mean(dim=1)
-            elif self._objective_mode == 3:
-                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                seqlen_dim = max((shift_labels != -100).sum(dim=-1))
-                loss = loss.view(bsz, seqlen).sum(dim=1) / seqlen_dim
+                loss = criterion(shift_logits, shift_labels)
+                loss = loss.sum(dim=1)
             else:
-                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                seqlen_dim = (input_ids != 50256).sum(dim=-1)
-                loss = loss.view(bsz, seqlen).sum(dim=1) / seqlen_dim
+                raise ValueError
 
             loss = loss.mean(dim=0)
         else:
