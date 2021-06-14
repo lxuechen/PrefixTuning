@@ -59,11 +59,12 @@ class PrivacyEngine(object):
         noise_multiplier: Optional[float] = None,
         target_epsilon: Optional[float] = None,
         target_delta: Optional[float] = None,
-        gradient_accumulation_steps: Optional[int] = 1,
+        gradient_accumulation_steps: int = 1,
         loss_reduction="mean",
+        batch_first: bool = True,
         accounting_mode="rdp",
         alphas: Sequence[float] = DEFAULT_ALPHAS,
-        verbose: Optional[bool] = False,
+        verbose: bool = False,
         **_,
     ):
         super(PrivacyEngine, self).__init__()
@@ -108,6 +109,7 @@ class PrivacyEngine(object):
         self.loss_reduction = loss_reduction
         self.alphas = alphas
         self.accounting_mode = accounting_mode
+        self.batch_first = batch_first
         self.verbose = verbose
 
         # Internals.
@@ -131,7 +133,7 @@ class PrivacyEngine(object):
 
     def attach(self, optimizer):
         autograd_grad_sample.add_hooks(
-            self.module, batch_first=True, loss_reduction=self.loss_reduction
+            self.module, batch_first=self.batch_first, loss_reduction=self.loss_reduction
         )
 
         # Override zero grad.
@@ -331,8 +333,13 @@ class PrivacyEngine(object):
             f"  target_epsilon={self.target_epsilon}, \n"
             f"  target_delta={self.target_delta}, \n"
             f"  noise_multiplier={self.noise_multiplier}, \n"
+            f"  epochs={self.epochs}, \n"
             f"  max_grad_norm={self.max_grad_norm}, \n"
-            f"  sample_rate={self.sample_rate}, \n"
+            f"  sample_rate={self.sample_rate}, \n "
+            f"  (actual) batch_size={self.batch_size}, \n"
+            f"  gradient_accumulation_steps={self.gradient_accumulation_steps}, \n"
+            f"  loss_reduction={self.loss_reduction}, \n"
+            f"  accounting_mode={self.accounting_mode}, \n"
             f")"
         )
 

@@ -451,15 +451,20 @@ def main():
         # TODO: Why does the per_example_max_grad_norm not affect things by much???
         actual_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
         privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
-            batch_size=actual_batch_size,
             module=model,
-            sample_size=len(train_dataset),
-            epochs=training_args.num_train_epochs,
+
             # Privacy specific arguments.
+            batch_size=actual_batch_size,  # This determines what's dividing the gradient!
+            sample_size=len(train_dataset),
+            gradient_accumulation_steps=training_args.gradient_accumulation_steps,
+            epochs=training_args.num_train_epochs,
             max_grad_norm=privacy_args.per_example_max_grad_norm,
             noise_multiplier=privacy_args.noise_multiplier,
             target_epsilon=privacy_args.target_epsilon,
             target_delta=privacy_args.target_delta,
+            loss_reduction="mean",
+            batch_first=True,
+            accounting_mode=privacy_args.accounting_mode,
         )
         privacy_engine.attach(trainer.optimizer)
         print(privacy_engine)
