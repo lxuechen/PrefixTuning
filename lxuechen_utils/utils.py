@@ -3006,3 +3006,12 @@ def top_singular(mat, left_singularvectors=False, right_singularvectors=False, n
 write_argparse = write_config
 load_argparse = load_config
 count_tensor_or_tensors_size = count_tensor_list_size
+
+
+# Safe math operations.
+def exp_(x):
+    try:
+        ans = math.exp(x)
+    except OverflowError:
+        ans = float('inf')
+    return ans

@@ -42,9 +42,12 @@ def _get_command(
     learning_rate=1e-05,
     # TODO: Artificially truncating since cannot avoid OOM with full + private...
     # TODO: This arg has only been tested for `data2text` so far...
+    #   Status for data2text (e2e):
+    #   truncate at max_seq_len=96 => training set size 42021
+    #   full training set size 42061
     max_seq_len=96,
 
-    eval_steps=100,
+    eval_steps=100,  # Evaluate every such steps.
     max_steps=-1,
     max_eval_batches=-1,
     mid_dim=512,

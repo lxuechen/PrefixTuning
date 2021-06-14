@@ -852,6 +852,8 @@ class Trainer_Prefix:
                         metrics = self.evaluate()
                         self._report_to_hp_search(trial, epoch, metrics)
 
+                        # TODO: Early stopping!
+
                     if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
                         print('saving model at a checkpoint!!')
                         # In all cases (even distributed/parallel), self.model is always a reference
