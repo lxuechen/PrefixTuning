@@ -330,15 +330,12 @@ def main():
     # 2 means our buggy version which is sum/max_batch(input_len +output_len)
     # 3 means our buggy version which is sum/max_batch(output_len)
     # 4 means our buggy version which is sum/(input_len +output_len)
-    # TODO: Double check this objective mode.
-    config._objective_mode = model_args.objective_mode
+    config._objective_mode = {
+        "fulltune": 0,
+        "prefixtune": 1,
+    }[model_args.tuning_mode]
+
     config._my_arg_task_mode = data_args.task_mode
-
-    if model_args.tuning_mode in ['finetune', 'adaptertune', 'finetune-top']:
-        print('objective is 0 because of finetune')
-    elif model_args.tuning_mode == 'prefixtune':
-        print('objective is {}'.format(config._objective_mode))
-
     config.return_dict = True
     model = GPT2LMHeadModel.from_pretrained(
         model_args.model_name_or_path,

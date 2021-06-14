@@ -812,21 +812,23 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
 
             if self._objective_mode == 0:
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                loss = loss.mean()
+                loss = loss.mean(dim=1)
             elif self._objective_mode == 1:
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                loss = loss.view(bsz, seqlen).sum(dim=-1)
+                loss = loss.view(bsz, seqlen).sum(dim=1)
             elif self._objective_mode == 2:
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                loss = loss.view(bsz, seqlen).mean(dim=-1)
+                loss = loss.view(bsz, seqlen).mean(dim=1)
             elif self._objective_mode == 3:
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 seqlen_dim = max((shift_labels != -100).sum(dim=-1))
-                loss = loss.view(bsz, seqlen).sum(dim=-1) / seqlen_dim
+                loss = loss.view(bsz, seqlen).sum(dim=1) / seqlen_dim
             else:
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 seqlen_dim = (input_ids != 50256).sum(dim=-1)
-                loss = loss.view(bsz, seqlen).sum(dim=-1) / seqlen_dim
+                loss = loss.view(bsz, seqlen).sum(dim=1) / seqlen_dim
+
+            loss = loss.mean(dim=0)
         else:
             loss = None
 

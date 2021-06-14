@@ -1171,7 +1171,7 @@ class Trainer_Prefix:
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
 
-        return outputs[0].mean()
+        return outputs[0]
 
     def compute_loss_distill(self, model, inputs, gpt2_model=None):
         """
