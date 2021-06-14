@@ -87,30 +87,11 @@ def get_dataset(
 ):
     file_path = args.eval_data_file if evaluate else args.train_data_file
     if args.line_by_line:
-        if args.task_mode == 'embMatch':
-            dataset = LineByLineEmbMatchTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                    block_size=args.block_size,
-                                                    num_layer=1, bos_tok=tokenizer.bos_token,
-                                                    eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'topic':
-            dataset = LineByLineTopicTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                 block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                 eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'length':
-            dataset = LineByLineLengthTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                  block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                  eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'keyword':
-            dataset = LineByLineKeywordTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                   eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'data2text':
+        if args.task_mode == 'data2text':
             dataset = LineByLineData2TextTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                      block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                      eos_tok=tokenizer.eos_token,
-                                                     lowdata_token=args.lowdata_token if (
-                                                         'lowdata' in training_args.output_dir and finetune_mode)
-                                                     else None,
+                                                     lowdata_token=None,
                                                      max_seq_len=args.max_seq_len)
 
         elif args.task_mode == 'triples':
@@ -122,51 +103,8 @@ def get_dataset(
             dataset = LineByLineWebNLGTextDataset(tokenizer=tokenizer, file_path=file_path,
                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
                                                   eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'writingPrompts':
-            dataset = LineByLineWritingPromptsTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                          block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                          eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'cnndm' or args.task_mode == 'xsum':
-            max_source_length = args.max_source_length
-            max_target_length = args.train_max_target_length if not evaluate else args.val_max_target_length
-            dataset = LineByLineSumTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                               block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                               eos_tok=tokenizer.eos_token, max_source_length=max_source_length,
-                                               max_target_length=max_target_length, )
-
-        elif args.task_mode == 'sentiment':
-            dataset = LineByLineSentimentTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'classify-sentiment':
-            dataset = LineByLineClassificationSentimentTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                                   block_size=args.block_size,
-                                                                   bos_tok=tokenizer.bos_token,
-                                                                   eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'classify-topic':
-            dataset = LineByLineClassificationTopicTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                               block_size=args.block_size,
-                                                               bos_tok=tokenizer.bos_token,
-                                                               eos_tok=tokenizer.eos_token)
-
-        elif args.task_mode == 'lemma2text':
-            dataset = LineByLineLemma2TextTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                      block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                      eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'text2data':
-            dataset = LineByLineText2DataTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token)
-        elif args.task_mode == 'gen_data':
-            dataset = LineByLineWithWeightTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                      block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                      eos_tok=tokenizer.eos_token)
         else:
-            return LineByLineTextDataset(tokenizer=tokenizer, file_path=file_path, block_size=args.block_size)
+            raise ValueError(f"Unknown `args.task_mode`: {args.task_mode}")
 
         return dataset
     else:

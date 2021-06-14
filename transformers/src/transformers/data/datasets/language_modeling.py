@@ -381,7 +381,7 @@ class LineByLineData2TextTextDataset(Dataset):
         block_size: int,
         bos_tok: str,
         eos_tok: str,
-        lowdata_token: str,
+        lowdata_token: Optional[str],
         max_seq_len=sys.maxsize,
     ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
