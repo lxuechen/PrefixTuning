@@ -381,7 +381,7 @@ class LineByLineData2TextTextDataset(Dataset):
         block_size: int,
         bos_tok: str,
         eos_tok: str,
-        lowdata_token: Optional[str],
+        lowdata_token: Optional[str] = None,
         max_seq_len=sys.maxsize,
     ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
@@ -400,6 +400,7 @@ class LineByLineData2TextTextDataset(Dataset):
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
+        # TODO: Inspect the source and targets here!
 
         if lowdata_token is None:
             edited_sents = []

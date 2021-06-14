@@ -23,13 +23,6 @@ import logging
 import os
 from typing import Optional
 
-import privacy_utils
-from .train_control import PrefixTuning
-from .trainer_prefix import Trainer_Prefix
-from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from lxuechen_utils import utils
-
-
 from transformers import (
     CONFIG_MAPPING,
     MODEL_WITH_LM_HEAD_MAPPING,
@@ -37,39 +30,23 @@ from transformers import (
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorForPermutationLanguageModeling,
-    DataCollatorForWeightedLanguageModeling,  # modified
-    DataCollatorForEmbMatchLanguageModeling,  # modified
-    # modified
-    # modified
-    DataCollatorForKeywordLanguageModeling,  # modified
     DataCollatorForData2TextLanguageModeling,  # modified
-    DataCollatorForText2DataLanguageModeling,  # modified
-    DataCollatorForWritingPromptsLanguageModeling,  # modified
-    DataCollatorForClassificationSentimentLanguageModeling,  # modified
-    DataCollatorForSumLanguageModeling,  # modified
     HfArgumentParser,
-    LineByLineTextDataset,
-    LineByLineWithWeightTextDataset,  # modified
-    LineByLineEmbMatchTextDataset,  # modified
-    LineByLineTopicTextDataset,  # modified
-    LineByLineKeywordTextDataset,  # modified
-    LineByLineLengthTextDataset,  # modified
     LineByLineData2TextTextDataset,  # modified
-    LineByLineLemma2TextTextDataset,  # modified
-    LineByLineText2DataTextDataset,  # modified
     LineByLineTriplesTextDataset,  # modified
     LineByLineWebNLGTextDataset,  # modified
-    LineByLineWritingPromptsTextDataset,  # modified
-    LineByLineSentimentTextDataset,  # modified
-    LineByLineClassificationSentimentTextDataset,  # modified
-    LineByLineClassificationTopicTextDataset,
-    LineByLineSumTextDataset,  # modified
     PreTrainedTokenizer,
     TextDataset,
     Trainer,
     set_seed,
     GPT2LMHeadModel,
 )
+
+from lxuechen_utils import utils
+import privacy_utils
+from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
+from .train_control import PrefixTuning
+from .trainer_prefix import Trainer_Prefix
 
 logger = logging.getLogger(__name__)
 
@@ -80,29 +57,43 @@ MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 def get_dataset(
     args: DataTrainingArguments,
     tokenizer: PreTrainedTokenizer,
-    evaluate: bool = False,
+    split: str = "train",
     cache_dir: Optional[str] = None,
-    training_args: TrainingArguments = None,
-    finetune_mode: bool = False,
+    **_,
 ):
-    file_path = args.eval_data_file if evaluate else args.train_data_file
+    file_path = {
+        "train": args.train_data_file,
+        "val": args.val_data_file,
+        "eval": args.eval_data_file,
+    }[split]
+    if file_path is None:
+        return None
+
     if args.line_by_line:
         if args.task_mode == 'data2text':
-            dataset = LineByLineData2TextTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                     block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                     eos_tok=tokenizer.eos_token,
-                                                     lowdata_token=None,
-                                                     max_seq_len=args.max_seq_len)
-
+            dataset = LineByLineData2TextTextDataset(
+                tokenizer=tokenizer,
+                file_path=file_path,
+                block_size=args.block_size,
+                bos_tok=tokenizer.bos_token,
+                eos_tok=tokenizer.eos_token,
+                max_seq_len=args.max_seq_len
+            )
         elif args.task_mode == 'triples':
-            dataset = LineByLineTriplesTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                   block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                   eos_tok=tokenizer.eos_token)
-
+            dataset = LineByLineTriplesTextDataset(
+                tokenizer=tokenizer,
+                file_path=file_path,
+                block_size=args.block_size, bos_tok=tokenizer.bos_token,
+                eos_tok=tokenizer.eos_token
+            )
         elif args.task_mode == 'webnlg':
-            dataset = LineByLineWebNLGTextDataset(tokenizer=tokenizer, file_path=file_path,
-                                                  block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                                                  eos_tok=tokenizer.eos_token)
+            dataset = LineByLineWebNLGTextDataset(
+                tokenizer=tokenizer,
+                file_path=file_path,
+                block_size=args.block_size,
+                bos_tok=tokenizer.bos_token,
+                eos_tok=tokenizer.eos_token
+            )
         else:
             raise ValueError(f"Unknown `args.task_mode`: {args.task_mode}")
 
@@ -118,15 +109,9 @@ def get_dataset(
 
 
 def get_dataset_wrapper(config, tokenizer, data_args, model_args, training_args):
-    train_dataset = (
-        get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, training_args=training_args,
-                    finetune_mode=(model_args.tuning_mode == 'finetune'))
-    )
-    eval_dataset = (
-        get_dataset(data_args, tokenizer=tokenizer, evaluate=True, cache_dir=model_args.cache_dir,
-                    training_args=training_args, finetune_mode=(model_args.tuning_mode == 'finetune'))
-        if training_args.do_eval
-        else None
+    train_dataset, val_dataset, eval_dataset = tuple(
+        get_dataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, split=split)
+        for split in ("train", "val", "eval")
     )
     if config.model_type == "xlnet":
         data_collator = DataCollatorForPermutationLanguageModeling(
@@ -135,61 +120,20 @@ def get_dataset_wrapper(config, tokenizer, data_args, model_args, training_args)
             max_span_length=data_args.max_span_length,
         )
     else:
-        if data_args.task_mode == 'embMatch':
-            data_collator = DataCollatorForEmbMatchLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'topic' or data_args.task_mode == 'sentiment':
-            data_collator = DataCollatorForKeywordLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'classify-topic' or data_args.task_mode == 'classify-sentiment':
-            data_collator = DataCollatorForClassificationSentimentLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'length':
-            data_collator = DataCollatorForKeywordLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'keyword':
-            data_collator = DataCollatorForKeywordLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'data2text' or data_args.task_mode == 'triples' or data_args.task_mode == 'webnlg':
-            print('FORMAT MODE IS ', data_args.format_mode)
+        if data_args.task_mode == 'data2text' or data_args.task_mode == 'triples' or data_args.task_mode == 'webnlg':
             data_collator = DataCollatorForData2TextLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
+                tokenizer=tokenizer,
+                mlm=data_args.mlm,
+                mlm_probability=data_args.mlm_probability,
                 format_mode=data_args.format_mode
-            )
-        elif data_args.task_mode == 'writingPrompts':
-            print('FORMAT MODE IS ', data_args.format_mode)
-            data_collator = DataCollatorForWritingPromptsLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
-                format_mode=data_args.format_mode
-            )
-        elif data_args.task_mode == 'xsum' or data_args.task_mode == 'cnndm':
-            print('FORMAT MODE IS ', data_args.format_mode)
-            data_collator = DataCollatorForSumLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability,
-                format_mode=data_args.format_mode
-            )
-        elif data_args.task_mode == 'lemma2text':
-            data_collator = DataCollatorForData2TextLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'text2data':
-            data_collator = DataCollatorForText2DataLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
-            )
-        elif data_args.task_mode == 'gen_data':
-            data_collator = DataCollatorForWeightedLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
             )
         else:
             data_collator = DataCollatorForLanguageModeling(
-                tokenizer=tokenizer, mlm=data_args.mlm, mlm_probability=data_args.mlm_probability
+                tokenizer=tokenizer,
+                mlm=data_args.mlm,
+                mlm_probability=data_args.mlm_probability
             )
-    return train_dataset, eval_dataset, data_collator
+    return train_dataset, val_dataset, eval_dataset, data_collator
 
 
 def main():
@@ -356,11 +300,12 @@ def main():
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
-    train_dataset, eval_dataset, data_collator = get_dataset_wrapper(
+    train_dataset, val_dataset, eval_dataset, data_collator = get_dataset_wrapper(
         config=config, tokenizer=tokenizer,
         data_args=data_args, training_args=training_args, model_args=model_args,
     )
     if model_args.tuning_mode == 'prefixtune':
+        # TODO: generation during training.
         trainer = Trainer_Prefix(
             model=model,
             tokenizer=tokenizer,
@@ -373,6 +318,7 @@ def main():
             use_dropout=(model_args.use_dropout == 'yes'),
         )
     else:
+        # TODO: generation during training.
         trainer = Trainer(
             model=model,
             tokenizer=tokenizer,

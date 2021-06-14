@@ -25,7 +25,8 @@ from . import wrapper
 from .wrapper import Mode
 
 TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
-TEST_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
+VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
+EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt"
 
 
 def _get_command(
@@ -108,7 +109,8 @@ def _get_command(
         --line_by_line \
         --save_total_limit 1 \
         --train_data_file {TRAIN_FILE} \
-        --eval_data_file {TEST_FILE} \
+        --val_data_file {VAL_FILE} \
+        --eval_data_file {EVAL_FILE} \
         --tuning_mode {tuning_mode} \
         --logging_dir {logging_dir} \
         --logging_steps -1 \

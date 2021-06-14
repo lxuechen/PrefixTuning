@@ -526,10 +526,7 @@ class DataCollatorForData2TextLanguageModeling:
     ) -> Dict[str, torch.Tensor]:
         if isinstance(examples[0], (dict, BatchEncoding)):
             examples = [e["input_ids"] for e in examples]
-        # print(examples[0])
-        # print(len(examples))
         input_ids, labels, src, tgt, cate = zip(*examples)
-        # print(len(input_ids), len(labels), len(weights))
         if self.mlm:
             inputs, labels = self.mask_tokens(batch)
             return {"input_ids": inputs, "labels": labels}
