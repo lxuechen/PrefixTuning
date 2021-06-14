@@ -11,7 +11,6 @@ tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_model_name_or_
 input_text = "James bond is working at "
 input_ids = tokenizer.encode(input_text, add_special_tokens=False, return_tensors="pt")
 # TODO: How is max length selected?
-# TODO: What are the bad_words?
 bad_words = tokenizer.decode([628, 198])
 print('bad words')
 print(f"{len(bad_words)}")
@@ -29,7 +28,8 @@ outputs = model.generate(
     top_p=0.9,  # Only filter with top_p.
     do_sample=False,
     num_beams=5,
-    # bad_words_ids=[[628], [198]],
+    # These are linebreaks; generating these will mess up the evaluation, since those files assume one example per-line.
+    bad_words_ids=[[628], [198]],
     num_return_sequences=1,
 )
 print(input_ids)
