@@ -8,7 +8,8 @@ model = transformers.AutoModelForCausalLM.from_pretrained(pretrained_model_name_
 tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_model_name_or_path='gpt2-medium')
 
 # Check out how beam-search works.
-input_ids = torch.tensor([[4, 6, 9, 10]])
+input_text = "James bond is working at "
+input_ids = tokenizer.encode(input_text, add_special_tokens=False, return_tensors="pt")
 # TODO: How is max length selected?
 # TODO: What are the bad_words?
 bad_words = tokenizer.decode([628, 198])
@@ -17,7 +18,8 @@ print(f"{len(bad_words)}")
 print(f"{[repr(i) for i in bad_words]}")
 print('')
 
-# TODO: past_key_values?
+# TODO: Check this is the correct setup.
+# TODO: Ensure things are correct when we have prompt.
 model.eval()
 outputs = model.generate(
     input_ids=input_ids,
@@ -27,9 +29,34 @@ outputs = model.generate(
     top_p=0.9,  # Only filter with top_p.
     do_sample=False,
     num_beams=5,
-    bad_words_ids=[[628], [198]],
+    # bad_words_ids=[[628], [198]],
     num_return_sequences=1,
 )
 print(input_ids)
 print(outputs)
+print(outputs.size())
+
+text_prefix = tokenizer.decode(input_ids[0], clean_up_tokenization_spaces=True)
+text_output = tokenizer.decode(outputs[0], clean_up_tokenization_spaces=True)
+
+print('eos: ')
+print(f'{repr(tokenizer.eos_token)}')
+
+print(f'{repr(text_prefix)}')
+print(f'{repr(text_output)}')
+print(text_output[len(text_prefix):])
+
+idx = text_output.find(tokenizer.eos_token)
+if idx > 0:
+    print(text_output[len(text_prefix):idx])
+else:
+    print(text_output[len(text_prefix)])
+
 # TODO: It seems outputs repeats inputs!
+
+import torch.nn.functional as F
+
+logits = torch.randn(2, 100)
+labels = torch.tensor([-100, 0])
+loss = F.cross_entropy(logits, labels)
+print(loss)
