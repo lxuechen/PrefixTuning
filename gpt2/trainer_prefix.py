@@ -250,6 +250,8 @@ class Trainer_Prefix:
         distill: Optional[bool] = False,
         matching_objective: Optional[str] = None,
         finetuned_gpt2: Optional[PreTrainedModel] = None,
+
+        val_dataset: Optional[Dataset] = None,
         **kwargs,
     ):
         if args is None:
@@ -269,6 +271,7 @@ class Trainer_Prefix:
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
+        self.val_dataset = val_dataset
         self.tokenizer = tokenizer
         self.model_init = model_init
         self.compute_metrics = compute_metrics
@@ -902,6 +905,8 @@ class Trainer_Prefix:
             if self.args.evaluation_strategy == EvaluationStrategy.EPOCH:
                 metrics = self.evaluate()
                 self._report_to_hp_search(trial, epoch, metrics)
+
+                # TODO: BLEU! generation!
 
             if self.args.tpu_metrics_debug or self.args.debug:
                 if is_torch_tpu_available():

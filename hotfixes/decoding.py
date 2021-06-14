@@ -10,22 +10,23 @@ tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_model_name_or_
 # Check out how beam-search works.
 input_text = "James bond is working at "
 input_ids = tokenizer.encode(input_text, add_special_tokens=False, return_tensors="pt")
-# TODO: How is max length selected?
+print('input_ids: ', input_ids.size())
+
 bad_words = tokenizer.decode([628, 198])
 print('bad words')
 print(f"{len(bad_words)}")
 print(f"{[repr(i) for i in bad_words]}")
 print('')
 
-# TODO: Check this is the correct setup.
-# TODO: Ensure things are correct when we have prompt.
 model.eval()
+# This is the exact same setup!
 outputs = model.generate(
     input_ids=input_ids,
+    max_length=20 + len(input_ids[0]),
     min_length=5,
-    max_length=20,
     top_k=0,
     top_p=0.9,  # Only filter with top_p.
+    repetition_penalty=1,
     do_sample=False,
     num_beams=5,
     # These are linebreaks; generating these will mess up the evaluation, since those files assume one example per-line.
@@ -58,5 +59,6 @@ import torch.nn.functional as F
 
 logits = torch.randn(2, 100)
 labels = torch.tensor([-100, 0])
-loss = F.cross_entropy(logits, labels)
+# Unrecognized labels results in 0 loss.
+loss = F.cross_entropy(logits, labels, reduction="none")
 print(loss)

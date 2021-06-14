@@ -227,6 +227,7 @@ class Trainer:
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
+        self.val_dataset = val_dataset
         self.tokenizer = tokenizer
         self.curr_best_eval = 10000000
         self.model_init = model_init
