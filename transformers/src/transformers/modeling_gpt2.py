@@ -688,27 +688,13 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         # TODO: better argument initialization.
         self.MEAN_METHOD = True
 
-
-        # TODAYFIX
-        # if hasattr(config, '_my_arg_task_mode'):
-        #     self.task_mode = config._my_arg_task_mode
-        #
-        # if hasattr(config, '_my_arg_tune_mode'):
-        #     if config._my_arg_tune_mode == 'finetune':
-        #         self.finetune_mode = True
-        #     elif config._my_arg_tune_mode == 'prefixtune':
-        #         self.finetune_mode = False
-        #     elif config._my_arg_tune_mode == 'finetune-top':
-        #         self.finetune_mode = True
-        #     else:
-        #         assert False, "incorrect tune mode"
-
         #TODAYFIX
         assert hasattr(config, '_my_arg_task_mode')
         assert hasattr(config, '_my_arg_tune_mode')
         if not hasattr(config, '_objective_mode'):
             config._objective_mode = 0
         self.task_mode = config._my_arg_task_mode
+        # TODO: finetune_mode is False iff (prefixtune, bothtune)
         if config._my_arg_tune_mode == 'finetune':
             self.finetune_mode = True
         elif config._my_arg_tune_mode == 'prefixtune' or config._my_arg_tune_mode == 'bothtune':
@@ -833,67 +819,43 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             All labels set to ``-100`` are ignored (masked), the loss is only
             computed for labels in ``[0, ..., config.vocab_size]``
         """
-
-        # print(use_cache, end = ' ')
-        # if past_key_values is not None:
-        #     print(past_key_values[0].shape, input_ids)
-        # else:
-        #     print(past_key_values, input_ids)
-
-
         if "past" in kwargs:
             warnings.warn(
                 "The `past` argument is deprecated and will be removed in a future version, use `past_key_values` instead.",
                 FutureWarning,
             )
             past_key_values = kwargs.pop("past")
-
-        if self.emb_match and emb_match is None:
-            emb_match = control_code
-
-        assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        # print(past_key_values is not None )
-        # assert  control_code is None
-        if self.prefix_control and control_code is not None:
-            assert False, 'control code should be None. moved the code. '
-            temp_control = self.transformer.wte(control_code)
-            temp_control = temp_control.sum(1).unsqueeze(1)
-            past_key_values = self.control_trans(temp_control)
-            # print(past_key_values.shape) #bsz, controlCodeLen, long... 5 * config.n_layer * 2 * config.n_embd
-            past_key_values = past_key_values.sum(1).unsqueeze(1)
-            # print(past_key_values.shape)  # bsz, 1, long...
-            bsz, seq_pastlen, _ = past_key_values.shape
-            past_key_values = past_key_values.view(bsz, seq_pastlen*self.preseqlen, self.match_n_layer * 2, self.match_n_head,
-                                                   self.match_n_embd)
-            past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
-            # past_key_values = None
-            # print(past_key_values[0].shape, len(past_key_values))
-        if self.emb_match and emb_match is not None:
-            assert False, 'emb should be none, moved the code. '
-            # print(self.config_class)
-            # print(self.config_class.n_layer, self./config_class.n_head, self.config_class.n_embd)
-            # print('line 752', emb_match.shape) #bsz, num_layer, 1024.
-            if not self.MEAN_METHOD:
-                bsz, numlayer, emb_dim = emb_match.shape
-                emb_match = emb_match.view(bsz, 1, numlayer*emb_dim)
-                past_key_values = self.emb_trans(emb_match)
-                # print(past_key_values.shape) # bsz, 1, long...
-                bsz, seq_pastlen, _ = past_key_values.shape
-            else:
-                past_key_values = self.emb_trans(emb_match)
-                # print(past_key_values.shape) #bsz, numlayer, long...
-                past_key_values = past_key_values.mean(1).unsqueeze(1)
-                # print(past_key_values.shape)  # bsz, 1, long...
-                bsz, seq_pastlen, _ = past_key_values.shape
-            # past_key_values = past_key_values.view(bsz, seq_pastlen, self.match_n_layer, 2, self.match_n_head, self.match_n_embd)
-            # past_key_values = past_key_values.permute([2, 3, 0, 4, 1, 5]).split(2)
 
-            past_key_values = past_key_values.view(bsz, seq_pastlen, self.match_n_layer*2, self.match_n_head, self.match_n_embd)
-            past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
-
-            # print(past_key_values[0].shape, len(past_key_values))
-
+        # if self.emb_match and emb_match is None:
+        #     emb_match = control_code
+        # assert kwargs == {}, f"Unexpected keyword arguments: {list(kwargs.keys())}."
+        # if self.prefix_control and control_code is not None:
+        #     assert False, 'control code should be None. moved the code. '
+        #     temp_control = self.transformer.wte(control_code)
+        #     temp_control = temp_control.sum(1).unsqueeze(1)
+        #     past_key_values = self.control_trans(temp_control)
+        #     # print(past_key_values.shape) #bsz, controlCodeLen, long... 5 * config.n_layer * 2 * config.n_embd
+        #     past_key_values = past_key_values.sum(1).unsqueeze(1)
+        #     # print(past_key_values.shape)  # bsz, 1, long...
+        #     bsz, seq_pastlen, _ = past_key_values.shape
+        #     past_key_values = past_key_values.view(bsz, seq_pastlen*self.preseqlen, self.match_n_layer * 2, self.match_n_head,
+        #                                            self.match_n_embd)
+        #     past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
+        # if self.emb_match and emb_match is not None:
+        #     assert False, 'emb should be none, moved the code. '
+        #     if not self.MEAN_METHOD:
+        #         bsz, numlayer, emb_dim = emb_match.shape
+        #         emb_match = emb_match.view(bsz, 1, numlayer*emb_dim)
+        #         past_key_values = self.emb_trans(emb_match)
+        #         bsz, seq_pastlen, _ = past_key_values.shape
+        #     else:
+        #         past_key_values = self.emb_trans(emb_match)
+        #         past_key_values = past_key_values.mean(1).unsqueeze(1)
+        #         bsz, seq_pastlen, _ = past_key_values.shape
+        # 
+        #     past_key_values = past_key_values.view(bsz, seq_pastlen, self.match_n_layer*2, self.match_n_head, self.match_n_embd)
+        #     past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -914,6 +876,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
 
         lm_logits = self.lm_head(hidden_states)
 
+        # TODO: Read this to make sure I understand it! How the tokens get shifted matters a lot!
         loss = None
         split_loss = None
         if labels is not None and weights is not None:
@@ -922,30 +885,15 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
             loss_fct = CrossEntropyLoss(reduction='none')
-            # print(weights)
             bsz, seqlen, vocab_size = shift_logits.shape
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-            # print(loss.shape)
-            # print(loss.view(bsz, seqlen)[0], loss.view(bsz, seqlen)[1])
             loss = loss.view(bsz, seqlen).mean(dim=-1)
-            # print(loss.shape)
-            weighted_loss = loss * weights
+            weighted_loss = loss * weights  # Reweight different examples.
             loss = weighted_loss.sum()
         elif labels is not None and not self.finetune_mode:
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
-
-            # URGENT NEW:
-            # loss_fct = CrossEntropyLoss()
-            # bsz, seqlen, vocab_size = shift_logits.shape
-            # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-            # print('line gpt2, reduction=mean', loss)
-
-
-            # # URGENT OLD
-            # # Flatten the tokens
-
 
             # 0 means the regular token level objective, which is sum / output_len
             # 1 means the sentence level objective, which is sum
@@ -954,59 +902,35 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             # 4 means our buggy version which is sum/(input_len +output_len)
 
             if self._objective_mode == 0:
-                # print('0 is the objective...')
-                # Flatten the tokens
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                # loss_fct = CrossEntropyLoss(reduction='none')
-                # bsz, seqlen, vocab_size = shift_logits.shape
-                # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-                # seqlen_dim = (shift_labels != -100).sum(dim=-1)
-                # loss = loss.view(bsz, seqlen).sum(dim=-1) / seqlen_dim
             elif self._objective_mode == 1:
-                # print('1 is the objective...')
                 loss_fct = CrossEntropyLoss(reduction='none')
                 bsz, seqlen, vocab_size = shift_logits.shape
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 loss = loss.view(bsz, seqlen).sum(dim=-1)
             elif self._objective_mode == 2:
-                # print('2 is the objective...')
                 loss_fct = CrossEntropyLoss(reduction='none')
                 bsz, seqlen, vocab_size = shift_logits.shape
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 loss = loss.view(bsz, seqlen).mean(dim=-1)
             elif self._objective_mode == 3:
-                # print('3 is the objective...')
                 loss_fct = CrossEntropyLoss(reduction='none')
                 bsz, seqlen, vocab_size = shift_logits.shape
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 seqlen_dim = max((shift_labels != -100).sum(dim=-1))
                 loss = loss.view(bsz, seqlen).sum(dim=-1) / seqlen_dim
             elif self._objective_mode == 4:
-                # print('4 is the objective...')
                 loss_fct = CrossEntropyLoss(reduction='none')
                 bsz, seqlen, vocab_size = shift_logits.shape
                 loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
                 seqlen_dim = (input_ids != 50256).sum(dim=-1)
                 loss = loss.view(bsz, seqlen).sum(dim=-1) / seqlen_dim
-                # assert False, "not implemented error, self._objective_mode == 4 "
-
-
-
-            # OLD
-            # loss_fct = CrossEntropyLoss(reduction='none')
-            # bsz, seqlen, vocab_size = shift_logits.shape
-            # loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-            # loss = loss.view(bsz, seqlen).mean(dim=-1)
-
         elif labels is not None:
-            # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
-            # Flatten the tokens
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-
 
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
