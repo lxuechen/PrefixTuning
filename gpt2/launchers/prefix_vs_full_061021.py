@@ -46,6 +46,7 @@ def _get_command(
     #   truncate at max_seq_len=96 => training set size 42021
     #   full training set size 42061
     max_seq_len=96,
+    objective_mode=1,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
     max_steps=-1,
@@ -123,7 +124,7 @@ def _get_command(
         --init_random no \
         --use_dropout no \
         --prefix_dropout 0.0 \
-        --objective_mode 1 \
+        --objective_mode {objective_mode} \
         --evaluate_during_training \
         --eval_steps {eval_steps} \
         --noise_multiplier {noise_multiplier} \
