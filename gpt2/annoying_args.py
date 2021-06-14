@@ -59,9 +59,10 @@ class ModelArguments:
     )
 
     objective_mode: Optional[int] = field(
-        default=2,
+        default=1,
         metadata={
-            "help": "In prefixtuning setting, the objective function... "
+            "help": "0 is the usual token-level objective (not suitable for DP);"
+                    "1 is the line-level objective (suitable for DP)"
         },
     )
 

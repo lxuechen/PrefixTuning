@@ -330,10 +330,10 @@ def main():
     # 2 means our buggy version which is sum/max_batch(input_len +output_len)
     # 3 means our buggy version which is sum/max_batch(output_len)
     # 4 means our buggy version which is sum/(input_len +output_len)
-    config._objective_mode = {
-        "fulltune": 0,
-        "prefixtune": 1,
-    }[model_args.tuning_mode]
+    # TODO: Refactor this part.
+    config._objective_mode = model_args.objective_mode
+    if privacy_args.nonprivate == "no":
+        assert config._objective_mode == 1
 
     config._my_arg_task_mode = data_args.task_mode
     config.return_dict = True
