@@ -333,6 +333,7 @@ def main():
     # TODO: Refactor this part.
     config._objective_mode = model_args.objective_mode
     if privacy_args.nonprivate == "no":
+        # Using 0 wouldn't cause a bug, but would artificially make gradients smaller.
         assert config._objective_mode == 1
 
     config._my_arg_task_mode = data_args.task_mode
