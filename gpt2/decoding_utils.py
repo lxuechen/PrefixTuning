@@ -15,7 +15,7 @@ def generate(
     bad_words_ids=((628,), (198,)),
     dummy_token_id=-100,  # Used as mask.
     num_return_sequences=1,
-    max_examples=sys.maxsize
+    max_generations=sys.maxsize
 ):
     assert not model.training, "Generation must be when `model` is in eval mode."
 
@@ -26,6 +26,7 @@ def generate(
         # labels may be [[-100, 123, 32], [-100, -100, 120]
 
         for input_ids, labels in zip(batch_input_ids, batch_labels):
+            # Find the first non- -100 position. Note there are trailing -100s.
             non_prompt_positions, = (labels != dummy_token_id).nonzero(as_tuple=True)
             first_non_prompt_position = non_prompt_positions[0]
             prompt_len = first_non_prompt_position
@@ -56,7 +57,7 @@ def generate(
 
             generations.append(output_str)
 
-        if len(generations) >= max_examples:
+        if len(generations) >= max_generations:
             break
 
     return generations

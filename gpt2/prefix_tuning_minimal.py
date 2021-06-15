@@ -93,6 +93,5 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
         )
 
     def generate(self, input_ids, **kwargs):
-        # TODO: Check you indeed attend to the past!
         past_key_values = self.make_past_key_values(bsz=input_ids.size(0))
         return self.gpt2.generate(input_ids=input_ids, past_key_values=past_key_values, **kwargs)

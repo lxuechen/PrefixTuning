@@ -47,6 +47,7 @@ import privacy_utils
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
 from .train_control import PrefixTuning
 from .trainer_prefix import Trainer_Prefix
+from . import prefix_tuning_minimal
 
 logger = logging.getLogger(__name__)
 
@@ -194,6 +195,10 @@ def main():
         config = CONFIG_MAPPING[model_args.model_type]()
         logger.warning("You are instantiating a new config instance from scratch.")
 
+    # TODO: `config.objective_mode` matters a lot!
+    config.return_dict = True
+    config.objective_mode = model_args.objective_mode
+
     # `bos_token` and `eos_token` is the same for GPT-2; both are 50256.
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, cache_dir=model_args.cache_dir)
@@ -206,33 +211,24 @@ def main():
             "and load it from here, using --tokenizer_name"
         )
 
-    config._my_arg_tune_mode = model_args.tuning_mode
+    if model_args.tuning_mode == 'prefixtune':
+        model = prefix_tuning_minimal.PrefixTuningMinimal(
+            model_args=model_args, config=config,
+        )
+    elif model_args.tuning_mode == "fulltune":
+        model = GPT2LMHeadModel.from_pretrained(
+            model_args.model_name_or_path,
+            config=config,
+            cache_dir=model_args.cache_dir,
+        )
+    else:
+        raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
     # 0 means the regular token level objective, which is sum / output_len
     # 1 means the sentence level objective, which is sum
     # 2 means our buggy version which is sum/max_batch(input_len +output_len)
     # 3 means our buggy version which is sum/max_batch(output_len)
     # 4 means our buggy version which is sum/(input_len +output_len)
-    # TODO: Refactor this part.
-    config._objective_mode = model_args.objective_mode
-    if privacy_args.nonprivate == "no":
-        # Using 0 wouldn't cause a bug, but would artificially make gradients smaller.
-        assert config._objective_mode == 1
-
-    config._my_arg_task_mode = data_args.task_mode
-    config.return_dict = True
-    model = GPT2LMHeadModel.from_pretrained(
-        model_args.model_name_or_path,
-        config=config,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        cache_dir=model_args.cache_dir,
-    )
-
-    if config.model_type in ["bert", "roberta", "distilbert", "camembert"] and not data_args.mlm:
-        raise ValueError(
-            "BERT and RoBERTa-like models do not have LM heads but masked LM heads. They must be run using the"
-            "--mlm flag (masked language modeling)."
-        )
 
     if data_args.block_size <= 0:
         data_args.block_size = tokenizer.max_len
@@ -252,61 +248,11 @@ def main():
     print(tokenizer.eos_token, tokenizer.eos_token_id)
     print(tokenizer.bos_token, tokenizer.bos_token_id)
 
-    if model_args.tuning_mode == 'prefixtune':
-        gpt2 = model.requires_grad_(False)
-        optim_prefix_bool = {"yes": True, "no": False}[model_args.optim_prefix]
-
-        # should clone the config and construct it.
-        config_prefix = AutoConfig.from_pretrained(model_args.model_name_or_path, cache_dir=model_args.cache_dir)
-        config_prefix._my_arg_tune_mode = model_args.tuning_mode
-        config_prefix._my_arg_task_mode = data_args.task_mode
-        config_prefix._my_arg_control = True
-        config_prefix.train_weights = data_args.train_embs
-        config_prefix.optim_prefix = optim_prefix_bool
-        config_prefix.preseqlen = model_args.preseqlen
-        config_prefix.use_infix = (data_args.format_mode == 'infix')
-        config_prefix.format_mode = data_args.format_mode
-        config_prefix.prefix_dropout = model_args.prefix_dropout
-        config_prefix.vocab_size = len(tokenizer)
-        config_prefix.lowdata = ('lowdata' in training_args.output_dir)
-        if not config_prefix.lowdata:
-            config_prefix.lowdata = (
-                'datalevels' in training_args.output_dir and data_args.use_lowdata_token == 'yes'
-            )
-        if config_prefix.lowdata and data_args.use_lowdata_token == 'yes':
-            config_prefix.lowdata_token = tokenizer(
-                [data_args.lowdata_token], add_prefix_space=True
-            )['input_ids']
-            print(data_args.lowdata_token)
-            print(config_prefix.lowdata_token)
-
-        # some extra stuff.
-        config_prefix.init_random = model_args.init_random
-        config_prefix.mid_dim = model_args.mid_dim
-        config_prefix.init_shallow = model_args.init_shallow
-        if config_prefix.init_shallow == 'yes':
-            if model_args.init_shallow_word != 'no':
-                config_prefix.init_shallow_word = tokenizer(
-                    [model_args.init_shallow_word],
-                    add_prefix_space=True
-                )['input_ids']
-            else:
-                config_prefix.init_shallow_word = None
-            print(model_args.init_shallow_word)
-            print(config_prefix.init_shallow_word)
-
-        model = PrefixTuning(config_prefix, model_gpt2=gpt2)
-    elif model_args.tuning_mode == "fulltune":
-        model.requires_grad_(True)
-    else:
-        raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
-
     train_dataset, val_dataset, eval_dataset, data_collator = get_dataset_wrapper(
         config=config, tokenizer=tokenizer,
         data_args=data_args, training_args=training_args, model_args=model_args,
     )
     if model_args.tuning_mode == 'prefixtune':
-        # TODO: generation during training.
         trainer = Trainer_Prefix(
             model=model,
             tokenizer=tokenizer,
@@ -318,7 +264,6 @@ def main():
             use_dropout=(model_args.use_dropout == 'yes'),
         )
     else:
-        # TODO: generation during training.
         trainer = Trainer(
             model=model,
             tokenizer=tokenizer,
@@ -331,6 +276,17 @@ def main():
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
     t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
     trainer.create_optimizer_and_scheduler(t_total)
+
+    # One-shot debugging stmts.
+    # if False:
+    #     train_loader = trainer.get_train_dataloader()
+    #     batch = next(iter(train_loader))
+    #     input_ids = batch["input_ids"]
+    #     labels = batch["labels"]
+    #     print(input_ids[0], labels[0])
+    #     print(input_ids[1], labels[1])
+    #     import pdb; pdb.set_trace()
+    #     exit()
 
     if privacy_args.nonprivate == "no":
         # TODO: Why does the per_example_max_grad_norm not affect things by much???

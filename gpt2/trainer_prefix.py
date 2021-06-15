@@ -42,6 +42,7 @@ from transformers.trainer_utils import (BestRun, default_compute_objective, defa
                                         TrainOutput)
 from transformers.training_args import TrainingArguments
 from transformers.utils import logging
+from gpt2 import decoding_utils
 
 _use_native_amp = False
 _use_apex = False
@@ -235,7 +236,6 @@ class Trainer_Prefix:
     def __init__(
         self,
         model: Optional[PreTrainedModel] = None,
-        model_gpt2: Optional[PreTrainedModel] = None,
         args: TrainingArguments = None,
         data_collator: Optional[DataCollator] = None,
         train_dataset: Optional[Dataset] = None,
@@ -247,9 +247,6 @@ class Trainer_Prefix:
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
         task_mode: Optional[str] = None,
         use_dropout: Optional[bool] = False,
-        distill: Optional[bool] = False,
-        matching_objective: Optional[str] = None,
-        finetuned_gpt2: Optional[PreTrainedModel] = None,
 
         val_dataset: Optional[Dataset] = None,
         **kwargs,
@@ -266,7 +263,6 @@ class Trainer_Prefix:
            "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
-        self.gpt2 = model_gpt2.to(args.device) if model_gpt2 is not None else None
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
@@ -280,11 +276,6 @@ class Trainer_Prefix:
         self.use_dropout = use_dropout
 
         self.curr_best_eval = 10000000.
-
-        self.distill = distill
-        if self.distill:
-            self.matching_objective = matching_objective
-            self.finetuned_gpt2 = finetuned_gpt2
 
         if model_init is not None and (self.optimizer is not None or self.lr_scheduler is not None):
             raise RuntimeError(
@@ -826,7 +817,6 @@ class Trainer_Prefix:
                     else:
                         self.optimizer.step()
 
-                    # URGENT
                     self.lr_scheduler.step()
                     model.zero_grad()
                     self.global_step += 1
@@ -1120,23 +1110,13 @@ class Trainer_Prefix:
             return self._training_step(model, inputs, self.optimizer)
 
         model.train()
-        if self.use_dropout:
-            if self.gpt2 is not None:
-                self.gpt2.train()
         inputs = self._prepare_inputs(inputs)
 
         if self.args.fp16 and _use_native_amp:
             with autocast():
-                if self.distill:
-                    loss = self.compute_loss_distill(model, inputs, gpt2_model=self.gpt2, )
-                else:
-                    loss = self.compute_loss(model, inputs, gpt2_model=self.gpt2)
+                loss = self.compute_loss(model, inputs)
         else:
-            if self.distill:
-                loss = self.compute_loss_distill(model, inputs, gpt2_model=self.gpt2)
-            else:
-                # TODO: Marker -- compute loss
-                loss = self.compute_loss(model, inputs, gpt2_model=self.gpt2)
+            loss = self.compute_loss(model, inputs)
 
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
@@ -1150,69 +1130,23 @@ class Trainer_Prefix:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
-            # print(loss)
             loss.backward()
-
-        # print('max allocated_memory:', torch.cuda.max_memory_allocated(0), 'total_memory:',
-        # torch.cuda.get_device_properties(0).total_memory,
-        #       'percentage', torch.cuda.max_memory_allocated(0)/torch.cuda.get_device_properties(0).total_memory)
 
         return loss.detach()
 
-    def compute_loss(self, model, inputs, gpt2_model=None):
+    def compute_loss(self, model, inputs):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
 
         Subclass and override for custom behavior.
         """
-        # outputs = model.forward_weighted(**inputs)
-        if 'prompt_lab' in inputs:
-            prompt_lab_ = inputs['prompt_lab']
-            k = torch.cat(self.discri_labels_code, dim=0)
-            inputs['control_code'] = torch.index_select(k, 0, prompt_lab_)
-            del inputs['prompt_lab']
 
-        # TODO: Marker -- forward pass!
-        outputs = model(**inputs, gpt2_model=gpt2_model)
+        outputs = model(**inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
             self._past = outputs[self.args.past_index]
 
         return outputs[0]
-
-    def compute_loss_distill(self, model, inputs, gpt2_model=None):
-        """
-        How the loss is computed by Trainer. By default, all models return the loss in the first element.
-
-        Subclass and override for custom behavior.
-        """
-        # outputs = model.forward_weighted(**inputs)
-
-        with torch.no_grad():
-            output_finetuned = self.finetuned_gpt2(**inputs)
-
-        outputs = model(**inputs, gpt2_model=gpt2_model)
-        # Save past state if it exists
-        if self.args.past_index >= 0:
-            self._past = outputs[self.args.past_index]
-
-        if self.matching_objective == 'kl':
-            # distrib_finetuned=torch.log_softmax(output_finetuned.logits[:,:,:-2], dim=-1)  #bsz, seqlen, vocab
-            distrib_finetuned = torch.log_softmax(output_finetuned.logits, dim=-1)  # bsz, seqlen, vocab
-            distrib_prefix = torch.log_softmax(outputs.logits, dim=-1)  # bsz, seqlen, vocab
-            loss = torch.sum(distrib_finetuned.exp() * (distrib_finetuned - distrib_prefix), dim=-1)  # bsz, seqlen
-
-        elif self.matching_objective == 'logits':
-            loss = torch.norm(output_finetuned.logits - outputs.logits, dim=-1)  # bsz, seqlen
-            # loss = torch.norm(output_finetuned.logits[:,:,:-2] - outputs.logits, dim=-1)  #bsz, seqlen
-
-        elif self.matching_objective == 'last_layer':
-            activation_diff = output_finetuned.last_hidden_state - outputs.last_hidden_state
-            loss = torch.norm(activation_diff, dim=-1)  # bsz, seqlen
-        else:
-            assert False, "invalid matching_objective"
-
-        return loss.sum(dim=-1).mean()
 
     def is_local_master(self) -> bool:
         """
@@ -1381,6 +1315,14 @@ class Trainer_Prefix:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
 
+        generations = decoding_utils.generate(eval_dataloader, model=self.model, tokenizer=self.tokenizer)
+        generations_path = os.path.join(self.args.output_dir, 'generations', f'global_step_{self.global_step:08d}.txt')
+        os.makedirs(os.path.dirname(generations_path), exist_ok=True)
+        with open(generations_path, 'w') as f:
+            generations = [line + '\n' for line in generations]
+            f.writelines(generations)
+        logger.warning(f"Wrote generations to {generations_path}")
+
         return output.metrics
 
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
@@ -1459,8 +1401,6 @@ class Trainer_Prefix:
         lin_logprobs: List[float] = []
 
         model.eval()
-        if self.gpt2 is not None:
-            self.gpt2.eval()
 
         if is_torch_tpu_available():
             dataloader = pl.ParallelLoader(dataloader, [self.args.device]).per_device_loader(self.args.device)
@@ -1588,7 +1528,7 @@ class Trainer_Prefix:
         inputs = self._prepare_inputs(inputs)
 
         with torch.no_grad():
-            outputs = model(**inputs, gpt2_model=self.gpt2)
+            outputs = model(**inputs)
             loss = outputs.loss
             if has_labels:  # The .mean() is to reduce in case of distributed training
                 loss = loss.mean().item()

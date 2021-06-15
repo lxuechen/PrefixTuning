@@ -679,8 +679,8 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         self.match_n_head = config.n_head
         self.match_n_embd = config.n_embd // config.n_head
 
-        self._objective_mode = getattr(config, '_objective_mode', 0)
-        assert self._objective_mode in tuple(range(5))
+        self.objective_mode = getattr(config, 'objective_mode', 0)
+        assert self.objective_mode in tuple(range(5))
 
         self.init_weights()
 
@@ -809,10 +809,10 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
             shift_labels = labels[..., 1:]
             criterion = CrossEntropyLoss(reduction="none")
 
-            if self._objective_mode == 0:
+            if self.objective_mode == 0:
                 loss = criterion(shift_logits, shift_labels)
                 loss = loss.mean(dim=1)
-            elif self._objective_mode == 1:
+            elif self.objective_mode == 1:
                 loss = criterion(shift_logits, shift_labels)
                 loss = loss.sum(dim=1)
             else:
