@@ -42,6 +42,8 @@ from .trainer_utils import (BestRun, default_compute_objective, default_hp_space
 from .training_args import TrainingArguments
 from .utils import logging
 
+from gpt2 import decoding_utils
+
 _use_native_amp = False
 _use_apex = False
 
