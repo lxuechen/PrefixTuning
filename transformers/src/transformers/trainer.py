@@ -1263,7 +1263,19 @@ class Trainer:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
 
+        self.generate_and_write_to_file(eval_dataloader)
+
         return output.metrics
+
+    def generate_and_write_to_file(self, loader):
+        # TODO: Also write evaluation val loader.
+        generations = decoding_utils.generate(loader, model=self.model, tokenizer=self.tokenizer)
+        generations_path = os.path.join(self.args.output_dir, 'generations', f'global_step_{self.global_step:08d}.txt')
+        os.makedirs(os.path.dirname(generations_path), exist_ok=True)
+        with open(generations_path, 'w') as f:
+            generations = [line + '\n' for line in generations]
+            f.writelines(generations)
+        logger.warning(f"Wrote generations to {generations_path}")
 
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
         """

@@ -1,19 +1,19 @@
+from contextlib import contextmanager
 import inspect
 import json
 import math
 import os
+from pathlib import Path
 import re
 import shutil
-import warnings
-from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import warnings
 
 import numpy as np
-import torch
-import torch.nn.functional as F
 from packaging import version
+import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.distributed import DistributedSampler
@@ -37,11 +37,12 @@ from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.trainer_utils import (BestRun, default_compute_objective, default_hp_space,
                                         distributed_broadcast_scalars, distributed_concat, EvalPrediction,
-                                        EvaluationStrategy, HPSearchBackend, nested_concat, nested_numpify,
+                                        EvaluationStrategy, HPSearchBackend, nested_numpify,
                                         nested_xla_mesh_reduce, PredictionOutput, PREFIX_CHECKPOINT_DIR, set_seed,
                                         TrainOutput)
 from transformers.training_args import TrainingArguments
 from transformers.utils import logging
+
 from gpt2 import decoding_utils
 
 _use_native_amp = False
@@ -1315,15 +1316,19 @@ class Trainer_Prefix:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
 
-        generations = decoding_utils.generate(eval_dataloader, model=self.model, tokenizer=self.tokenizer)
+        self.generate_and_write_to_file(eval_dataloader)
+
+        return output.metrics
+
+    def generate_and_write_to_file(self, loader):
+        # TODO: Also write evaluation val loader.
+        generations = decoding_utils.generate(loader, model=self.model, tokenizer=self.tokenizer)
         generations_path = os.path.join(self.args.output_dir, 'generations', f'global_step_{self.global_step:08d}.txt')
         os.makedirs(os.path.dirname(generations_path), exist_ok=True)
         with open(generations_path, 'w') as f:
             generations = [line + '\n' for line in generations]
             f.writelines(generations)
         logger.warning(f"Wrote generations to {generations_path}")
-
-        return output.metrics
 
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
         """
