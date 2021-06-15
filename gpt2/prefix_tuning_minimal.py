@@ -47,11 +47,11 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
 
     def state_dict(self):
         """Avoid storing GPT-2, since it's not even trained."""
-        return self.prefix_net.state_dict()
+        return self.extra_prefix_net.state_dict()
 
     def load_state_dict(self, state_dict):
         """Avoid loading GPT-2, since it's not even trained."""
-        self.prefix_net.load_state_dict(state_dict)
+        self.extra_prefix_net.load_state_dict(state_dict)
 
     @property
     def major_device(self):
