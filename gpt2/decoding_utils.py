@@ -26,7 +26,9 @@ def generate(
         # labels may be [[-100, 123, 32], [-100, -100, 120]
 
         for input_ids, labels in zip(batch_input_ids, batch_labels):
-            prompt_len = (labels == dummy_token_id).sum().item()
+            non_prompt_positions, = (labels != dummy_token_id).nonzero(as_tuple=True)
+            first_non_prompt_position = non_prompt_positions[0]
+            prompt_len = first_non_prompt_position
             input_ids = input_ids[:prompt_len]
 
             output_ids = model.generate(
