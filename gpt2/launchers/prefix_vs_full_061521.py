@@ -196,7 +196,6 @@ def main(
                                 tuning_mode=tuning_mode,
                                 mode=mode,
                                 learning_rate=lr,
-                                model_name_or_path="gpt2-medium",
                                 per_example_max_grad_norm=max_grad_norm,
                             )
 
