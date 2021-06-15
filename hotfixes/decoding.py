@@ -62,3 +62,9 @@ labels = torch.tensor([-100, 0])
 # Unrecognized labels results in 0 loss.
 loss = F.cross_entropy(logits, labels, reduction="none")
 print(loss)
+
+print(dir(tokenizer))
+import pdb; pdb.set_trace()
+
+print(type(tokenizer.vocab))
+print(tokenizer.vocab)

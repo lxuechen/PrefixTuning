@@ -2,10 +2,13 @@ import sys
 from typing import Optional
 
 import tqdm
+import transformers
 
 
 def generate(
-    loader, model, tokenizer,
+    loader,
+    model,
+    tokenizer: transformers.PreTrainedTokenizer,
     max_length=20,
     min_length=5,
     top_k=0,
@@ -18,12 +21,15 @@ def generate(
     num_return_sequences=1,
     max_generations=sys.maxsize,
     device=None,
+    padding_token="[PAD]",
 ):
     assert not model.training, "Generation must be when `model` is in eval mode."
 
     # These are linebreaks; generating these will mess up the evaluation, since those files assume one example per-line.
     if bad_words_ids is None:
         bad_words_ids = [[628], [198]]
+        if padding_token in tokenizer.get_vocab():
+            bad_words_ids.append(tokenizer.encode(padding_token))
 
     generations = []
     for batch_idx, batch in tqdm.tqdm(enumerate(loader), desc="generation"):
@@ -55,7 +61,7 @@ def generate(
 
             whole_str: str = tokenizer.decode(output_ids, clean_up_tokenization_spaces=True)
             prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
-            output_str: str = whole_str[len(prompt_str)]
+            output_str: str = whole_str[len(prompt_str):]
             del whole_str, prompt_str
 
             # Remove potential eos_token at the end.
