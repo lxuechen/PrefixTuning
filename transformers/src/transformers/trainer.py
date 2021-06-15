@@ -208,6 +208,8 @@ class Trainer:
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         tb_writer: Optional["SummaryWriter"] = None,
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
+
+        val_dataset: Optional[Dataset] = None,
         **kwargs,
     ):
         if args is None:
