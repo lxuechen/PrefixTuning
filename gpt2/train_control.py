@@ -3,6 +3,7 @@ from torch import nn
 from transformers import GPT2PreTrainedModel
 
 
+# TODO: Rewrite this huge thing eventually!!!
 class PrefixTuning(GPT2PreTrainedModel):
     """Classification Head for  transformer encoders"""
 

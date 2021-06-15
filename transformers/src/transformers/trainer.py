@@ -1088,7 +1088,6 @@ class Trainer:
 
         Subclass and override for custom behavior.
         """
-        # outputs = model.forward_weighted(**inputs)
         outputs = model(**inputs)
         # Save past state if it exists
         if self.args.past_index >= 0:
