@@ -18,7 +18,7 @@ run:
 """
 
 import os
-
+import sys
 import fire
 
 from . import wrapper
@@ -47,6 +47,7 @@ def _get_command(
     #   truncate at max_seq_len=96 => training set size 42021
     #   full training set size 42061
     max_seq_len=96,
+    max_generations=sys.maxsize,
     objective_mode=1,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
@@ -137,6 +138,7 @@ def _get_command(
         --evaluation_strategy "steps" \
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --max_seq_len {max_seq_len} \
+        --max_generations {max_generations} \
         --overwrite_output_dir'
     # @formatter:off
 

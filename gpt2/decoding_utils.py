@@ -48,7 +48,7 @@ def generate(
                 bad_words_ids=bad_words_ids,
                 num_return_sequences=num_return_sequences,
                 num_beams=num_beams,
-                pad_token_id=tokenizer.eos_token,  # Stop the stupid logging...
+                pad_token_id=tokenizer.eos_token_id,  # Stop the stupid logging...
             )
             output_ids = output_ids.squeeze(dim=0)  # Throw away batch dimension.
 

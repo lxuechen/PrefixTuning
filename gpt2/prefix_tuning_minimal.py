@@ -1,3 +1,4 @@
+"""Make the prefix-tuning model as minimal as possible."""
 import torch
 from torch import nn
 from transformers import GPT2PreTrainedModel, GPT2LMHeadModel
