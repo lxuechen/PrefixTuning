@@ -310,7 +310,6 @@ def main():
         trainer = Trainer_Prefix(
             model=model,
             tokenizer=tokenizer,
-            model_gpt2=gpt2,
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
