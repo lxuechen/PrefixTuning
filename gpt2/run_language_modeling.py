@@ -211,20 +211,11 @@ def main():
             "and load it from here, using --tokenizer_name"
         )
 
-    if model_args.tuning_mode == 'prefixtune':
-        model = prefix_tuning_minimal.PrefixTuningMinimal(
-            model_args=model_args, config=config,
-        )
-        gpt2 = model.gpt2
-    elif model_args.tuning_mode == "fulltune":
-        model = GPT2LMHeadModel.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            cache_dir=model_args.cache_dir,
-        )
-        gpt2 = model
-    else:
-        raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
+    gpt2 = GPT2LMHeadModel.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        cache_dir=model_args.cache_dir,
+    )
 
     # 0 means the regular token level objective, which is sum / output_len
     # 1 means the sentence level objective, which is sum
@@ -249,6 +240,17 @@ def main():
     print('len(tokenizer) = ', len(tokenizer))
     print(tokenizer.eos_token, tokenizer.eos_token_id)
     print(tokenizer.bos_token, tokenizer.bos_token_id)
+
+    config.vocab_size = len(tokenizer)
+    # TODO: This creation needs to be at the end, since the tokenizer is expanded, hence embedding is expanded.
+    if model_args.tuning_mode == 'prefixtune':
+        model = prefix_tuning_minimal.PrefixTuningMinimal(
+            model_args=model_args, config=config, gpt2=gpt2,
+        )
+    elif model_args.tuning_mode == "fulltune":
+        model = gpt2
+    else:
+        raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
     train_dataset, val_dataset, eval_dataset, data_collator = get_dataset_wrapper(
         config=config, tokenizer=tokenizer,

@@ -16,13 +16,16 @@ class _View(nn.Module):
 class PrefixTuningMinimal(GPT2PreTrainedModel):
     """A minimalistic implementation of the core components."""
 
-    def __init__(self, config, model_args):
+    def __init__(self, config, model_args, gpt2=None):
         super(PrefixTuningMinimal, self).__init__(config=config)
 
         # Instantiate a GPT-2, and DON'T optimizer it!
-        self.gpt2 = GPT2LMHeadModel.from_pretrained(
-            model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
-        ).requires_grad_(False)
+        if gpt2 is None:
+            self.gpt2 = GPT2LMHeadModel.from_pretrained(
+                model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
+            ).requires_grad_(False)
+        else:
+            self.gpt2 = gpt2.requires_grad_(False)
 
         self.register_buffer('extra_prefix_ids', torch.arange(model_args.preseqlen))
         self.extra_prefix_net = nn.Sequential(
@@ -68,13 +71,9 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
-        src_attn=None,
-        tgt_attn=None,
         **kwargs,
     ):
         past_key_values = self.make_past_key_values(bsz=input_ids.size(0))
-        if src_attn is not None and tgt_attn is not None:
-            attention_mask = torch.cat([src_attn, tgt_attn], dim=1)
         return self.gpt2(
             input_ids=input_ids,
             past_key_values=past_key_values,
