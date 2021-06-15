@@ -23,10 +23,10 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
             model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
         ).requires_grad_(False)
 
-        self.extra_prefix_ids = self.register_buffer('extra_prefix_ids', torch.arange(model_args.preseqlen))
+        self.register_buffer('extra_prefix_ids', torch.arange(model_args.preseqlen))
         self.extra_prefix_net = nn.Sequential(
             nn.Embedding(model_args.preseqlen, config.n_embd),
-            nn.Linear(model_args.mid_dim, model_args.mid_dim),
+            nn.Linear(config.n_embd, model_args.mid_dim),
             nn.Tanh(),
             nn.Linear(model_args.mid_dim, config.n_layer * 2 * config.n_embd),
             _View((-1, model_args.preseqlen, config.n_layer * 2, config.n_head, config.n_embd // config.n_head)),
