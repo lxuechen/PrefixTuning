@@ -47,9 +47,11 @@ def generate(
             prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
 
             eos_position: Optional[int] = whole_str.find(tokenizer.eos_token)
-            if eos_position == -1:  # Failed.
+            if eos_position == -1:  # Didn't generate eos_token; that's okay -- just skip!
                 eos_position = None
-            output_str = whole_str[len(prompt_str):eos_position]
+            output_str: str = whole_str[len(prompt_str):eos_position]
+            output_str = output_str.strip()
+
             generations.append(output_str)
 
         if len(generations) >= max_examples:
