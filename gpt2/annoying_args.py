@@ -1,5 +1,5 @@
-import sys
 from dataclasses import dataclass, field
+import sys
 from typing import Optional
 
 import transformers
@@ -279,12 +279,13 @@ class DataTrainingArguments:
 
     train_embs: str = field(default="yes")
 
-    max_seq_len: Optional[int] = field(default=sys.maxsize)
+    max_seq_len: int = field(default=sys.maxsize)
 
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
     max_eval_batches: int = field(default=-1, metadata={"help": "Maximum number of evaluation steps to run."})
+    max_generations: int = field(default=sys.maxsize)
 
 
 @dataclass
