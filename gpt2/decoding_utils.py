@@ -31,6 +31,7 @@ def generate(
         if padding_token in tokenizer.get_vocab():
             bad_words_ids.append(tokenizer.encode(padding_token))
 
+    full_generations = []  # Sentences including the prompt part.
     generations = []
     for batch_idx, batch in tqdm.tqdm(enumerate(loader), desc="generation"):
         batch_input_ids, batch_labels = batch["input_ids"], batch["labels"]
@@ -62,6 +63,8 @@ def generate(
             whole_str: str = tokenizer.decode(output_ids, clean_up_tokenization_spaces=True)
             prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
             output_str: str = whole_str[len(prompt_str):]
+
+            full_generations.append(whole_str)
             del whole_str, prompt_str
 
             # Remove potential eos_token at the end.
@@ -75,7 +78,7 @@ def generate(
 
             generations.append(output_str)
 
-        if len(generations) >= max_generations:
-            break
+            if len(generations) >= max_generations:
+                break
 
-    return generations
+    return full_generations, generations
