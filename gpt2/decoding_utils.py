@@ -38,7 +38,8 @@ def generate(
                 repetition_penalty=repetition_penalty,
                 do_sample=do_sample,
                 bad_words_ids=bad_words_ids,
-                num_return_sequences=num_return_sequences
+                num_return_sequences=num_return_sequences,
+                num_beams=num_beams,
             )
             output_ids = output_ids.squeeze(dim=0)  # Throw away batch dimension.
 
