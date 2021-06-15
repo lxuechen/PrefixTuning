@@ -897,8 +897,6 @@ class Trainer_Prefix:
                 metrics = self.evaluate()
                 self._report_to_hp_search(trial, epoch, metrics)
 
-                # TODO: BLEU! generation!
-
             if self.args.tpu_metrics_debug or self.args.debug:
                 if is_torch_tpu_available():
                     # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
