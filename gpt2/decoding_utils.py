@@ -33,12 +33,19 @@ def generate(
 
     full_generations = []  # Sentences including the prompt part.
     generations = []
+    stop_generation = False
     for batch_idx, batch in tqdm.tqdm(enumerate(loader), desc="generation"):
+        if stop_generation:
+            break
+
         batch_input_ids, batch_labels = batch["input_ids"], batch["labels"]
         # e.g., inputs_ids may be [[95, 123, 32], [198, 19, 120]], and
         # labels may be [[-100, 123, 32], [-100, -100, 120]
 
         for input_ids, labels in zip(batch_input_ids, batch_labels):
+            if stop_generation:
+                break
+
             # Find the first non- -100 position. Note there are trailing -100s.
             non_prompt_positions, = (labels != dummy_token_id).nonzero(as_tuple=True)
             first_non_prompt_position = non_prompt_positions[0].item()
@@ -79,6 +86,6 @@ def generate(
             generations.append(output_str)
 
             if len(generations) >= max_generations:
-                break
+                stop_generation = True
 
     return full_generations, generations
