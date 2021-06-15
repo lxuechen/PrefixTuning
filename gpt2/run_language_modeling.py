@@ -215,12 +215,14 @@ def main():
         model = prefix_tuning_minimal.PrefixTuningMinimal(
             model_args=model_args, config=config,
         )
+        gpt2 = model.gpt2
     elif model_args.tuning_mode == "fulltune":
         model = GPT2LMHeadModel.from_pretrained(
             model_args.model_name_or_path,
             config=config,
             cache_dir=model_args.cache_dir,
         )
+        gpt2 = model
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
@@ -243,7 +245,7 @@ def main():
     print('adapting the size of the model embedding to include [PAD]')
     print('len(tokenizer) = ', len(tokenizer))
     num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    embedding_layer = model.resize_token_embeddings(len(tokenizer))
+    embedding_layer = gpt2.resize_token_embeddings(len(tokenizer))
     print('len(tokenizer) = ', len(tokenizer))
     print(tokenizer.eos_token, tokenizer.eos_token_id)
     print(tokenizer.bos_token, tokenizer.bos_token_id)
