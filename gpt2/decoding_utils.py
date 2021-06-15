@@ -1,5 +1,6 @@
 import sys
 from typing import Optional
+
 import tqdm
 
 
@@ -54,11 +55,16 @@ def generate(
 
             whole_str: str = tokenizer.decode(output_ids, clean_up_tokenization_spaces=True)
             prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
+            output_str: str = whole_str[len(prompt_str)]
+            del whole_str, prompt_str
 
-            eos_position: Optional[int] = whole_str.find(tokenizer.eos_token)
+            # Remove potential eos_token at the end.
+            eos_position: Optional[int] = output_str.find(tokenizer.eos_token)
             if eos_position == -1:  # Didn't generate eos_token; that's okay -- just skip!
                 eos_position = None
-            output_str: str = whole_str[len(prompt_str):eos_position]
+            output_str = output_str[:eos_position]
+
+            # Removing leading and trailing spaces.
             output_str = output_str.strip()
 
             generations.append(output_str)

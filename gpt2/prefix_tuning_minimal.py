@@ -40,7 +40,9 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
     def make_past_key_values(self, bsz=None):
         extra_prefix_ids = self.extra_prefix_ids[None, :].expand(bsz, -1)
         past_key_values = self.extra_prefix_net(extra_prefix_ids)
-        past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2)
+        # (n_layer, batch_size, n_head, preseqlen, n_embed // n_head).
+        # e.g., (2, 1, 12, 5, 64,).
+        past_key_values = past_key_values.permute([2, 0, 3, 1, 4]).split(2, dim=0)
         return past_key_values
 
     def state_dict(self):
@@ -92,6 +94,7 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
             **kwargs
         )
 
-    def generate(self, input_ids, **kwargs):
-        past_key_values = self.make_past_key_values(bsz=input_ids.size(0))
-        return self.gpt2.generate(input_ids=input_ids, past_key_values=past_key_values, **kwargs)
+    def generate(self, input_ids, num_beams, **kwargs):
+        # TODO: This seems like a hack; check if multiply by beam size work in general.
+        past_key_values = self.make_past_key_values(bsz=input_ids.size(0) * num_beams)
+        return self.gpt2.generate(input_ids=input_ids, num_beams=num_beams, past_key_values=past_key_values, **kwargs)
