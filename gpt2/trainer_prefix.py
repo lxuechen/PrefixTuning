@@ -1314,31 +1314,59 @@ class Trainer_Prefix:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
 
-        self.generate_and_write_to_file(eval_dataloader)
+        self.generate_and_write_to_file()
 
         return output.metrics
 
-    def generate_and_write_to_file(self, loader):
-        # TODO: Also write evaluation val loader.
-        # TODO: Also check out training generations!
-        full_generations, unstripped_generations, generations = decoding_utils.generate(
-            loader, model=self.model, tokenizer=self.tokenizer, max_generations=self.args.max_generations,
-            device=self.args.device
-        )
-        print('full generations: ')
-        print(full_generations[:10])
-        print('unstripped generations: ')
-        s = '\n'.join([repr(line) for line in unstripped_generations])
-        print(s)
-        print('generations: ')
-        print(generations[:10])  # Just to check things out.
+    def _get_loader_by_split(self, split):
+        if split == "train":
+            loader = self.get_train_dataloader()
+        else:
+            if split == "val":
+                loader = self.get_eval_dataloader(self.val_dataset)
+            elif split == "eval":
+                loader = self.get_eval_dataloader(self.eval_dataset)
+            else:
+                raise ValueError(f"Unknown split: {split}")
+        return loader
 
-        generations_path = os.path.join(self.args.output_dir, 'generations', f'global_step_{self.global_step:08d}.txt')
-        os.makedirs(os.path.dirname(generations_path), exist_ok=True)
-        with open(generations_path, 'w') as f:
-            generations = [line + '\n' for line in generations]
-            f.writelines(generations)
-        logger.warning(f"Wrote generations to {generations_path}")
+    def generate_and_write_to_file(self, num_generations_to_print=10):
+
+        def pretty_format(lines):
+            """A useful helper to make printted generationed look nice."""
+            return '\n'.join([repr(line) for line in lines[:num_generations_to_print]])
+
+        kwargs = dict(
+            model=self.model, tokenizer=self.tokenizer, device=self.args.device,
+            max_generations=self.args.max_generations
+        )
+
+        all_generations = {}
+        for split in ("train", "val", "eval"):
+            loader = self._get_loader_by_split(split)
+            full_generations, unstripped_generations, generations = decoding_utils.generate(loader, **kwargs)
+            all_generations[split] = {
+                "full_generations": full_generations,
+                "unstripped_generations": unstripped_generations,
+                "generations": generations,
+            }
+
+            generations_path = os.path.join(
+                self.args.output_dir, f'{split}_generations', f'global_step_{self.global_step:08d}.txt'
+            )
+            os.makedirs(os.path.dirname(generations_path), exist_ok=True)
+            with open(generations_path, 'w') as f:
+                generations = [line + '\n' for line in generations]
+                f.writelines(generations)
+            logger.warning(f"Wrote generations to {generations_path}")
+
+            print(f" --- split {split} ---")
+            print('full generations: ')
+            print(pretty_format(full_generations))
+            print('unstripped generations: ')
+            print(pretty_format(unstripped_generations))
+            print('generations: ')
+            print(pretty_format(generations))
 
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
         """
