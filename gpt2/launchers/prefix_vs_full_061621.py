@@ -37,6 +37,7 @@ def _get_command(
 
     # Don't modify these easily!
     epochs=5,
+    train_batch_size=5,
     per_device_train_batch_size=5,
     per_device_eval_batch_size=10,
     gradient_accumulation_steps=1,
@@ -67,6 +68,7 @@ def _get_command(
     learning_rate_str = wrapper.float2str(learning_rate)
     per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
     noise_multiplier_str = wrapper.float2str(noise_multiplier)
+    train_batch_size_str = wrapper.int2str(train_batch_size)
 
     # Check mode.
     if mode == Mode.submit:
@@ -74,12 +76,14 @@ def _get_command(
             per_device_train_batch_size = 1
             gradient_accumulation_steps = 5
             gpu = "3090"  # This stupid thing needs a lot of memory!!!
+        else:
+            gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
 
         if nonprivate == "no":
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune/date_0616"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}"
+                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
                 f"/{seed}"
             )
             # @formatter:on
@@ -87,7 +91,7 @@ def _get_command(
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune/date_0616"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}"
+                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
                 f"/{seed}"
             )
             # @formatter:on
@@ -187,9 +191,7 @@ def main(
             noise_multiplier = 0.7
             tuning_mode = "prefixtune"
             mid_dim = 256
-            for batch_size in (100, 200, 500, 1000):
-                per_device_train_batch_size = 25  # Roughly 9 Gigs.
-                gradient_accumulation_steps = batch_size // per_device_train_batch_size
+            for train_batch_size in (100, 200, 500, 1000):
                 for preseqlen in (5, 10, 15, 20):
                     for lr in (1e-2, 1e-3, 1e-4, 1e-5):
                         commands += _get_command(
@@ -206,8 +208,8 @@ def main(
                             tuning_mode=tuning_mode,
                             mid_dim=mid_dim,
 
-                            per_device_train_batch_size=per_device_train_batch_size,
-                            gradient_accumulation_steps=gradient_accumulation_steps,
+                            train_batch_size=train_batch_size,
+                            per_device_train_batch_size=25,  # Roughly 9 Gigs for prefix-tuning.
                             preseqlen=preseqlen,
                             learning_rate=lr,
                         )
