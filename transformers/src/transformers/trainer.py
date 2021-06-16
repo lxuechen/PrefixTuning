@@ -1288,50 +1288,69 @@ class Trainer:
                 raise ValueError(f"Unknown split: {split}")
         return loader
 
-    def generate_and_write_to_file(self, num_generations_to_print=10):
+    def generate_and_write_to_file(self, num_generations_to_print=6):
+        kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
-        def pretty_format(lines):
-            """A useful helper to make printted generationed look nice."""
-            return '\n'.join([repr(line) for line in lines[:num_generations_to_print]])
-
-        kwargs = dict(
-            model=self.model, tokenizer=self.tokenizer, device=self.args.device,
-        )
-
-        # TODO: Also check out the generations with references!
         all_generations = {}
         for split in ("train", "val", "eval"):
             loader = self._get_loader_by_split(split)
-
             if split == "train":  # Don't waste compute on sanity checks.
                 max_generations = 20
             else:
                 max_generations = self.args.max_generations
-            full_generations, unstripped_generations, generations = decoding_utils.generate(
+            full_generations, unstripped_generations, generations, references = decoding_utils.generate(
                 loader, max_generations=max_generations, **kwargs
             )
-            all_generations[split] = {
-                "full_generations": full_generations,
-                "unstripped_generations": unstripped_generations,
-                "generations": generations,
-            }
+            all_generations[split] = dict(
+                full_generations=full_generations,
+                unstripped_generations=unstripped_generations,
+                generations=generations,
+                references=references,
+            )
 
+            def pretty_format(lines):
+                """A useful helper to make printted generationed look nice."""
+                return '\n'.join([repr(line) for line in lines[:num_generations_to_print]])
+
+            # Various visuals.
+            print(f" --- split {split} --- ")
+            print(f" *** full generations *** ")
+            print(pretty_format(full_generations))
+            print(f" *** unstripped generations *** ")
+            print(pretty_format(unstripped_generations))
+            print(f" *** generations *** ")
+            print(pretty_format(generations))
+            print(f" *** references *** ")
+            print(pretty_format(references))
+
+            # Store generations for BLEU.
             generations_path = os.path.join(
                 self.args.output_dir, f'generations', f'{split}', f'global_step_{self.global_step:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_path), exist_ok=True)
             with open(generations_path, 'w') as f:
-                generations = [line + '\n' for line in generations]
-                f.writelines(generations)
+                f.writelines([line + '\n' for line in generations])
             logger.warning(f"Wrote generations to {generations_path}")
+            del generations_path
 
-            print(f" --- split {split} ---")
-            print('full generations: ')
-            print(pretty_format(full_generations))
-            print('unstripped generations: ')
-            print(pretty_format(unstripped_generations))
-            print('generations: ')
-            print(pretty_format(generations))
+            # Store generations with references for visual inspection.
+            generations_with_refs_path = os.path.join(
+                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{self.global_step:08d}.txt'
+            )
+            os.makedirs(os.path.dirname(generations_with_refs_path), exist_ok=True)
+            with open(generations_with_refs_path, 'w') as f:
+                generations_with_refs = []
+                if len(generations) != len(references):
+                    msg = "Number of generations not equal to the number of reference! There might be a mismatch!"
+                    logger.warning(msg)
+                    generations_with_refs += [msg]  # So that you know something is wrong when looking at the txt file!
+
+                generations_with_refs = [ref + ' ' + gen for ref, gen in zip(references, generations)]
+                f.writelines([line + '\n' for line in generations_with_refs])
+            logger.warning(f"Wrote generations and references to {generations_with_refs_path}")
+            del generations_with_refs_path
+
+        return all_generations
 
     def predict(self, test_dataset: Dataset) -> PredictionOutput:
         """

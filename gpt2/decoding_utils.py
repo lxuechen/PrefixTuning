@@ -31,9 +31,11 @@ def generate(
         if padding_token in tokenizer.get_vocab():
             bad_words_ids.append(tokenizer.encode(padding_token))
 
+    references = []
     full_generations = []  # Sentences including the prompt part.
     unstripped_generations = []
     generations = []
+
     stop_generation = False
     for batch_idx, batch in tqdm.tqdm(enumerate(loader), desc="generation"):
         if stop_generation:
@@ -47,15 +49,30 @@ def generate(
             if stop_generation:
                 break
 
+            # Find the first pad token and end the sentence from there!
+            if padding_token in tokenizer.get_vocab():
+                pad_positions, = (
+                    input_ids == tokenizer.encode(padding_token, return_tensors="pt").squeeze()
+                ).nonzero(as_tuple=True)
+                # Some sentences might have padding; others might not.
+                if pad_positions.numel() == 0:
+                    first_pad_position = None
+                else:
+                    first_pad_position = pad_positions[0]
+                reference_str: str = tokenizer.decode(input_ids[:first_pad_position], clean_up_tokenization_spaces=True)
+            else:
+                reference_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
+            references.append(reference_str)
+
             # Find the first non- -100 position. Note there are trailing -100s.
             non_prompt_positions, = (labels != dummy_token_id).nonzero(as_tuple=True)
             first_non_prompt_position = non_prompt_positions[0].item()
             prompt_len = first_non_prompt_position
-            input_ids = input_ids[:prompt_len]
+            prompt_ids = input_ids[:prompt_len]
 
             output_ids = model.generate(
-                input_ids=input_ids[None, ...].to(device),
-                max_length=max_length + prompt_len,
+                input_ids=prompt_ids[None, ...].to(device),
+                max_length=max_length + prompt_len,  # This cannot be a 0-D tensor!
                 min_length=min_length,
                 top_k=top_k,
                 top_p=top_p,
@@ -69,7 +86,7 @@ def generate(
             output_ids = output_ids.squeeze(dim=0)  # Throw away batch dimension.
 
             whole_str: str = tokenizer.decode(output_ids, clean_up_tokenization_spaces=True)
-            prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
+            prompt_str: str = tokenizer.decode(prompt_ids, clean_up_tokenization_spaces=True)
             output_str: str = whole_str[len(prompt_str):]
 
             full_generations.append(whole_str)
@@ -90,4 +107,4 @@ def generate(
             if len(generations) >= max_generations:
                 stop_generation = True
 
-    return full_generations, unstripped_generations, generations
+    return full_generations, unstripped_generations, generations, references
