@@ -1261,6 +1261,13 @@ class Trainer:
 
         self.log(output.metrics)
 
+        # Save log history always! This must appear after the `log_history` is updated.
+        json.dump(
+            self.log_history,
+            open(os.path.join(self.args.output_dir, "log_history.json"), "w"),
+            indent=2, ensure_ascii=False
+        )
+
         if self.args.tpu_metrics_debug or self.args.debug:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
