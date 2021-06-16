@@ -38,6 +38,7 @@ def _get_command(
     # Don't modify these easily!
     epochs=5,
     per_device_train_batch_size=5,
+    per_device_eval_batch_size=10,
     gradient_accumulation_steps=1,
     per_example_max_grad_norm=1.,
     noise_multiplier=0.8,
@@ -103,7 +104,7 @@ def _get_command(
         --model_name_or_path {model_name_or_path} \
         --tokenizer_name {model_name_or_path} \
         --per_device_train_batch_size {per_device_train_batch_size} \
-        --per_device_eval_batch_size 10 \
+        --per_device_eval_batch_size {per_device_eval_batch_size} \
         --save_steps 500000 \
         --num_train_epochs {epochs} \
         --do_train \
@@ -198,6 +199,7 @@ def main(
                             nonprivate="no",
                             eval_steps=100,
                             max_eval_batches=100,
+                            per_device_eval_batch_size=25,
 
                             per_example_max_grad_norm=max_grad_norm,
                             noise_multiplier=noise_multiplier,
