@@ -32,6 +32,7 @@ def generate(
             bad_words_ids.append(tokenizer.encode(padding_token))
 
     full_generations = []  # Sentences including the prompt part.
+    unstripped_generations = []
     generations = []
     stop_generation = False
     for batch_idx, batch in tqdm.tqdm(enumerate(loader), desc="generation"):
@@ -79,6 +80,7 @@ def generate(
             if eos_position == -1:  # Didn't generate eos_token; that's okay -- just skip!
                 eos_position = None
             output_str = output_str[:eos_position]
+            unstripped_generations.append(output_str)
 
             # Removing leading and trailing spaces.
             output_str = output_str.strip()
@@ -88,4 +90,4 @@ def generate(
             if len(generations) >= max_generations:
                 stop_generation = True
 
-    return full_generations, generations
+    return full_generations, unstripped_generations, generations

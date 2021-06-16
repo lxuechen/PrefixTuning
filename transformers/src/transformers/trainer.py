@@ -1271,7 +1271,7 @@ class Trainer:
 
     def generate_and_write_to_file(self, loader):
         # TODO: Also write evaluation val loader.
-        full_generations, generations = decoding_utils.generate(
+        full_generations, unstripped_generations, generations = decoding_utils.generate(
             loader, model=self.model, tokenizer=self.tokenizer, max_generations=self.args.max_generations,
             device=self.args.device
         )
