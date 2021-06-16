@@ -1303,7 +1303,7 @@ class Trainer:
             }
 
             generations_path = os.path.join(
-                self.args.output_dir, f'{split}_generations', f'global_step_{self.global_step:08d}.txt'
+                self.args.output_dir, f'generations', f'{split}', f'global_step_{self.global_step:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_path), exist_ok=True)
             with open(generations_path, 'w') as f:
