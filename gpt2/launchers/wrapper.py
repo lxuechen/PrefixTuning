@@ -71,7 +71,7 @@ def float2str(x, precision=8):
 
 
 def int2str(x, leading_zeros=8):
-    return f"{x:{leading_zeros}0d}"
+    return f"{x:0{leading_zeros}d}"
 
 
 class ContainerMeta(type):
