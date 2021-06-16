@@ -1345,13 +1345,19 @@ class Trainer_Prefix:
 
         kwargs = dict(
             model=self.model, tokenizer=self.tokenizer, device=self.args.device,
-            max_generations=self.args.max_generations
         )
 
         all_generations = {}
         for split in ("train", "val", "eval"):
             loader = self._get_loader_by_split(split)
-            full_generations, unstripped_generations, generations = decoding_utils.generate(loader, **kwargs)
+
+            if split == "train":  # Don't waste compute on sanity checks.
+                max_generations = 20
+            else:
+                max_generations = self.args.max_generations
+            full_generations, unstripped_generations, generations = decoding_utils.generate(
+                loader, max_generations=max_generations, **kwargs
+            )
             all_generations[split] = {
                 "full_generations": full_generations,
                 "unstripped_generations": unstripped_generations,
