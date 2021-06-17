@@ -31,6 +31,7 @@ def generate(
         if padding_token in tokenizer.get_vocab():
             bad_words_ids.append(tokenizer.encode(padding_token))
 
+    # TODO: Generate with loader! or generate with dataset!
     references = []
     full_generations = []  # Sentences including the prompt part.
     unstripped_generations = []
