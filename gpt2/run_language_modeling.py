@@ -262,6 +262,7 @@ def main():
             tokenizer=tokenizer,
             args=training_args,
             train_dataset=train_dataset,
+            val_dataset=val_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
             task_mode=data_args.task_mode,
@@ -275,6 +276,7 @@ def main():
             data_collator=data_collator,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
+            val_dataset=val_dataset,
         )
     num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
