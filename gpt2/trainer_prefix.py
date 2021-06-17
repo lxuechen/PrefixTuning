@@ -250,6 +250,7 @@ class Trainer_Prefix:
         use_dropout: Optional[bool] = False,
 
         val_dataset: Optional[Dataset] = None,
+        generation_stuff: Optional[Dict] = None,
         **kwargs,
     ):
         if args is None:
@@ -275,7 +276,7 @@ class Trainer_Prefix:
         self.optimizer, self.lr_scheduler = optimizers
         self.task_mode = task_mode
         self.use_dropout = use_dropout
-
+        self.generation_stuff = generation_stuff
         self.curr_best_eval = 10000000.
 
         if model_init is not None and (self.optimizer is not None or self.lr_scheduler is not None):
@@ -1337,18 +1338,26 @@ class Trainer_Prefix:
                 raise ValueError(f"Unknown split: {split}")
         return loader
 
+    def _get_prompt_dataset_by_split(self, split):
+        return {
+            "train": self.generation_stuff["train_prompts"],
+            "val": self.generation_stuff["val_prompts"],
+            "eval": self.generation_stuff["eval_prompts"],
+        }[split]
+
     def generate_and_write_to_file(self, num_generations_to_print=6):
         kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
         all_generations = {}
         for split in ("train", "val", "eval"):
-            loader = self._get_loader_by_split(split)
+            prompt_dataset = self._get_prompt_dataset_by_split(split)  # Don't the loader to avoid duplicated prompts!
             if split == "train":  # Don't waste compute on sanity checks.
                 max_generations = 20
             else:
                 max_generations = self.args.max_generations
+
             full_generations, unstripped_generations, generations, references = decoding_utils.generate(
-                loader, max_generations=max_generations, **kwargs
+                prompt_dataset=prompt_dataset, max_generations=max_generations, **kwargs
             )
             all_generations[split] = dict(
                 full_generations=full_generations,
@@ -1371,6 +1380,7 @@ class Trainer_Prefix:
             print(pretty_format(generations))
             print(f" *** references *** ")
             print(pretty_format(references))
+            print(f" *** num generations: {len(generations)}, num references: {len(references)} *** ")
 
             # Store generations for BLEU.
             generations_path = os.path.join(

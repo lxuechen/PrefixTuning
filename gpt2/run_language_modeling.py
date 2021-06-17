@@ -284,6 +284,7 @@ def main():
             data_collator=data_collator,
             task_mode=data_args.task_mode,
             use_dropout=(model_args.use_dropout == 'yes'),
+            generation_stuff=generation_stuff,
         )
     else:
         trainer = Trainer(
@@ -294,6 +295,7 @@ def main():
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             val_dataset=val_dataset,
+            generation_stuff=generation_stuff,
         )
     num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)

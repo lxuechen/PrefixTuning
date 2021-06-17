@@ -8,8 +8,8 @@ VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
 EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt"
 
 TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
-VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_val.txt"
-EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_eval.txt"
+VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
+EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
 
 
 def _get_command(

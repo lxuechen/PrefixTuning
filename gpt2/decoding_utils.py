@@ -6,9 +6,10 @@ import transformers
 
 
 def generate(
-    loader,
     model,
     tokenizer: transformers.PreTrainedTokenizer,
+    loader=None,
+    prompt_dataset=None,
     max_length=20,
     min_length=5,
     top_k=0,
@@ -31,7 +32,50 @@ def generate(
         if padding_token in tokenizer.get_vocab():
             bad_words_ids.append(tokenizer.encode(padding_token))
 
-    # TODO: Generate with loader! or generate with dataset!
+    kwargs = dict(
+        model=model,
+        tokenizer=tokenizer,
+        max_length=max_length,
+        min_length=min_length,
+        top_k=top_k,
+        top_p=top_p,
+        repetition_penalty=repetition_penalty,
+        do_sample=do_sample,
+        num_beams=num_beams,
+        bad_words_ids=bad_words_ids,
+        dummy_token_id=dummy_token_id,
+        num_return_sequences=num_return_sequences,
+        max_generations=max_generations,
+        device=device,
+        padding_token=padding_token,
+    )
+    if loader is not None:
+        return _generate_with_loader(loader=loader, **kwargs)
+    elif prompt_dataset is not None:
+        return _generate_with_prompt_dataset(prompt_dataset=prompt_dataset, **kwargs)
+    else:
+        raise ValueError(f"`loader` and `prompt_dataset` cannot both be `None`.")
+
+
+def _generate_with_loader(
+    loader,
+
+    model,
+    tokenizer: transformers.PreTrainedTokenizer,
+    max_length,
+    min_length,
+    top_k,
+    top_p,
+    repetition_penalty,
+    do_sample,
+    num_beams,
+    bad_words_ids,
+    dummy_token_id,
+    num_return_sequences,
+    max_generations,
+    device,
+    padding_token,
+):
     references = []
     full_generations = []  # Sentences including the prompt part.
     unstripped_generations = []
@@ -108,4 +152,74 @@ def generate(
             if len(generations) >= max_generations:
                 stop_generation = True
 
+    return full_generations, unstripped_generations, generations, references
+
+
+def _generate_with_prompt_dataset(
+    prompt_dataset,
+
+    model,
+    tokenizer,
+    max_length,
+    min_length,
+    top_k,
+    top_p,
+    repetition_penalty,
+    do_sample,
+    num_beams,
+    bad_words_ids,
+    dummy_token_id,
+    num_return_sequences,
+    max_generations,
+    device,
+    padding_token,
+):
+    references = []
+    full_generations = []  # Sentences including the prompt part.
+    unstripped_generations = []
+    generations = []
+
+    stop_generation = False
+    for input_ids in prompt_dataset:
+        if stop_generation:
+            break
+
+        prompt_len = len(input_ids[0])
+        output_ids = model.generate(
+            input_ids=input_ids.to(device),
+            max_length=max_length + prompt_len,  # This cannot be a 0-D tensor!
+            min_length=min_length,
+            top_k=top_k,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            do_sample=do_sample,
+            bad_words_ids=bad_words_ids,
+            num_return_sequences=num_return_sequences,
+            num_beams=num_beams,
+            pad_token_id=tokenizer.eos_token_id,  # Stop the stupid logging...
+        )
+        output_ids = output_ids.squeeze(dim=0)  # Throw away batch dimension.
+        input_ids = input_ids.squeeze(dim=0)
+
+        whole_str: str = tokenizer.decode(output_ids, clean_up_tokenization_spaces=True)
+        prompt_str: str = tokenizer.decode(input_ids, clean_up_tokenization_spaces=True)
+        output_str: str = whole_str[len(prompt_str):]
+
+        full_generations.append(whole_str)
+        del whole_str, prompt_str
+
+        # Remove potential eos_token at the end.
+        eos_position: Optional[int] = output_str.find(tokenizer.eos_token)
+        if eos_position == -1:  # Didn't generate eos_token; that's okay -- just skip!
+            eos_position = None
+        output_str = output_str[:eos_position]
+        unstripped_generations.append(output_str)
+
+        # Removing leading and trailing spaces.
+        output_str = output_str.strip()
+
+        generations.append(output_str)
+
+        if len(generations) >= max_generations:
+            stop_generation = True
     return full_generations, unstripped_generations, generations, references
