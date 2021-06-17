@@ -75,7 +75,11 @@ def extract_prompts(
 
 def eval(
     # @formatter:off
-    gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00001000.txt",
+    # Private.
+    gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00002100.txt",
+
+    # Non-private.
+    # gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_yes_tuning_mode_fulltune_learning_rate_0_00001000_train_batch_size_00000005_mid_dim_00000256/0/generations/eval/global_step_00001800.txt",
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
 
     # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
