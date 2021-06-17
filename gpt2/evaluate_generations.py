@@ -1,5 +1,6 @@
 import collections
 import logging
+import os
 
 import fire
 import transformers
@@ -49,6 +50,8 @@ def extract_references(
     with open(out_file_path, 'w') as f:
         for src in src2tgt:
             for tgt in src2tgt[src]:
+                if not tgt.endswith('\n'):
+                    tgt = tgt + "\n"
                 f.write(tgt)
             f.write('\n')
     logging.warning(f"Number of prompts for generation: {len(src2tgt)}")
@@ -72,11 +75,11 @@ def extract_prompts(
 
 def eval(
     # @formatter:off
-    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0616/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_01000000/0/generations/eval/global_step_00001400.txt",
+    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00001000.txt",
     ref_dir="",
     # @formatter:on
 ):
-    pass
+    os.system()
 
 
 def main(task="clean", **kwargs):
