@@ -17,3 +17,8 @@ python -m gpt2.launchers.prefix_vs_full_061721 --mode "local"     \
   --mid_dim 512 \
   --preseqlen 5
 ```
+
+## Running evaluation
+```bash
+python -m gpt2.evaluate_generations --task eval
+```

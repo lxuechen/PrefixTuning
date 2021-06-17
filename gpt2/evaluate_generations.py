@@ -75,11 +75,14 @@ def extract_prompts(
 
 def eval(
     # @formatter:off
-    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00001000.txt",
-    ref_dir="",
+    gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00001000.txt",
+    ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
+
+    # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
+    e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
     # @formatter:on
 ):
-    os.system()
+    os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} ; cd -')
 
 
 def main(task="clean", **kwargs):
@@ -93,6 +96,8 @@ def main(task="clean", **kwargs):
 
             out_file_path = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_{split}.txt"
             extract_prompts(file_path=file_path, out_file_path=out_file_path, **kwargs)
+
+    # python -m gpt2.evaluate_generations --task eval
     elif task == "eval":
         eval(**kwargs)
     else:
