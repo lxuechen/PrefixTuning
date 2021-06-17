@@ -73,6 +73,7 @@ def main(
                         per_device_train_batch_size = train_batch_size
 
                     commands += _get_command(
+                        date="0617",
                         mode=mode,
 
                         seed=seed,

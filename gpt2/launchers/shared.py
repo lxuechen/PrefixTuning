@@ -16,6 +16,7 @@ def _get_command(
     seed,
     tuning_mode,
     nonprivate,
+    date=None,  # Always include this so as to not mess up the folders.
 
     # Don't modify these easily!
     epochs=5,
@@ -47,6 +48,9 @@ def _get_command(
     conda_env="lxuechen-prefix-tuning",
     priority="standard",
 ):
+    if mode == Mode.submit and date is None:
+        raise ValueError(f"`date` cannot be None when submitting.")
+
     # Standardize.
     learning_rate_str = wrapper.float2str(learning_rate)
     per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
@@ -66,7 +70,7 @@ def _get_command(
         if nonprivate == "no":
             # @formatter:off
             train_dir = (
-                f"/nlp/scr/lxuechen/prefixtune/date_0617"
+                f"/nlp/scr/lxuechen/prefixtune/date_{date}"
                 f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
                 f"/{seed}"
             )
@@ -74,7 +78,7 @@ def _get_command(
         else:
             # @formatter:off
             train_dir = (
-                f"/nlp/scr/lxuechen/prefixtune/date_0617"
+                f"/nlp/scr/lxuechen/prefixtune/date_{date}"
                 f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
                 f"/{seed}"
             )
