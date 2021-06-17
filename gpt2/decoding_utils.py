@@ -180,7 +180,7 @@ def _generate_with_prompt_dataset(
     generations = []
 
     stop_generation = False
-    for input_ids in prompt_dataset:
+    for input_ids in tqdm.tqdm(prompt_dataset, desc="generation"):
         if stop_generation:
             break
 

@@ -44,7 +44,8 @@ def _get_command(
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
     gpu=None,  # Randomly grab.
-    conda_env="lxuechen-prefix-tuning"
+    conda_env="lxuechen-prefix-tuning",
+    priority="standard",
 ):
     # Standardize.
     learning_rate_str = wrapper.float2str(learning_rate)
@@ -135,6 +136,8 @@ def _get_command(
     # @formatter:off
 
     if mode == Mode.submit:
-        command = wrapper.mynlprun_wrapper(command, train_dir=train_dir, gpu=gpu, conda_env=conda_env)
+        command = wrapper.mynlprun_wrapper(
+            command, train_dir=train_dir, gpu=gpu, conda_env=conda_env, priority=priority
+        )
         command += "\n"
     return command
