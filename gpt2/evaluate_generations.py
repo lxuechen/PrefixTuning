@@ -65,7 +65,8 @@ def extract_prompts(
 
     with open(out_file_path, 'w') as f:
         prompts = src2tgt.keys()
-        f.writelines('\n'.join(prompts))  # TODO: You might need to strip '\n' eventually.
+        giant_chunk = [line + '\n' for line in prompts]
+        f.writelines(giant_chunk)  # TODO: You might need to strip '\n' eventually.
     logging.warning(f"Number of prompts for generation: {len(prompts)}")
 
 
