@@ -16,6 +16,7 @@ def clean(
     """
     with open(test_file_path, 'r') as f:
         lines = f.readlines()
+    print(len(lines))
 
     # TODO: Punctuation a bit awkward!
     src2tgt = collections.OrderedDict()
@@ -39,6 +40,7 @@ def clean(
     logging.warning(f"Number of prompts for generation: {len(src2tgt)}")
 
 
+# You probably need to throw this away!
 def eval_old(
     # @formatter:off
     gen_path="/nlp/scr/lxuechen/prefixtune/date_0616/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_01000000/0/generations/eval/global_step_00001400.txt",
@@ -56,6 +58,7 @@ def eval_old(
     """
     with open(gen_path, 'r') as f:
         lines = f.readlines()
+    print(len(lines))
 
     # Deduplicate with specific ordering!
     deduplicated_lines = []
