@@ -198,6 +198,10 @@ class DataTrainingArguments:
     val_data_file: Optional[str] = field(default=None)
     eval_data_file: Optional[str] = field(default=None)
 
+    train_prompt_file: Optional[str] = field(default=None)
+    val_prompt_file: Optional[str] = field(default=None)
+    eval_prompt_file: Optional[str] = field(default=None)
+
     line_by_line: bool = field(
         default=False,
         metadata={"help": "Whether distinct lines of text in the dataset are to be handled as distinct sequences."},

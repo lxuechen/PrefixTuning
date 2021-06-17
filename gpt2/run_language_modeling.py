@@ -44,10 +44,9 @@ from transformers import (
 
 from lxuechen_utils import utils
 import privacy_utils
-from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from .train_control import PrefixTuning
-from .trainer_prefix import Trainer_Prefix
 from . import prefix_tuning_minimal
+from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
+from .trainer_prefix import Trainer_Prefix
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +106,16 @@ def get_dataset(
             overwrite_cache=args.overwrite_cache,
             cache_dir=cache_dir,
         )
+
+
+def get_prompt_dataset(file_path, tokenizer):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    encoded_lines = [
+        tokenizer.encode(line.strip(), add_special_tokens=False, return_tensors="pt")
+        for line in lines
+    ]
+    return encoded_lines
 
 
 def get_dataset_wrapper(config, tokenizer, data_args, model_args, training_args):
@@ -256,6 +265,14 @@ def main():
         config=config, tokenizer=tokenizer,
         data_args=data_args, training_args=training_args, model_args=model_args,
     )
+
+    # Materialize the prompts.
+    generation_stuff = dict(
+        train_prompts=get_prompt_dataset(file_path=data_args.train_prompt_file, tokenizer=tokenizer),
+        val_prompts=get_prompt_dataset(file_path=data_args.val_prompt_file, tokenizer=tokenizer),
+        eval_prompts=get_prompt_dataset(file_path=data_args.eval_prompt_file, tokenizer=tokenizer),
+    )
+
     if model_args.tuning_mode == 'prefixtune':
         trainer = Trainer_Prefix(
             model=model,
