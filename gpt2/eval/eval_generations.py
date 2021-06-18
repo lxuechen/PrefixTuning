@@ -1,7 +1,9 @@
 import collections
+from datetime import date
 import logging
 import os
 import shutil
+import uuid
 
 import fire
 import transformers
@@ -126,6 +128,54 @@ def eval_trajectory(
         )
 
 
+def gen2ref(
+    # @formatter:off
+    gen_path="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00002100.txt",
+    file_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt",
+    tokenizer=None,
+
+    uid_max_len=8,
+    img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
+    # @formatter:on
+):
+    if tokenizer is None:
+        tokenizer = _create_default_tokenizer()
+
+    with open(file_path, 'r') as f:
+        true_lines = f.readlines()
+
+    with open(gen_path, 'r') as g:
+        gen_lines = g.readlines()
+
+    # Add uids, since you might get repeated generations.
+    gen_lines = [f"uuid4={str(uuid.uuid4())[:uid_max_len]}\t" + line.strip() for line in gen_lines]
+
+    gen2ref_map = dict()
+    gen_idx = -1
+
+    src2tgt = collections.OrderedDict()
+    for line_idx, true_line in enumerate(true_lines):
+        src, tgt = true_line.strip().split('||')
+        src = f"{src} {tokenizer.bos_token}"
+        if src not in src2tgt:
+            src2tgt[src] = [tgt]
+
+            gen_idx += 1
+            gen2ref_map[gen_lines[gen_idx]] = [tgt]
+        else:
+            src2tgt[src].append(tgt)
+
+            gen2ref_map[gen_lines[gen_idx]].append(tgt)
+        del src, tgt
+
+    today = date.today().strftime("%m%d%y")
+    out_path = os.path.join(img_dir, f'distilgpt2-private-head2head-comparison-{today}.json')
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    utils.jdump(gen2ref_map, out_path)
+
+    return src2tgt, gen2ref_map
+
+
 def main(task="clean", **kwargs):
     # python -m gpt2.eval.eval_generations --task clean
     if task == "clean":
@@ -141,13 +191,19 @@ def main(task="clean", **kwargs):
     # python -m gpt2.eval.eval_generations --task eval
     elif task == "eval":
         eval(**kwargs)
+
     elif task == "eval_nonprivate":
         # @formatter:off
         gen_path = "/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00042000.txt"
         eval(gen_path=gen_path)
         # @formatter:on
+
     elif task == "eval_trajectory":
         eval_trajectory(**kwargs)
+
+    # python -m gpt2.eval.eval_generations --task gen2ref
+    elif task == "gen2ref":
+        gen2ref(**kwargs)
     else:
         raise ValueError(f"Unknown task: {task}")
 
