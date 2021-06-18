@@ -66,7 +66,7 @@ def main(
                 tuning_mode = "prefixtune"
                 mid_dim = 512
                 preseqlen = 10
-                eval_steps = 100
+                eval_steps = 1000
                 max_eval_batches = 100
                 objective_mode = 0
                 priority = "high"
