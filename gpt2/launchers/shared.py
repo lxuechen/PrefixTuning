@@ -34,13 +34,14 @@ def _get_command(
     #   full training set size 42061
     max_seq_len=96,
     max_generations=sys.maxsize,
-    objective_mode=1,  # 1 is line-level; 0 is token-level (not suitable with DP).
+    objective_mode=0,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
     max_steps=-1,
     max_eval_batches=-1,
     mid_dim=512,
     preseqlen=5,
+    save_steps=500000,
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
@@ -97,7 +98,7 @@ def _get_command(
         --tokenizer_name {model_name_or_path} \
         --per_device_train_batch_size {per_device_train_batch_size} \
         --per_device_eval_batch_size {per_device_eval_batch_size} \
-        --save_steps 500000 \
+        --save_steps {save_steps} \
         --num_train_epochs {epochs} \
         --do_train \
         --do_eval \
@@ -136,7 +137,6 @@ def _get_command(
         --train_prompt_file {TRAIN_PROMPT_FILE} \
         --val_prompt_file {VAL_PROMPT_FILE} \
         --eval_prompt_file {EVAL_PROMPT_FILE} \
-        --save_steps 2000 \
         --overwrite_output_dir'
     # @formatter:off
 

@@ -59,7 +59,6 @@ def main(
         commands = "#!/bin/bash\n"
 
         for seed in seeds:
-            # TODO: The two have different batch sizes.
             for model_name_or_path in ("distilgpt2", "gpt2-medium"):
 
                 if model_name_or_path == "distilgpt2":
@@ -72,9 +71,11 @@ def main(
                 mid_dim = 512
                 preseqlen = 10
                 eval_steps = 100
+                max_eval_batches = 100
+                objective_mode = 0
 
-                for train_batch_size in (100, 500, 5, 50, 1000):
-                    for lr in (1e-2, 1e-3, 1e-4, 1e-5):
+                for train_batch_size in (100, 500, 20, 4):
+                    for lr in (1e-2, 1e-3, 1e-4):
                         # 25 is reasonable to fit on a single GPU; but this gives a problem if we want to test out 5.
                         if train_batch_size < per_device_train_batch_size:
                             per_device_train_batch_size = train_batch_size
@@ -86,7 +87,8 @@ def main(
                             seed=seed,
                             nonprivate="no",
                             eval_steps=eval_steps,
-                            max_eval_batches=100,
+                            save_steps=eval_steps,
+                            max_eval_batches=max_eval_batches,
                             per_device_eval_batch_size=per_device_train_batch_size,
 
                             per_example_max_grad_norm=max_grad_norm,
@@ -100,6 +102,7 @@ def main(
                             preseqlen=preseqlen,
                             learning_rate=lr,
                             model_name_or_path=model_name_or_path,
+                            objective_mode=objective_mode,
                         )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_061921.sh')
