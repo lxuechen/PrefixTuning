@@ -850,7 +850,6 @@ class Trainer_Prefix:
                         # TODO: Early stopping!
 
                     if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
-                        print('saving model at a checkpoint!!')
                         # In all cases (even distributed/parallel), self.model is always a reference
                         # to the model we want to save.
                         if hasattr(model, "module"):

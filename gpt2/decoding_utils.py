@@ -10,13 +10,13 @@ def generate(
     tokenizer: transformers.PreTrainedTokenizer,
     loader=None,
     prompt_dataset=None,
-    max_length=20,
+    max_length=100,
     min_length=5,
     top_k=0,
-    top_p=0.95,  # Only filter with top_p.
+    top_p=0.9,  # Only filter with top_p.
     repetition_penalty=1,
     do_sample=False,
-    num_beams=20,
+    num_beams=5,
     bad_words_ids=None,
     dummy_token_id=-100,  # Used as mask.
     num_return_sequences=1,
