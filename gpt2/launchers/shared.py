@@ -34,6 +34,7 @@ def _get_command(
     #   full training set size 42061
     max_seq_len=96,
     max_generations=sys.maxsize,
+    max_generations_train=60,
     objective_mode=0,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
@@ -136,6 +137,7 @@ def _get_command(
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \
+        --max_generations_train {max_generations_train} \
         --train_prompt_file {TRAIN_PROMPT_FILE} \
         --val_prompt_file {VAL_PROMPT_FILE} \
         --eval_prompt_file {EVAL_PROMPT_FILE} \

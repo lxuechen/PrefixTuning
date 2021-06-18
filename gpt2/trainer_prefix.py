@@ -1351,7 +1351,7 @@ class Trainer_Prefix:
         for split in ("train", "val", "eval"):
             prompt_dataset = self._get_prompt_dataset_by_split(split)  # Don't the loader to avoid duplicated prompts!
             if split == "train":  # Don't waste compute on sanity checks.
-                max_generations = 20
+                max_generations = self.args.max_generations_train
             else:
                 max_generations = self.args.max_generations
 
