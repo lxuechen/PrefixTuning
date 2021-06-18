@@ -104,6 +104,11 @@ def main(task="clean", **kwargs):
     # python -m gpt2.eval.eval_generations --task eval
     elif task == "eval":
         eval(**kwargs)
+    elif task == "eval_nonprivate":
+        # @formatter:off
+        gen_path = "/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00042000.txt"
+        eval(gen_path=gen_path)
+        # @formatter:on
     else:
         raise ValueError(f"Unknown task: {task}")
 
