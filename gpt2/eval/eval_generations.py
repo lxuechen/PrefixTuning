@@ -1,9 +1,12 @@
 import collections
 import logging
 import os
+import shutil
 
 import fire
 import transformers
+
+from lxuechen_utils import utils
 
 
 def _create_default_tokenizer():
@@ -77,16 +80,49 @@ def eval(
     # @formatter:off
     # Private.
     gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100/0/generations/eval/global_step_00002100.txt",
-
-    # Non-private.
-    # gen_path="/nlp/scr/lxuechen/prefixtune/date_0617/model_name_distilgpt2_nonprivate_yes_tuning_mode_fulltune_learning_rate_0_00001000_train_batch_size_00000005_mid_dim_00000256/0/generations/eval/global_step_00001800.txt",
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
 
     # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
     e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
     # @formatter:on
 ):
+    """Evaluate a file of generate sentences against references."""
     os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} ; cd -')
+
+
+def eval_trajectory(
+    # @formatter:off
+    ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
+    # Non-private.
+    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/",
+    e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
+    scratch_dir="/nlp/scr/lxuechen/scratch/tmp",  # Mess around here.
+    global_steps=tuple(range(1000, 42001, 1000)) + (42025,),
+
+    img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
+    # @formatter:on
+):
+    """Evaluate various scores and plot trajectory."""
+    os.makedirs(scratch_dir, exist_ok=True)
+    scores = []
+    for global_step in global_steps:
+        gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
+        out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
+        os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --out_path {out_path}; cd -')
+
+        score = utils.jload(out_path)
+        scores.append(score)
+        del score
+    shutil.rmtree(scratch_dir)
+
+    for metric in ("bleu",):
+        x = global_steps
+        y = [score[metric] for score in scores]
+        img_path = os.path.join(img_dir, f"{metric}.png")
+        utils.plot(
+            plots=({'x': x, 'y': y, 'label': metric},),
+            img_path=img_path,
+        )
 
 
 def main(task="clean", **kwargs):
@@ -109,6 +145,8 @@ def main(task="clean", **kwargs):
         gen_path = "/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00042000.txt"
         eval(gen_path=gen_path)
         # @formatter:on
+    elif task == "eval_trajectory":
+        eval_trajectory(**kwargs)
     else:
         raise ValueError(f"Unknown task: {task}")
 
