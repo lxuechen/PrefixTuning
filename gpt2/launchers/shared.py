@@ -57,6 +57,8 @@ def _get_command(
     per_example_max_grad_norm_str = wrapper.float2str(per_example_max_grad_norm)
     noise_multiplier_str = wrapper.float2str(noise_multiplier)
     train_batch_size_str = wrapper.int2str(train_batch_size)
+    mid_dim_str = wrapper.int2str(mid_dim)
+    preseqlen_str = wrapper.int2str(preseqlen)
 
     # Check mode.
     if mode == Mode.submit:
@@ -72,7 +74,7 @@ def _get_command(
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
+                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
                 f"/{seed}"
             )
             # @formatter:on
@@ -80,7 +82,7 @@ def _get_command(
             # @formatter:off
             train_dir = (
                 f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}"
+                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
                 f"/{seed}"
             )
             # @formatter:on

@@ -10,6 +10,8 @@ purpose:
     Find best prefix-tuning setup.
 notes:
     After fixing the generation and BLEU bugs.
+    Try to see if the problem is coming from 1) gpt2-medium vs distilgpt2 or 2) decoding tweaks.
+    Also fix the length bug in decoding.
 run:
     to generate running scripts:
         python -m gpt2.launchers.prefix_vs_full_061921 --mode "submit"
@@ -73,6 +75,8 @@ def main(
                 eval_steps = 100
                 max_eval_batches = 100
                 objective_mode = 0
+                priority = "standard"
+                save_steps = eval_steps
 
                 for train_batch_size in (100, 500, 20, 4):
                     for lr in (1e-2, 1e-3, 1e-4):
@@ -87,7 +91,7 @@ def main(
                             seed=seed,
                             nonprivate="no",
                             eval_steps=eval_steps,
-                            save_steps=eval_steps,
+                            save_steps=save_steps,
                             max_eval_batches=max_eval_batches,
                             per_device_eval_batch_size=per_device_train_batch_size,
 
@@ -103,6 +107,7 @@ def main(
                             learning_rate=lr,
                             model_name_or_path=model_name_or_path,
                             objective_mode=objective_mode,
+                            priority=priority,
                         )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_061921.sh')
