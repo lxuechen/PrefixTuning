@@ -1,25 +1,26 @@
+from contextlib import contextmanager
 import inspect
 import json
 import math
 import os
+from pathlib import Path
 import re
 import shutil
-import warnings
-from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import warnings
 
 import numpy as np
-import torch
-import torch.nn.functional as F
 from packaging import version
+import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from tqdm.auto import tqdm, trange
 
+from gpt2 import decoding_utils
 from .data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
 from .file_utils import is_datasets_available, is_torch_tpu_available
 from .integrations import (
@@ -41,8 +42,6 @@ from .trainer_utils import (BestRun, default_compute_objective, default_hp_space
                             nested_xla_mesh_reduce, PredictionOutput, PREFIX_CHECKPOINT_DIR, set_seed, TrainOutput)
 from .training_args import TrainingArguments
 from .utils import logging
-
-from gpt2 import decoding_utils
 
 _use_native_amp = False
 _use_apex = False
@@ -1187,6 +1186,15 @@ class Trainer:
         self.model.save_pretrained(output_dir)
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(output_dir)
+
+        # My addition: Don't make life that complicated!
+        state_dicts = dict(
+            model=self.model.state_dict() if self.model is not None else None,
+            optimizer=self.optimizer.state_dict() if self.optimizer is not None else None,
+            lr_scheduler=self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None,
+        )
+        ckpt_path = os.path.join(self.args.output_dir, 'ckpts', f'global_step_{self.global_step:08d}.ckpt')
+        torch.save(state_dicts, ckpt_path)
 
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, "training_args.bin"))

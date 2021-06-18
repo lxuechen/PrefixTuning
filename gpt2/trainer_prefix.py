@@ -1236,6 +1236,15 @@ class Trainer_Prefix:
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(output_dir)
 
+        # My addition: Don't make life that complicated!
+        state_dicts = dict(
+            model=self.model.state_dict() if self.model is not None else None,
+            optimizer=self.optimizer.state_dict() if self.optimizer is not None else None,
+            lr_scheduler=self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None,
+        )
+        ckpt_path = os.path.join(self.args.output_dir, 'ckpts', f'global_step_{self.global_step:08d}.ckpt')
+        torch.save(state_dicts, ckpt_path)
+
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
         json.dump(
