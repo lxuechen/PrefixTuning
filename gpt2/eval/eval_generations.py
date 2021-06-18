@@ -90,7 +90,7 @@ def eval(
 
 
 def main(task="clean", **kwargs):
-    # python -m gpt2.evaluate_generations --task clean
+    # python -m gpt2.eval.eval_generations --task clean
     if task == "clean":
         for split in ('valid', 'test', 'train'):
             file_path = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_{split}.txt"
@@ -101,7 +101,7 @@ def main(task="clean", **kwargs):
             out_file_path = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_{split}.txt"
             extract_prompts(file_path=file_path, out_file_path=out_file_path, **kwargs)
 
-    # python -m gpt2.evaluate_generations --task eval
+    # python -m gpt2.eval.eval_generations --task eval
     elif task == "eval":
         eval(**kwargs)
     else:
