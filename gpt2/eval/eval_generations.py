@@ -148,7 +148,7 @@ def gen2ref(
         gen_lines = g.readlines()
 
     # Add uids, since you might get repeated generations.
-    gen_lines = [f"uuid4={str(uuid.uuid4())[:uid_max_len]}\t" + line.strip() for line in gen_lines]
+    gen_lines = [f"uuid4={str(uuid.uuid4())[:uid_max_len]} || " + line.strip() for line in gen_lines]
 
     gen2ref_map = dict()
     gen_idx = -1
