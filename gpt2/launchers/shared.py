@@ -136,6 +136,7 @@ def _get_command(
         --train_prompt_file {TRAIN_PROMPT_FILE} \
         --val_prompt_file {VAL_PROMPT_FILE} \
         --eval_prompt_file {EVAL_PROMPT_FILE} \
+        --save_steps 2000 \
         --overwrite_output_dir'
     # @formatter:off
 
