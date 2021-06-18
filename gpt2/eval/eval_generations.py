@@ -115,7 +115,8 @@ def eval_trajectory(
         del score
     shutil.rmtree(scratch_dir)
 
-    for metric in ("bleu",):
+    metrics = scores[0].keys()
+    for metric in metrics:
         x = global_steps
         y = [score[metric] for score in scores]
         img_path = os.path.join(img_dir, f"{metric}.png")
