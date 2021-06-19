@@ -109,6 +109,9 @@ def eval_trajectory(
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
         assert os.path.exists(gen_path), f"Failed to find path {gen_path}"
+        del gen_path
+
+    logging.warning(f"eval_trajectory for gen_dir {gen_dir}")
 
     os.makedirs(scratch_dir, exist_ok=True)
     scores = []
@@ -212,10 +215,21 @@ def main(task="clean", **kwargs):
         # python -m gpt2.eval.eval_generations --task eval_best_private_trajectory
 
         # Private.
-        gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/" \
-                  "model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
-        global_steps = tuple(range(500, 15001, 500))
-        img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private"
+        # @formatter:off
+
+        # Small batch size and small learning rate.
+
+        # gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/" \
+        #           "model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
+        # global_steps = tuple(range(500, 15001, 500))
+        # img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private"
+
+        # Large batch size and large learning rate.
+        gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_01000000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
+        global_steps = tuple(range(500, 26001, 500))
+        img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private-large-bs-large-lr"
+
+        # @formatter:on
         eval_trajectory(
             gen_dir=gen_dir,
             global_steps=global_steps,
