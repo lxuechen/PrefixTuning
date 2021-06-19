@@ -130,6 +130,7 @@ def eval_trajectory(
         img_path = os.path.join(img_dir, f"{metric}.png")
         utils.plot(
             plots=({'x': x, 'y': y, 'label': metric},),
+            options={"xlabel": "steps", "ylabel": "metric"},
             img_path=img_path,
         )
 

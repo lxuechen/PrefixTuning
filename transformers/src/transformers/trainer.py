@@ -1296,7 +1296,8 @@ class Trainer:
             "eval": self.generation_stuff["eval_prompts"],
         }[split]
 
-    def generate_and_write_to_file(self, num_generations_to_print=6):
+    def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
+        # Pass in the additional decoding stuff from `decoding_kwargs`.
         kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
         all_generations = {}
@@ -1308,7 +1309,8 @@ class Trainer:
                 max_generations = self.args.max_generations
 
             full_generations, unstripped_generations, generations, references = decoding_utils.generate(
-                prompt_dataset=prompt_dataset, max_generations=max_generations, **kwargs
+                prompt_dataset=prompt_dataset, max_generations=max_generations,
+                **kwargs, **decoding_kwargs
             )
             all_generations[split] = dict(
                 full_generations=full_generations,
@@ -1334,8 +1336,9 @@ class Trainer:
             print(f" *** num generations: {len(generations)}, num references: {len(references)} *** ")
 
             # Store generations for BLEU.
+            counter = self.global_step if self.global_step is not None else -1
             generations_path = os.path.join(
-                self.args.output_dir, f'generations', f'{split}', f'global_step_{self.global_step:08d}.txt'
+                self.args.output_dir, f'generations', f'{split}', f'global_step_{counter:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_path), exist_ok=True)
             with open(generations_path, 'w') as f:
@@ -1345,7 +1348,7 @@ class Trainer:
 
             # Store generations with references for visual inspection.
             generations_with_refs_path = os.path.join(
-                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{self.global_step:08d}.txt'
+                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{counter:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_with_refs_path), exist_ok=True)
             with open(generations_with_refs_path, 'w') as f:

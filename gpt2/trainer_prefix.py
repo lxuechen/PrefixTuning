@@ -1344,7 +1344,8 @@ class Trainer_Prefix:
             "eval": self.generation_stuff["eval_prompts"],
         }[split]
 
-    def generate_and_write_to_file(self, num_generations_to_print=6):
+    def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
+        # Pass in the additional decoding stuff from `decoding_kwargs`.
         kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
         all_generations = {}
@@ -1356,7 +1357,8 @@ class Trainer_Prefix:
                 max_generations = self.args.max_generations
 
             full_generations, unstripped_generations, generations, references = decoding_utils.generate(
-                prompt_dataset=prompt_dataset, max_generations=max_generations, **kwargs
+                prompt_dataset=prompt_dataset, max_generations=max_generations,
+                **kwargs, **decoding_kwargs
             )
             all_generations[split] = dict(
                 full_generations=full_generations,
