@@ -1382,8 +1382,9 @@ class Trainer_Prefix:
             print(f" *** num generations: {len(generations)}, num references: {len(references)} *** ")
 
             # Store generations for BLEU.
+            counter = self.global_step if self.global_step is not None else -1
             generations_path = os.path.join(
-                self.args.output_dir, f'generations', f'{split}', f'global_step_{self.global_step:08d}.txt'
+                self.args.output_dir, f'generations', f'{split}', f'global_step_{counter:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_path), exist_ok=True)
             with open(generations_path, 'w') as f:
@@ -1393,7 +1394,7 @@ class Trainer_Prefix:
 
             # Store generations with references for visual inspection.
             generations_with_refs_path = os.path.join(
-                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{self.global_step:08d}.txt'
+                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{counter:08d}.txt'
             )
             os.makedirs(os.path.dirname(generations_with_refs_path), exist_ok=True)
             with open(generations_with_refs_path, 'w') as f:

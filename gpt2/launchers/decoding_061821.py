@@ -7,7 +7,7 @@ import fire
 from . import shared
 
 
-def main():
+def main(**kwargs):
     command = shared._get_command(
         seed=0,
         tuning_mode="prefixtune",
@@ -17,6 +17,7 @@ def main():
         mid_dim=512,
         preseqlen=10,
         mode="local",
+        **kwargs,
     )
     print(command)
     os.system(command)
