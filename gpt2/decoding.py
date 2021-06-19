@@ -28,8 +28,7 @@ def create_essentials(model_args):
     return dict(config=config, tokenizer=tokenizer, gpt2=gpt2, model=model)
 
 
-def main(
-):
+def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments, PrivacyArguments))
     model_args, data_args, training_args, privacy_args = parser.parse_args_into_dataclasses()
 
@@ -57,11 +56,6 @@ def main(
     model.eval()
     print(model)
 
-    train_dataset, val_dataset, eval_dataset, data_collator = run_language_modeling.get_dataset_wrapper(
-        config=config, tokenizer=tokenizer,
-        data_args=data_args, training_args=training_args, model_args=model_args,
-    )
-
     generation_stuff = dict(
         train_prompts=run_language_modeling.get_prompt_dataset(
             file_path=data_args.train_prompt_file, tokenizer=tokenizer
@@ -79,10 +73,13 @@ def main(
             model=model,
             tokenizer=tokenizer,
             args=training_args,
-            train_dataset=train_dataset,
-            val_dataset=val_dataset,
-            eval_dataset=eval_dataset,
-            data_collator=data_collator,
+
+            # Not needed for generation!
+            train_dataset=None,
+            val_dataset=None,
+            eval_dataset=None,
+            data_collator=None,
+
             task_mode=data_args.task_mode,
             use_dropout=(model_args.use_dropout == 'yes'),
             generation_stuff=generation_stuff,
@@ -91,7 +88,8 @@ def main(
         raise ValueError
 
     trainer.generate_and_write_to_file(
-        num_beams=3,
+        num_beams=20,
+        top_p=0.99,
     )
 
 

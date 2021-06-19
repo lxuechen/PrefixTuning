@@ -1,3 +1,4 @@
+import logging
 import sys
 from typing import Optional
 
@@ -23,8 +24,11 @@ def generate(
     max_generations=sys.maxsize,
     device=None,
     padding_token="[PAD]",
+    **kwargs,
 ):
     assert not model.training, "Generation must be when `model` is in eval mode."
+    if kwargs:
+        logging.warning(f"Hitting unknown kwargs: {kwargs}")
 
     # These are linebreaks; generating these will mess up the evaluation, since those files assume one example per-line.
     if bad_words_ids is None:
