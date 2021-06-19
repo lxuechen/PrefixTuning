@@ -105,7 +105,6 @@ def eval_trajectory(
     # @formatter:on
 ):
     """Evaluate various scores and plot trajectory."""
-    # TODO: This is dumb; should just use the prompt as the key.
     # Check the files exist.
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
@@ -145,6 +144,7 @@ def gen2ref(
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     # @formatter:on
 ):
+    # TODO: This is dumb; should just use the prompt as the key.
     if tokenizer is None:
         tokenizer = _create_default_tokenizer()
 
@@ -225,6 +225,14 @@ def main(task="clean", **kwargs):
     # python -m gpt2.eval.eval_generations --task gen2ref
     elif task == "gen2ref":
         gen2ref(**kwargs)
+
+    # Best private generation for today!
+    # python -m gpt2.eval.eval_generations --task gen2ref_061821
+    elif task == "gen2ref_061821":
+        gen2ref(
+            gen_path="/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00013500.txt",
+            img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-private",
+        )
     else:
         raise ValueError(f"Unknown task: {task}")
 
