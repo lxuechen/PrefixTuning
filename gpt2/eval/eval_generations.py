@@ -106,6 +106,11 @@ def eval_trajectory(
 ):
     """Evaluate various scores and plot trajectory."""
     # TODO: This is dumb; should just use the prompt as the key.
+    # Check the files exist.
+    for global_step in global_steps:
+        gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
+        assert os.path.exists(gen_path), f"Failed to find path {gen_path}"
+
     os.makedirs(scratch_dir, exist_ok=True)
     scores = []
     for global_step in global_steps:
@@ -201,6 +206,20 @@ def main(task="clean", **kwargs):
 
     elif task == "eval_trajectory":
         eval_trajectory(**kwargs)
+
+    elif task == "eval_best_private_trajectory":
+        # python -m gpt2.eval.eval_generations --task eval_best_private_trajectory
+
+        # Private.
+        gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/" \
+                  "model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
+        global_steps = tuple(range(500, 15001, 500))
+        img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private"
+        eval_trajectory(
+            gen_dir=gen_dir,
+            global_steps=global_steps,
+            img_dir=img_dir,
+        )
 
     # python -m gpt2.eval.eval_generations --task gen2ref
     elif task == "gen2ref":
