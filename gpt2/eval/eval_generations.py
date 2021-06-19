@@ -225,8 +225,8 @@ def main(task="clean", **kwargs):
         # img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private"
 
         # Large batch size and large learning rate.
-        gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_01000000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
-        global_steps = tuple(range(500, 26001, 500))
+        gen_dir = "/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_01000000_train_batch_size_00000500_mid_dim_00000512_preseqlen_00000010/0/generations/eval/"
+        global_steps = tuple(range(500, 7001, 500))
         img_dir = "/nlp/scr/lxuechen/plots/distilgpt2-e2e-private-large-bs-large-lr"
 
         # @formatter:on
