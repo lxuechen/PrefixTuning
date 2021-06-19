@@ -118,6 +118,7 @@ def eval_trajectory(
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
         out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
+        logging.warning(f'eval for {gen_path}')
         os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --out_path {out_path}; cd -')
 
         score = utils.jload(out_path)
