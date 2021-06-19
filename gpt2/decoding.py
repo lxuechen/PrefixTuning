@@ -46,7 +46,7 @@ def main():
     # @formatter:off
     # Good checkpoint directory.
     ckpt_path = (
-        "/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/checkpoint-15000/pytorch_model.bin"
+        "/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/checkpoint-13500/pytorch_model.bin"
     )
     # @formatter:on
 
@@ -88,8 +88,8 @@ def main():
         raise ValueError
 
     trainer.generate_and_write_to_file(
-        num_beams=20,
-        top_p=0.99,
+        num_beams=5,
+        top_p=0.9,
     )
 
 
