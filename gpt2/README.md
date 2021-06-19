@@ -22,3 +22,10 @@ python -m gpt2.launchers.prefix_vs_full_061721 --mode "local"     \
 ```bash
 python -m gpt2.evaluate_generations --task eval
 ```
+
+
+## Playing with decoding
+This script creates a command and calls `gpt2/decoding.py`.
+```bash
+python -m gpt2.launchers.decoding_061821
+```

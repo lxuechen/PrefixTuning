@@ -49,6 +49,9 @@ def _get_command(
     gpu=None,  # Randomly grab.
     conda_env="lxuechen-prefix-tuning",
     priority="standard",
+
+    script="gpt2.run_language_modeling",
+    train_dir=None,
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -72,28 +75,31 @@ def _get_command(
             gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
 
         if nonprivate == "no":
-            # @formatter:off
-            train_dir = (
-                f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
-                f"/{seed}"
-            )
-            # @formatter:on
+            if train_dir is None:
+                # @formatter:off
+                train_dir = (
+                    f"/nlp/scr/lxuechen/prefixtune/date_{date}"
+                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
+                    f"/{seed}"
+                )
+                # @formatter:on
         else:
-            # @formatter:off
-            train_dir = (
-                f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
-                f"/{seed}"
-            )
-            # @formatter:on
+            if train_dir is None:
+                # @formatter:off
+                train_dir = (
+                    f"/nlp/scr/lxuechen/prefixtune/date_{date}"
+                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
+                    f"/{seed}"
+                )
+                # @formatter:on
     else:
-        # Local debugging.
-        train_dir = "/nlp/scr/lxuechen/tests/prefix-tuning"
+        if train_dir is None:
+            # Local debugging.
+            train_dir = "/nlp/scr/lxuechen/tests/prefix-tuning"
 
     # @formatter:off
     logging_dir = train_dir
-    command = f'python -m gpt2.run_language_modeling \
+    command = f'python -m {script} \
         --output_dir {train_dir} \
         --task_mode "data2text" \
         --model_type {model_type} \
