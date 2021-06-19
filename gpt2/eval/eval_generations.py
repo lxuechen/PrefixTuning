@@ -105,6 +105,7 @@ def eval_trajectory(
     # @formatter:on
 ):
     """Evaluate various scores and plot trajectory."""
+    # TODO: This is dumb; should just use the prompt as the key.
     os.makedirs(scratch_dir, exist_ok=True)
     scores = []
     for global_step in global_steps:
@@ -210,3 +211,8 @@ def main(task="clean", **kwargs):
 
 if __name__ == "__main__":
     fire.Fire(main)
+
+# This is the best private generation so far with distilgpt2.
+# @formatter:off
+# /nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00007000.txt
+# @formatter:on
