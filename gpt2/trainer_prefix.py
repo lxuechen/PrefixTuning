@@ -730,7 +730,6 @@ class Trainer_Prefix:
 
         tr_loss = torch.tensor(0.0).to(self.args.device)
         logging_loss_scalar = 0.0
-        model.zero_grad()
         disable_tqdm = self.args.disable_tqdm or not self.is_local_process_zero()
         train_pbar = trange(epochs_trained, int(np.ceil(num_train_epochs)), desc="Epoch", disable=disable_tqdm)
         for epoch in range(epochs_trained, int(np.ceil(num_train_epochs))):
@@ -748,6 +747,11 @@ class Trainer_Prefix:
             # Reset the past mems state at the beginning of each epoch if necessary.
             if self.args.past_index >= 0:
                 self._past = None
+
+            # lxuechen: This extra step is crucial. The problem is that the total number of steps in one epoch might
+            # not divide the number of accumulation steps, thus the accumulated summed_grad might overflow to the next
+            # epoch, causing more gradient signal than there truly is.
+            model.zero_grad()
 
             epoch_pbar = tqdm(epoch_iterator, desc="Iteration", disable=disable_tqdm)
             for step, inputs in enumerate(epoch_iterator):
@@ -1440,7 +1444,11 @@ class Trainer_Prefix:
                 eval_losses.extend([loss] * batch_size)
 
             if logits is not None:
-                valid_locations = (inputs['labels'] != -100)
+                # This is very important for computing log-prob!
+                logits = logits[..., :-1, :]
+                labels = labels[..., 1:]
+
+                valid_locations = (labels != -100)
                 all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
 
                 entropy = -(all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).

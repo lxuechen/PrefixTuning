@@ -1,7 +1,7 @@
 ## For playing around locally on E2Es
 
 ```bash
-python -m gpt2.launchers.prefix_vs_full_061721 --mode "local"     \
+python -m gpt2.launchers.prefix_vs_full_062021 --mode "local"     \
   --tuning_mode "prefixtune"      \
   --max_steps 10000 \
   --max_seq_len 96 \

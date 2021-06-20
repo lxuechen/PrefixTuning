@@ -282,8 +282,6 @@ def main():
             val_dataset=val_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            task_mode=data_args.task_mode,
-            use_dropout=(model_args.use_dropout == 'yes'),
             generation_stuff=generation_stuff,
         )
     else:

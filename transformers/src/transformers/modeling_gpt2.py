@@ -159,15 +159,6 @@ class Attention(nn.Module):
             w = torch.where(mask.bool(), w, self.masked_bias.to(w.dtype))
 
         if attention_mask is not None:
-            # Apply the attention mask
-            # URGENT
-            # if attention_mask.size(1) != w.size(1):
-            #     bsz, _, _, tempseqlen = attention_mask.shape
-            #     _, _, _, tgtseqlen = w.shape
-            #     temp_ones = torch.zeros(bsz, 1, 1, tgtseqlen-tempseqlen).to(attention_mask.device)
-            #     # print(attention_mask)
-            #     attention_mask = torch.cat([temp_ones, attention_mask], dim=-1)
-            #     # print('sad')
             w = w + attention_mask
 
         w = nn.Softmax(dim=-1)(w)
