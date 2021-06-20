@@ -136,6 +136,14 @@ def eval_trajectory(
             options={"xlabel": "steps", "ylabel": "metric"},
             img_path=img_path,
         )
+        del img_path
+
+    results_path = os.path.join(img_dir, 'results.json')
+    # Key is global_step, value is score!
+    results = {
+        gs: score for gs, score in utils.zip_(global_steps, scores)
+    }
+    utils.jdump(results, results_path)
 
 
 def gen2ref(
@@ -245,7 +253,8 @@ def main(task="clean", **kwargs):
     # python -m gpt2.eval.eval_generations --task gen2ref_061821
     elif task == "gen2ref_061821":
         gen2ref(
-            gen_path="/nlp/scr/lxuechen/prefixtune/date_0620/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00013500.txt",
+            gen_path="/nlp/scr/lxuechen/prefixtune/date_0620"
+                     "/model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_70000000_learning_rate_0_00100000_train_batch_size_00000100_mid_dim_00000512_preseqlen_00000010/0/generations/eval/global_step_00013500.txt",
             img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-private",
         )
     else:
