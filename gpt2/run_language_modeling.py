@@ -261,6 +261,9 @@ def main():
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
+    num_trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
+    print(f"Number of trainable params: {num_trainable_params / 1e6} million")
+
     train_dataset, val_dataset, eval_dataset, data_collator = get_dataset_wrapper(
         config=config, tokenizer=tokenizer,
         data_args=data_args, training_args=training_args, model_args=model_args,
