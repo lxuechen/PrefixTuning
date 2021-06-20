@@ -6,7 +6,7 @@ from transformers import HfArgumentParser, AutoConfig, AutoTokenizer, GPT2LMHead
 from . import prefix_tuning_minimal
 from . import run_language_modeling
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from .trainer_prefix import Trainer_Prefix
+from .trainer import Trainer
 
 
 def create_essentials(model_args):
@@ -68,24 +68,19 @@ def main():
         ),
     )
 
-    if model_args.tuning_mode == 'prefixtune':
-        trainer = Trainer_Prefix(
-            model=model,
-            tokenizer=tokenizer,
-            args=training_args,
+    trainer = Trainer(
+        model=model,
+        tokenizer=tokenizer,
+        args=training_args,
 
-            # Not needed for generation!
-            train_dataset=None,
-            val_dataset=None,
-            eval_dataset=None,
-            data_collator=None,
+        # Not needed for generation!
+        train_dataset=None,
+        val_dataset=None,
+        eval_dataset=None,
+        data_collator=None,
 
-            task_mode=data_args.task_mode,
-            use_dropout=(model_args.use_dropout == 'yes'),
-            generation_stuff=generation_stuff,
-        )
-    else:
-        raise ValueError
+        generation_stuff=generation_stuff,
+    )
 
     trainer.generate_and_write_to_file(
         num_beams=5,

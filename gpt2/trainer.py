@@ -192,7 +192,7 @@ def get_tpu_sampler(dataset: Dataset):
     return DistributedSampler(dataset, num_replicas=xm.xrt_world_size(), rank=xm.get_ordinal())
 
 
-class Trainer_Prefix:
+class Trainer:
     """
     Trainer is a simple but feature-complete training and eval loop for PyTorch,
     optimized for 🤗 Transformers.

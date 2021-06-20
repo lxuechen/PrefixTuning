@@ -46,7 +46,7 @@ from lxuechen_utils import utils
 import privacy_utils
 from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from .trainer_prefix import Trainer_Prefix
+from .trainer import Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -273,28 +273,16 @@ def main():
         eval_prompts=get_prompt_dataset(file_path=data_args.eval_prompt_file, tokenizer=tokenizer),
     )
 
-    if model_args.tuning_mode == 'prefixtune':
-        trainer = Trainer_Prefix(
-            model=model,
-            tokenizer=tokenizer,
-            args=training_args,
-            train_dataset=train_dataset,
-            val_dataset=val_dataset,
-            eval_dataset=eval_dataset,
-            data_collator=data_collator,
-            generation_stuff=generation_stuff,
-        )
-    else:
-        trainer = Trainer(
-            model=model,
-            tokenizer=tokenizer,
-            args=training_args,
-            data_collator=data_collator,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            val_dataset=val_dataset,
-            generation_stuff=generation_stuff,
-        )
+    trainer = Trainer(
+        model=model,
+        tokenizer=tokenizer,
+        args=training_args,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        eval_dataset=eval_dataset,
+        data_collator=data_collator,
+        generation_stuff=generation_stuff,
+    )
     num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
     t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
