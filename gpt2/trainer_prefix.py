@@ -246,8 +246,6 @@ class Trainer_Prefix:
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
         tb_writer: Optional["SummaryWriter"] = None,
         optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
-        task_mode: Optional[str] = None,
-        use_dropout: Optional[bool] = False,
 
         val_dataset: Optional[Dataset] = None,
         generation_stuff: Optional[Dict] = None,
@@ -270,15 +268,12 @@ class Trainer_Prefix:
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.val_dataset = val_dataset
+        self.generation_stuff = generation_stuff
         self.tokenizer = tokenizer
+        self.curr_best_eval = 10000000.
         self.model_init = model_init
         self.compute_metrics = compute_metrics
         self.optimizer, self.lr_scheduler = optimizers
-        self.task_mode = task_mode
-        self.use_dropout = use_dropout
-        self.generation_stuff = generation_stuff
-        self.curr_best_eval = 10000000.
-
         if model_init is not None and (self.optimizer is not None or self.lr_scheduler is not None):
             raise RuntimeError(
                 "Passing a `model_init` is incompatible with providing the `optimizers` argument."
@@ -393,7 +388,6 @@ class Trainer_Prefix:
             collate_fn=self.data_collator,
             drop_last=self.args.dataloader_drop_last,
             num_workers=self.args.dataloader_num_workers,
-            worker_init_fn=np.random.seed(self.args.seed)
         )
 
     def _get_eval_sampler(self, eval_dataset: Dataset) -> Optional[torch.utils.data.sampler.Sampler]:
@@ -434,35 +428,6 @@ class Trainer_Prefix:
             collate_fn=self.data_collator,
             drop_last=self.args.dataloader_drop_last,
             num_workers=self.args.dataloader_num_workers,
-            worker_init_fn=np.random.seed(self.args.seed)
-        )
-
-    def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
-        """
-        Returns the test :class:`~torch.utils.data.DataLoader`.
-
-        Will use no sampler if :obj:`test_dataset` is a :obj:`torch.utils.data.IterableDataset`, a sequential
-        sampler (adapted to distributed training if necessary) otherwise.
-
-        Subclass and override this method if you want to inject some custom behavior.
-
-        Args:
-            eval_dataset (:obj:`torch.utils.data.dataset.Dataset`, `optional`):
-                The test dataset to use. If it is an :obj:`datasets.Dataset`, columns not accepted by the
-                ``model.forward()`` method are automatically removed.
-        """
-        if is_datasets_available() and isinstance(test_dataset, datasets.Dataset):
-            self._remove_unused_columns(test_dataset, description="test")
-        test_sampler = self._get_eval_sampler(test_dataset)
-
-        # We use the same batch_size as for eval.
-        return DataLoader(
-            test_dataset,
-            sampler=test_sampler,
-            batch_size=self.args.eval_batch_size,
-            collate_fn=self.data_collator,
-            drop_last=self.args.dataloader_drop_last,
-            worker_init_fn=np.random.seed(self.args.seed)
         )
 
     def create_optimizer_and_scheduler(self, num_training_steps: int):
@@ -793,9 +758,7 @@ class Trainer_Prefix:
                     epoch_pbar.update(1)
                     continue
 
-                # TODO: Marker -- run train step
                 tr_loss += self.training_step(model, inputs)
-
                 self.total_flos += self.floating_point_ops(inputs)
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
@@ -1076,10 +1039,6 @@ class Trainer_Prefix:
             if isinstance(v, torch.Tensor):
                 inputs[k] = v.to(self.args.device)
 
-        if self.args.past_index >= 0 and self._past is not None:
-            assert False
-            inputs["mems"] = self._past
-
         return inputs
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
@@ -1344,6 +1303,7 @@ class Trainer_Prefix:
             "eval": self.generation_stuff["eval_prompts"],
         }[split]
 
+    # TODO: Fix generation with references.
     def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
         # Pass in the additional decoding stuff from `decoding_kwargs`.
         kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
@@ -1412,31 +1372,6 @@ class Trainer_Prefix:
             del generations_with_refs_path
 
         return all_generations
-
-    def predict(self, test_dataset: Dataset) -> PredictionOutput:
-        """
-        Run prediction and returns predictions and potential metrics.
-
-        Depending on the dataset and your use case, your test dataset may contain labels.
-        In that case, this method will also return metrics, like in :obj:`evaluate()`.
-
-        Args:
-            test_dataset (:obj:`Dataset`):
-                Dataset to run the predictions on. If it is an :obj:`datasets.Dataset`, columns not accepted by the
-                ``model.forward()`` method are automatically removed.
-
-        Returns:
-            `NamedTuple`:
-            predictions (:obj:`np.ndarray`):
-                The predictions on :obj:`test_dataset`.
-            label_ids (:obj:`np.ndarray`, `optional`):
-                The labels (if the dataset contained some).
-            metrics (:obj:`Dict[str, float]`, `optional`):
-                The potential dictionary of metrics (if the dataset contained labels).
-        """
-        test_dataloader = self.get_test_dataloader(test_dataset)
-
-        return self.prediction_loop(test_dataloader, description="Prediction")
 
     def prediction_loop(
         self, dataloader: DataLoader, description: str, prediction_loss_only: Optional[bool] = None

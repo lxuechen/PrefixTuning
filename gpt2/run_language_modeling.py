@@ -244,8 +244,8 @@ def main():
     print(model_args.tuning_mode)
     print('adapting the size of the model embedding to include [PAD]')
     print('len(tokenizer) = ', len(tokenizer))
-    num_added_tokens = tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-    embedding_layer = gpt2.resize_token_embeddings(len(tokenizer))
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    gpt2.resize_token_embeddings(len(tokenizer))
     print('len(tokenizer) = ', len(tokenizer))
     print(tokenizer.eos_token, tokenizer.eos_token_id)
     print(tokenizer.bos_token, tokenizer.bos_token_id)
@@ -301,17 +301,6 @@ def main():
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
     t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
     trainer.create_optimizer_and_scheduler(t_total)
-
-    # One-shot debugging stmts.
-    # if False:
-    #     train_loader = trainer.get_train_dataloader()
-    #     batch = next(iter(train_loader))
-    #     input_ids = batch["input_ids"]
-    #     labels = batch["labels"]
-    #     print(input_ids[0], labels[0])
-    #     print(input_ids[1], labels[1])
-    #     import pdb; pdb.set_trace()
-    #     exit()
 
     if privacy_args.nonprivate == "no":
         # TODO: Why does the per_example_max_grad_norm not affect things by much???

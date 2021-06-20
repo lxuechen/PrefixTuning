@@ -15,7 +15,7 @@ python -m gpt2.launchers.prefix_vs_full_061721 --mode "local"     \
   --learning_rate 1e-5 \
   --per_example_max_grad_norm 0.1 \
   --mid_dim 512 \
-  --preseqlen 5
+  --preseqlen 10
 ```
 
 ## Running evaluation
