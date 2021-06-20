@@ -40,7 +40,7 @@ for train_batch_size in (100, 200, 300, 400, 500):
                 )
         global_steps.sort()
         global_steps = [str(gs) for gs in global_steps]
-        global_steps = ", ".join(global_steps)
+        global_steps = ",".join(global_steps)
 
         img_dir = os.path.join(out_dir, f"{train_batch_size_str}-{learning_rate_str}")
         os.makedirs(img_dir, exist_ok=True)
