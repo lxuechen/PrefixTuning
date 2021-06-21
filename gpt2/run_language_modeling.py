@@ -46,7 +46,7 @@ from lxuechen_utils import utils
 import privacy_utils
 from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from .trainer import Trainer
+from gpt2.trainer import Trainer
 
 logger = logging.getLogger(__name__)
 

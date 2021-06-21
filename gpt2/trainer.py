@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import functools
 import inspect
 import json
 import math
@@ -36,14 +37,15 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.trainer_utils import (BestRun, default_compute_objective, default_hp_space,
-                                        distributed_broadcast_scalars, distributed_concat, EvalPrediction,
-                                        EvaluationStrategy, HPSearchBackend, nested_numpify,
-                                        nested_xla_mesh_reduce, PredictionOutput, PREFIX_CHECKPOINT_DIR, set_seed,
+                                        distributed_broadcast_scalars, EvalPrediction,
+                                        EvaluationStrategy, HPSearchBackend, PredictionOutput, PREFIX_CHECKPOINT_DIR,
+                                        set_seed,
                                         TrainOutput)
-from transformers.training_args import TrainingArguments
 from transformers.utils import logging
 
 from gpt2 import decoding_utils
+from gpt2.annoying_args import TrainingArguments
+from lxuechen_utils import utils
 
 _use_native_amp = False
 _use_apex = False
@@ -249,6 +251,7 @@ class Trainer:
 
         val_dataset: Optional[Dataset] = None,
         generation_stuff: Optional[Dict] = None,
+        ema_model_averaging: bool = False,
         **kwargs,
     ):
         if args is None:
@@ -263,6 +266,8 @@ class Trainer:
            "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
+        avg_fn = functools.partial(utils.inplace_ema, gamma=args.ema_model_gamma)
+        self.ema_model = utils.AveragedModel(module=self.model, avg_fn=avg_fn) if args.ema_model_averaging else None
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
@@ -787,6 +792,7 @@ class Trainer:
                         self.optimizer.step()
 
                     self.lr_scheduler.step()
+                    self.ema_model.step(global_step=self.global_step)
                     model.zero_grad()
                     self.global_step += 1
                     self.epoch = epoch + (step + 1) / len(epoch_iterator)
@@ -1310,6 +1316,7 @@ class Trainer:
     # TODO: Fix generation with references.
     def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
         # Pass in the additional decoding stuff from `decoding_kwargs`.
+        # TODO: Also get generations from ema model.
         kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
         all_generations = {}
@@ -1417,17 +1424,21 @@ class Trainer:
         logger.info("***** Running %s *****", description)
         logger.info("  Num examples = %d", self.num_examples(dataloader))
         logger.info("  Batch size = %d", batch_size)
-        eval_losses: List[float] = []
-        preds: Optional[torch.Tensor] = None
-        label_ids: Optional[torch.Tensor] = None
-        entropy_losses: List[float] = []
-        entropy_losses2: List[float] = []
-
-        # My additions.
-        tok_logprobs: List[float] = []
-        lin_logprobs: List[float] = []
 
         model.eval()
+        self.ema_model.eval()
+
+        def create_record():
+            """For reporting results."""
+            return dict(
+                eval_losses=[],
+                entropy_losses=[],
+                tok_logprobs=[],
+                lin_logprobs=[],
+            )
+
+        model_record, ema_model_record = create_record(), create_record()
+        preds = label_ids = None
 
         if is_torch_tpu_available():
             dataloader = pl.ParallelLoader(dataloader, [self.args.device]).per_device_loader(self.args.device)
@@ -1435,36 +1446,40 @@ class Trainer:
         if self.args.past_index >= 0:
             self._past = None
 
-        disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
-        for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
-            loss, logits, labels = self.prediction_step(model, inputs, prediction_loss_only)
-
+        def eval_stats(inputs, loss, logits, labels):
             if loss is not None:
                 batch_size = inputs['input_ids'].size(0)
-                eval_losses.extend([loss] * batch_size)
+                eval_loss = [loss] * batch_size
+            else:
+                eval_loss = [-1]
 
             if logits is not None:
-                # This is very important for computing log-prob!
+                # Shifting is very important for computing log-prob!
                 logits = logits[..., :-1, :]
                 labels = labels[..., 1:]
 
                 valid_locations = (labels != -100)
                 all_log_probs = logits.log_softmax(dim=-1)  # (B, L, V).
-
                 entropy = -(all_log_probs.exp() * all_log_probs).sum(dim=-1)  # (B, L).
-                entropy_losses.extend(entropy.view(-1).tolist())
-                entropy_losses2.extend(entropy[valid_locations].tolist())
+                entropy = entropy[valid_locations]
 
                 logprob = F.cross_entropy(logits.permute(0, 2, 1), labels, reduction="none")  # (B, L).
-                logprob = logprob * valid_locations  # (B, L).
+            else:
+                entropy, logprob = [-1], [-1]
 
-                tok_logprobs.extend(logprob.view(-1).tolist())
-                lin_logprobs.extend(logprob.sum(dim=-1).view(-1).tolist())
+            return eval_loss, entropy, logprob
 
-                del all_log_probs, valid_locations, entropy, logprob
+        disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
+        for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
 
-            if labels is not None:  # Flatten then concat.
-                pass
+            for this_model, this_record in utils.zip_((model, self.ema_model), (model_record, ema_model_record)):
+                loss, logits, labels = self.prediction_step(this_model, inputs, prediction_loss_only)
+
+                eval_loss, entropy, logprob = eval_stats(inputs, loss, logits, labels)
+                this_record["eval_losses"].extend(eval_loss)
+                this_record["entropy_losses"].extend(entropy.tolist())
+                this_record["tok_logprobs"].extend(logprob.view(-1).tolist())
+                this_record["lin_logprobs"].extend(logprob.sum(dim=-1).view(-1).tolist())
 
             if self.args.max_eval_batches > 0 and batch_idx + 1 >= self.args.max_eval_batches:
                 break
@@ -1473,54 +1488,13 @@ class Trainer:
             # Clean the state at the end of the evaluation loop
             delattr(self, "_past")
 
-        if self.args.local_rank != -1:
-            # In distributed mode, concatenate all results from all nodes:
-            if preds is not None:
-                preds = distributed_concat(preds, num_total_examples=self.num_examples(dataloader))
-            if label_ids is not None:
-                label_ids = distributed_concat(label_ids, num_total_examples=self.num_examples(dataloader))
-        elif is_torch_tpu_available():
-            # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
-            if preds is not None:
-                preds = nested_xla_mesh_reduce(preds, "eval_preds")
-            if label_ids is not None:
-                label_ids = nested_xla_mesh_reduce(label_ids, "eval_label_ids")
-            if eval_losses is not None:
-                eval_losses = xm.mesh_reduce("eval_losses", torch.tensor(eval_losses), torch.cat).tolist()
+        # lxuechen: I removed everything regarding distributed training.
+        for this_record in (model_record, ema_model_record):
+            for key, value in this_record.items():
+                if isinstance(value, (list, tuple)):
+                    this_record[key] = np.mean(value)
 
-        # Finally, turn the aggregated tensors into numpy arrays.
-        if preds is not None:
-            preds = nested_numpify(preds)
-        if label_ids is not None:
-            label_ids = nested_numpify(label_ids)
-
-        if self.compute_metrics is not None and preds is not None and label_ids is not None:
-            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
-        else:
-            metrics = {}
-        if len(eval_losses) > 0:
-            if self.args.local_rank != -1:
-                metrics["eval_loss"] = (
-                    distributed_broadcast_scalars(eval_losses, num_total_examples=self.num_examples(dataloader))
-                        .mean()
-                        .item()
-                )
-            else:
-                metrics["eval_loss"] = np.mean(eval_losses)
-
-        # Prefix all keys with eval_
-        for key in list(metrics.keys()):
-            if not key.startswith("eval_"):
-                metrics[f"eval_{key}"] = metrics.pop(key)
-
-        if len(entropy_losses) > 0:
-            metrics['entropy'] = np.mean(entropy_losses)
-
-        if len(tok_logprobs) > 0:
-            metrics['tok_logprob'] = np.mean(tok_logprobs)
-
-        if len(lin_logprobs) > 0:
-            metrics['lin_logprob'] = np.mean(lin_logprobs)
+        metrics = dict(model=model_record, ema_model=ema_model_record, )
 
         if hasattr(self.optimizer, 'privacy_engine'):
             pe = self.optimizer.privacy_engine

@@ -32,19 +32,19 @@ import shutil
 import signal
 import sys
 import time
-import warnings
 from typing import Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+import warnings
 
 import numpy as np
 import requests
+from scipy import stats
 import six
 import torch
+from torch import nn, optim
 import torch.autograd.profiler as profiler
 import torch.nn.functional as F
-import tqdm
-from scipy import stats
-from torch import nn, optim
 from torch.utils import data
+import tqdm
 
 
 # Misc.
@@ -1210,6 +1210,54 @@ def ema_update(ema_model: nn.Module, model: nn.Module, gamma: Optional[float] = 
 
     ema_model.train(ema_model_state)
     model.train(model_state)
+
+
+def inplace_ema(averaged_module, module, num_averaged, gamma=.99):
+    del num_averaged
+    averaged_module_state_dict = averaged_module.state_dict()
+    for key, val in module.state_dict().items():
+        p1 = averaged_module_state_dict[key]
+        if val.dtype in (torch.int32, torch.int64):  # For `num_batches_tracked` in batch norm.
+            p1.data.copy_(val.detach())
+        else:
+            p1.data.copy_(gamma * p1.data + (1 - gamma) * val.data)
+
+
+def inplace_polyak(averaged_module, module, num_averaged):
+    averaged_module_state_dict = averaged_module.state_dict()
+    for key, val in module.state_dict().items():
+        p1 = averaged_module_state_dict[key]
+        val = val.detach()
+        if val.dtype in (torch.int32, torch.int64):  # For `num_batches_tracked` in batch norm.
+            p1.data.copy_(val)
+        else:
+            p1.data.copy_(p1 + (val - p1) / (num_averaged + 1))
+
+
+class AveragedModel(nn.Module):
+    def __init__(self, module: nn.Module, avg_fn=inplace_ema, start_from=0):
+        super(AveragedModel, self).__init__()
+        self._module = module
+        self._averaged_module = copy.deepcopy(module)
+
+        self._avg_fn = avg_fn
+        self._start_from = start_from
+        self._num_averaged = 1
+
+    @torch.no_grad()
+    def step(self, global_step):
+        if global_step >= self._start_from:
+            self._avg_fn(
+                averaged_module=self._averaged_module,
+                module=self._module,
+                num_averaged=self._num_averaged
+            )
+            self._num_averaged += 1
+        else:
+            self._averaged_module = copy.deepcopy(self._module)
+
+    def forward(self, *args, **kwargs):
+        return self._averaged_module(*args, **kwargs)
 
 
 # Plotting.

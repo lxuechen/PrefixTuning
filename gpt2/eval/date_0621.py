@@ -13,7 +13,7 @@ mid_dim_str = utils.int2str(512)
 preseqlen_str = utils.int2str(10)
 seed = 0
 
-out_dir = f"/nlp/scr/lxuechen/plots/{date}"
+out_dir = f"/nlp/scr/lxuechen/plots/date_{date}"
 
 for train_batch_size in (100, 200, 300, 400, 500):
     for lr in (3e-3, 1e-3, 3e-4, 1e-4):

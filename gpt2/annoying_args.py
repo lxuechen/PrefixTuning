@@ -291,6 +291,8 @@ class TrainingArguments(transformers.TrainingArguments):
     max_eval_batches: int = field(default=-1, metadata={"help": "Maximum number of evaluation steps to run."})
     max_generations: int = field(default=sys.maxsize)
     max_generations_train: int = field(default=60)
+    ema_model_averaging: bool = field(default=True)
+    ema_model_gamma: float = field(default=0.99)
 
 
 @dataclass
