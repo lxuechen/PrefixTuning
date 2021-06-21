@@ -53,6 +53,7 @@ def _get_command(
     script="gpt2.run_language_modeling",
     train_dir=None,
     ema_model_start_from=1000,
+    ema_model_averaging=True,
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -148,6 +149,7 @@ def _get_command(
         --train_prompt_file {TRAIN_PROMPT_FILE} \
         --val_prompt_file {VAL_PROMPT_FILE} \
         --eval_prompt_file {EVAL_PROMPT_FILE} \
+        --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
         --overwrite_output_dir'
     # @formatter:off
