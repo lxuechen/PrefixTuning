@@ -5,7 +5,7 @@ python -m gpt2.launchers.prefix_vs_full_062021 --mode "local"     \
   --tuning_mode "prefixtune"      \
   --max_steps 10000 \
   --max_seq_len 96 \
-  --nonprivate "yes"\
+  --nonprivate "no"\
   --per_device_train_batch_size 5 \
   --gradient_accumulation_steps 1 \
   --noise_multiplier 0.7 \
