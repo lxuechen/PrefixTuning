@@ -46,6 +46,7 @@ from transformers.utils import logging
 from gpt2 import decoding_utils
 from gpt2.annoying_args import TrainingArguments
 from lxuechen_utils import utils
+import copy
 
 _use_native_amp = False
 _use_apex = False
@@ -266,8 +267,8 @@ class Trainer:
            "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
-        avg_fn = functools.partial(utils.inplace_ema, gamma=args.ema_model_gamma)
-        self.ema_model = utils.AveragedModel(module=self.model, avg_fn=avg_fn) if args.ema_model_averaging else None
+        self.avg_fn = functools.partial(utils.ema_update, gamma=args.ema_model_gamma)
+        self.ema_model = copy.deepcopy(self.model) if args.ema_model_averaging else None
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
@@ -792,7 +793,8 @@ class Trainer:
                         self.optimizer.step()
 
                     self.lr_scheduler.step()
-                    self.ema_model.step(global_step=self.global_step)
+                    if self.ema_model is not None:
+                        self.avg_fn(self.ema_model, self.model)
                     model.zero_grad()
                     self.global_step += 1
                     self.epoch = epoch + (step + 1) / len(epoch_iterator)
@@ -1317,10 +1319,11 @@ class Trainer:
     def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
         # Pass in the additional decoding stuff from `decoding_kwargs`.
 
-        model_tags = ("model", "ema_model")
+        models = (self.model,) if self.ema_model is None else (self.model, self.ema_model)
+        model_tags = ("model",) if self.ema_model is None else ("model", "ema_model")
         all_generations = {model_tag: {} for model_tag in model_tags}
 
-        for this_model, this_model_tag in utils.zip_((self.model, self.ema_model), model_tags):
+        for this_model, this_model_tag in utils.zip_(models, model_tags):
             kwargs = dict(model=this_model, tokenizer=self.tokenizer, device=self.args.device)
             this_generations = all_generations[this_model_tag]
 
