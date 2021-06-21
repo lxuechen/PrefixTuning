@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-import functools
+import copy
 import inspect
 import json
 import math
@@ -46,7 +46,6 @@ from transformers.utils import logging
 from gpt2 import decoding_utils
 from gpt2.annoying_args import TrainingArguments
 from lxuechen_utils import utils
-import copy
 
 _use_native_amp = False
 _use_apex = False
@@ -267,7 +266,7 @@ class Trainer:
            "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
-        self.avg_fn = functools.partial(utils.ema_update, gamma=args.ema_model_gamma)
+        self.avg_fn = utils.ema_update
         self.ema_model = copy.deepcopy(self.model) if args.ema_model_averaging else None
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
@@ -793,9 +792,14 @@ class Trainer:
                         self.optimizer.step()
 
                     self.lr_scheduler.step()
-                    if self.ema_model is not None:
-                        self.avg_fn(self.ema_model, self.model)
-                    model.zero_grad()
+                    model.zero_grad()  # Avoid ema copying gradients.
+
+                    if self.ema_model is not None and self.global_step >= self.args.ema_model_start_from:
+                        self.avg_fn(self.ema_model, model, gamma=self.args.ema_model_gamma)
+                    else:
+                        if self.global_step + 1 == self.args.ema_model_start_from:
+                            self.ema_model = copy.deepcopy(model)
+
                     self.global_step += 1
                     self.epoch = epoch + (step + 1) / len(epoch_iterator)
 
@@ -1319,8 +1323,11 @@ class Trainer:
     def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
         # Pass in the additional decoding stuff from `decoding_kwargs`.
 
-        models = (self.model,) if self.ema_model is None else (self.model, self.ema_model)
-        model_tags = ("model",) if self.ema_model is None else ("model", "ema_model")
+        models = (self.model,)
+        model_tags = ("model",)
+        if self.ema_model is not None and (self.global_step - 1) >= self.args.ema_model_start_from:
+            models += (self.ema_model,)
+            model_tags += ("ema_model",)
         all_generations = {model_tag: {} for model_tag in model_tags}
 
         for this_model, this_model_tag in utils.zip_(models, model_tags):
@@ -1422,33 +1429,26 @@ class Trainer:
             self.model.config, "output_hidden_states", False
         ), "The prediction loop does not work with `output_hidden_states=True`."
 
-        model = self.model
-        # multi-gpu eval
-        if self.args.n_gpu > 1:
-            model = torch.nn.DataParallel(model)
-        else:
-            model = self.model
-        # Note: in torch.distributed mode, there's no point in wrapping the model
-        # inside a DistributedDataParallel as we'll be under `no_grad` anyways.
-
         batch_size = dataloader.batch_size
         logger.info("***** Running %s *****", description)
         logger.info("  Num examples = %d", self.num_examples(dataloader))
         logger.info("  Batch size = %d", batch_size)
 
-        model.eval()
-        self.ema_model.eval()
+        self.model.eval()
+        models = (self.model,)
+        model_tags = ("model",)
+
+        if self.ema_model is not None and (self.global_step - 1 >= self.args.ema_model_start_from):
+            self.ema_model.eval()
+            models += (self.ema_model,)
+            model_tags += ("ema_model",)
 
         def create_record():
-            """For reporting results."""
             return dict(
-                eval_losses=[],
-                entropy_losses=[],
-                tok_logprobs=[],
-                lin_logprobs=[],
+                eval_losses=[], entropy_losses=[], tok_logprobs=[], lin_logprobs=[],
             )
 
-        model_record, ema_model_record = create_record(), create_record()
+        records = {model_tag: create_record() for model_tag in model_tags}
         preds = label_ids = None
 
         if is_torch_tpu_available():
@@ -1482,10 +1482,9 @@ class Trainer:
 
         disable_tqdm = not self.is_local_process_zero() or self.args.disable_tqdm
         for batch_idx, inputs in tqdm(enumerate(dataloader), desc=description, disable=disable_tqdm):
-
-            for this_model, this_record in utils.zip_((model, self.ema_model), (model_record, ema_model_record)):
+            for this_model, this_model_tag in utils.zip_(models, model_tags):
+                this_record = records[this_model_tag]
                 loss, logits, labels = self.prediction_step(this_model, inputs, prediction_loss_only)
-
                 eval_loss, entropy, logprob = eval_stats(inputs, loss, logits, labels)
                 this_record["eval_losses"].extend(eval_loss)
                 this_record["entropy_losses"].extend(entropy.tolist())
@@ -1500,12 +1499,13 @@ class Trainer:
             delattr(self, "_past")
 
         # lxuechen: I removed everything regarding distributed training.
-        for this_record in (model_record, ema_model_record):
+        for record_key, record_value in records.items():
+            this_record = records[record_key]
             for key, value in this_record.items():
                 if isinstance(value, (list, tuple)):
                     this_record[key] = np.mean(value)
 
-        metrics = dict(model=model_record, ema_model=ema_model_record, )
+        metrics = records
 
         if hasattr(self.optimizer, 'privacy_engine'):
             pe = self.optimizer.privacy_engine

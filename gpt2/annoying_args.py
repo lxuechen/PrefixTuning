@@ -293,6 +293,7 @@ class TrainingArguments(transformers.TrainingArguments):
     max_generations_train: int = field(default=60)
     ema_model_averaging: bool = field(default=True)
     ema_model_gamma: float = field(default=0.99)
+    ema_model_start_from: int = field(default=1000)
 
 
 @dataclass
