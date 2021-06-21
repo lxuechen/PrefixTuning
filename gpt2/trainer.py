@@ -1316,71 +1316,79 @@ class Trainer:
     # TODO: Fix generation with references.
     def generate_and_write_to_file(self, num_generations_to_print=6, **decoding_kwargs):
         # Pass in the additional decoding stuff from `decoding_kwargs`.
-        # TODO: Also get generations from ema model.
-        kwargs = dict(model=self.model, tokenizer=self.tokenizer, device=self.args.device)
 
-        all_generations = {}
-        for split in ("train", "val", "eval"):
-            prompt_dataset = self._get_prompt_dataset_by_split(split)  # Don't the loader to avoid duplicated prompts!
-            if split == "train":  # Don't waste compute on sanity checks.
-                max_generations = self.args.max_generations_train
-            else:
-                max_generations = self.args.max_generations
+        model_tags = ("model", "ema_model")
+        all_generations = {model_tag: {} for model_tag in model_tags}
 
-            full_generations, unstripped_generations, generations, references = decoding_utils.generate(
-                prompt_dataset=prompt_dataset, max_generations=max_generations,
-                **kwargs, **decoding_kwargs
-            )
-            all_generations[split] = dict(
-                full_generations=full_generations,
-                unstripped_generations=unstripped_generations,
-                generations=generations,
-                references=references,
-            )
+        for this_model, this_model_tag in utils.zip_((self.model, self.ema_model), model_tags):
+            kwargs = dict(model=this_model, tokenizer=self.tokenizer, device=self.args.device)
+            this_generations = all_generations[this_model_tag]
 
-            def pretty_format(lines):
-                """A useful helper to make printted generationed look nice."""
-                return '\n'.join([repr(line) for line in lines[:num_generations_to_print]])
+            for split in ("train", "val", "eval"):
+                # Don't use the loader to avoid duplicated prompts!
+                prompt_dataset = self._get_prompt_dataset_by_split(split)
+                if split == "train":  # Don't waste compute on sanity checks.
+                    max_generations = self.args.max_generations_train
+                else:
+                    max_generations = self.args.max_generations
 
-            # Various visuals.
-            print(f" --- split {split} --- ")
-            print(f" *** full generations *** ")
-            print(pretty_format(full_generations))
-            print(f" *** unstripped generations *** ")
-            print(pretty_format(unstripped_generations))
-            print(f" *** generations *** ")
-            print(pretty_format(generations))
-            print(f" *** references *** ")
-            print(pretty_format(references))
-            print(f" *** num generations: {len(generations)}, num references: {len(references)} *** ")
+                full_generations, unstripped_generations, generations, references = decoding_utils.generate(
+                    prompt_dataset=prompt_dataset, max_generations=max_generations,
+                    **kwargs, **decoding_kwargs
+                )
+                this_generations[split] = dict(
+                    full_generations=full_generations,
+                    unstripped_generations=unstripped_generations,
+                    generations=generations,
+                    references=references,
+                )
 
-            # Store generations for BLEU.
-            counter = self.global_step if self.global_step is not None else -1
-            generations_path = os.path.join(
-                self.args.output_dir, f'generations', f'{split}', f'global_step_{counter:08d}.txt'
-            )
-            os.makedirs(os.path.dirname(generations_path), exist_ok=True)
-            with open(generations_path, 'w') as f:
-                f.writelines([line + '\n' for line in generations])
-            logger.warning(f"Wrote generations to {generations_path}")
-            del generations_path
+                def pretty_format(lines):
+                    """A useful helper to make printted generationed look nice."""
+                    return '\n'.join([repr(line) for line in lines[:num_generations_to_print]])
 
-            # Store generations with references for visual inspection.
-            generations_with_refs_path = os.path.join(
-                self.args.output_dir, f'generations_with_refs', f'{split}', f'global_step_{counter:08d}.txt'
-            )
-            os.makedirs(os.path.dirname(generations_with_refs_path), exist_ok=True)
-            with open(generations_with_refs_path, 'w') as f:
-                generations_with_refs = []
-                if len(generations) != len(references):
-                    msg = "Number of generations not equal to the number of reference! There might be a mismatch!"
-                    logger.warning(msg)
-                    generations_with_refs += [msg]  # So that you know something is wrong when looking at the txt file!
+                # Various visuals.
+                print(f" --- split {split} --- ")
+                print(f" *** full generations *** ")
+                print(pretty_format(full_generations))
+                print(f" *** unstripped generations *** ")
+                print(pretty_format(unstripped_generations))
+                print(f" *** generations *** ")
+                print(pretty_format(generations))
+                print(f" *** references *** ")
+                print(pretty_format(references))
+                print(f" *** num generations: {len(generations)}, num references: {len(references)} *** ")
 
-                generations_with_refs = [ref + ' ' + gen for ref, gen in zip(references, generations)]
-                f.writelines([line + '\n' for line in generations_with_refs])
-            logger.warning(f"Wrote generations and references to {generations_with_refs_path}")
-            del generations_with_refs_path
+                # Store generations for BLEU.
+                counter = self.global_step if self.global_step is not None else -1
+                generations_path = os.path.join(
+                    self.args.output_dir,
+                    f'generations_{this_model_tag}', f'{split}', f'global_step_{counter:08d}.txt'
+                )
+                os.makedirs(os.path.dirname(generations_path), exist_ok=True)
+                with open(generations_path, 'w') as f:
+                    f.writelines([line + '\n' for line in generations])
+                logger.warning(f"Wrote generations to {generations_path}")
+                del generations_path
+
+                # Store generations with references for visual inspection.
+                generations_with_refs_path = os.path.join(
+                    self.args.output_dir,
+                    f'generations_with_refs_{this_model_tag}', f'{split}', f'global_step_{counter:08d}.txt'
+                )
+                os.makedirs(os.path.dirname(generations_with_refs_path), exist_ok=True)
+                with open(generations_with_refs_path, 'w') as f:
+                    generations_with_refs = []
+                    if len(generations) != len(references):
+                        msg = "Number of generations not equal to the number of reference! There might be a mismatch!"
+                        logger.warning(msg)
+                        # So that you know something is wrong when looking at the txt file!
+                        generations_with_refs += [msg]
+
+                    generations_with_refs = [ref + ' ' + gen for ref, gen in zip(references, generations)]
+                    f.writelines([line + '\n' for line in generations_with_refs])
+                logger.warning(f"Wrote generations and references to {generations_with_refs_path}")
+                del generations_with_refs_path
 
         return all_generations
 
