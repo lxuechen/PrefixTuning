@@ -4,6 +4,7 @@ import math
 import types
 from typing import Callable, Dict, Optional, Sequence, Union
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -34,7 +35,7 @@ class PrivacyEngine(object):
         loss_reduction: One of (`mean`, 'sum').
             Should correspond to how the loss is scaled; if set correctly,
             two cases should give the same aggregated per-sample gradient.
-        accounting_mode: One of (`rdp`, `gdp`, `both`). Privacy accounting mode.
+        accounting_mode: One of (`rdp`, `gdp`, `all`, `rdp_cks`). Privacy accounting mode.
         alphas: The RDP orders for (ε, δ)-DP conversion.
 
     Notes:
@@ -62,13 +63,13 @@ class PrivacyEngine(object):
         gradient_accumulation_steps: int = 1,
         loss_reduction="mean",
         batch_first: bool = True,
-        accounting_mode="rdp",
+        accounting_mode="rdp_cks",
         alphas: Sequence[float] = DEFAULT_ALPHAS,
         verbose: bool = False,
         **_,
     ):
         super(PrivacyEngine, self).__init__()
-        if accounting_mode not in ('rdp', 'gdp', 'both'):
+        if accounting_mode not in ('rdp', 'gdp', 'all', 'rdp_cks'):
             raise ValueError(f"Unknown accounting mode: {accounting_mode}")
 
         # Privacy parameters.
@@ -303,15 +304,21 @@ class PrivacyEngine(object):
             sigma=self.noise_multiplier,
             alphas=self.alphas,
         )
-        if self.accounting_mode in ('both', 'rdp'):
+        if self.accounting_mode in ('all', 'rdp'):
+            # Uses conversion.
             eps_rdp, alpha_rdp = _eps_from_rdp(**kwargs)
-            privacy_results['eps_rdp'] = eps_rdp
-            privacy_results['alpha_rdp'] = alpha_rdp
+            privacy_results['eps_rdp_opacus'] = eps_rdp
+            privacy_results['alpha_rdp_opacus'] = alpha_rdp
 
-        if self.accounting_mode in ('both', 'gdp'):
+        if self.accounting_mode in ('all', 'gdp'):
             eps_gdp, mu_gdp = _eps_from_gdp(**kwargs)
             privacy_results['eps_gdp'] = eps_gdp
             privacy_results['mu_gdp'] = mu_gdp
+
+        if self.accounting_mode in ('all', "rdp_cks"):
+            eps_rdp, alpha_rdp = _eps_from_rdp_cks(**kwargs)
+            privacy_results['eps_rdp'] = eps_rdp
+            privacy_results['alpha_rdp'] = alpha_rdp
 
         return privacy_results
 
@@ -482,6 +489,74 @@ def _eps_from_rdp(
         orders=alphas, rdp=rdp, delta=delta
     )
     return eps, alpha
+
+
+def _compute_eps_cks(orders, rdp, delta):
+    """Compute epsilon given a list of RDP values and target delta.
+    Args:
+      orders: An array (or a scalar) of orders.
+      rdp: A list (or a scalar) of RDP guarantees.
+      delta: The target delta.
+    Returns:
+      Pair of (eps, optimal_order).
+    Raises:
+      ValueError: If input is malformed.
+    """
+    orders_vec = np.atleast_1d(orders)
+    rdp_vec = np.atleast_1d(rdp)
+
+    if delta <= 0:
+        raise ValueError("Privacy failure probability bound delta must be >0.")
+    if len(orders_vec) != len(rdp_vec):
+        raise ValueError("Input lists must have the same length.")
+
+    # Basic bound (see https://arxiv.org/abs/1702.07476 Proposition 3 in v3):
+    #   eps = min( rdp_vec - math.log(delta) / (orders_vec - 1) )
+
+    # Improved bound from https://arxiv.org/abs/2004.00010 Proposition 12 (in v4).
+    # Also appears in https://arxiv.org/abs/2001.05990 Equation 20 (in v1).
+    eps_vec = []
+    for (a, r) in zip(orders_vec, rdp_vec):
+        if a < 1: raise ValueError("Renyi divergence order must be >=1.")
+        if r < 0: raise ValueError("Renyi divergence must be >=0.")
+
+        if delta ** 2 + math.expm1(-r) >= 0:
+            # In this case, we can simply bound via KL divergence:
+            # delta <= sqrt(1-exp(-KL)).
+            eps = 0  # No need to try further computation if we have eps = 0.
+        elif a > 1.01:
+            # This bound is not numerically stable as alpha->1.
+            # Thus we have a min value of alpha.
+            # The bound is also not useful for small alpha, so doesn't matter.
+            eps = r + math.log1p(-1 / a) - math.log(delta * a) / (a - 1)
+        else:
+            # In this case we can't do anything. E.g., asking for delta = 0.
+            eps = np.inf
+        eps_vec.append(eps)
+
+    idx_opt = np.argmin(eps_vec)
+    return max(0, eps_vec[idx_opt]), orders_vec[idx_opt]
+
+
+# @formatter:off
+def _eps_from_rdp_cks(
+    sample_rate,
+    sigma,
+    steps,
+    delta,
+    alphas=DEFAULT_ALPHAS,
+    **_,
+):
+    """Compute RDP as usual, but the conversion to (ε, δ)-DP is based on result by Canonne, Kamath, Steinke.
+    Code from https://github.com/tensorflow/privacy/blob/5f07198b66b3617b22609db983926e3ba97cd905/tensorflow_privacy/privacy/analysis/rdp_accountant.py#L237
+    """
+    rdp = rdp_accounting.compute_rdp(
+        q=sample_rate, noise_multiplier=sigma, steps=steps, orders=alphas
+    )
+    # (ε, α)
+    eps, alpha = _compute_eps_cks(orders=alphas, rdp=rdp, delta=delta)
+    return eps, alpha
+# @formatter:on
 
 
 def _eps_from_gdp(
