@@ -42,11 +42,11 @@ from transformers import (
     GPT2LMHeadModel,
 )
 
+from gpt2.trainer import Trainer
 from lxuechen_utils import utils
 import privacy_utils
 from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
-from gpt2.trainer import Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -361,13 +361,8 @@ def main():
         train_file = os.path.join(training_args.output_dir, "train_results.json")
         utils.jdump(train_output, train_file)
 
-        results = {
-            "train_eval_loss": train_output["eval_loss"],
-            "eval_lin_logprob": eval_output["lin_logprob"],
-        }
         logger.info("***** Eval results *****")
-        for key in sorted(results.keys()):
-            logger.info("  %s = %s", key, str(results[key]))
+        logger.info(train_output)
 
 
 def _mp_fn(index):
