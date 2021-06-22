@@ -83,7 +83,8 @@ def main(
                 per_device_eval_batch_size = 10
                 objective_mode = 0
                 priority = "standard"
-                save_steps = 1000  # So that we don't blow up disk space.
+                save_steps = 50000  # So that we don't blow up disk space.
+                ema_model_averaging = "no"
 
                 for train_batch_size in (200, 300, 400):
                     for lr in (7e-4,):
@@ -115,6 +116,7 @@ def main(
                             model_name_or_path=model_name_or_path,
                             objective_mode=objective_mode,
                             priority=priority,
+                            ema_model_averaging=ema_model_averaging,
 
                             epochs=epochs,
                         )
