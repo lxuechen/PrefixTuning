@@ -37,7 +37,7 @@ def mynlprun_wrapper(
         if gpu is not None:
             wrapped_command += f"-d {gpu} "
         if time is not None:
-            wrapped_command += f"-t {time}"
+            wrapped_command += f"-t {time} "
         if job_name is not None:
             # Suffix with uid just in case you get a job name collision!
             this_id = uuid.uuid4().hex[:salt_length]
