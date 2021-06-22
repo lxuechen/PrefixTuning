@@ -600,7 +600,8 @@ class GPT2Model(GPT2PreTrainedModel):
 
         if inputs_embeds is None:
             inputs_embeds = self.wte(input_ids)
-        position_embeds = self.wpe(position_ids)
+        # lxuechen: "Waste" memory by repeating just for DP to work.
+        position_embeds = self.wpe(position_ids.repeat(input_ids.size(0), 1))
         if token_type_ids is not None:
             token_type_embeds = self.wte(token_type_ids)
         else:
