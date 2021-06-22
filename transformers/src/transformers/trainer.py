@@ -1239,7 +1239,7 @@ class Trainer:
             logger.info("Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
             shutil.rmtree(checkpoint)
 
-    def evaluate(self, eval_dataset: Optional[Dataset] = None) -> Dict[str, float]:
+    def evaluate(self, eval_dataset: Optional[Dataset] = None, log_results=True) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
 
@@ -1260,14 +1260,15 @@ class Trainer:
 
         output = self.prediction_loop(eval_dataloader, description="Evaluation")
 
-        self.log(output.metrics)
+        if log_results:
+            self.log(output.metrics)
 
-        # Save log history always! This must appear after the `log_history` is updated.
-        json.dump(
-            self.log_history,
-            open(os.path.join(self.args.output_dir, "log_history.json"), "w"),
-            indent=2, ensure_ascii=False
-        )
+            # Save log history always! This must appear after the `log_history` is updated.
+            json.dump(
+                self.log_history,
+                open(os.path.join(self.args.output_dir, "log_history.json"), "w"),
+                indent=2, ensure_ascii=False
+            )
 
         if self.args.tpu_metrics_debug or self.args.debug:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)

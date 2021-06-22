@@ -345,19 +345,20 @@ def main():
         )
         trainer.train(model_path=model_path)
         trainer.save_model()
-        if model_args.tuning_mode == 'bothtune':
-            gpt2_dir = os.path.join(training_args.output_dir, 'gpt2')
-            gpt2.save_pretrained(gpt2_dir)
 
     # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        eval_output = trainer.evaluate(eval_dataset)
+        eval_output = trainer.evaluate(eval_dataset, log_results=False)
         eval_file = os.path.join(training_args.output_dir, "eval_results.json")
         utils.jdump(eval_output, eval_file)
 
-        train_output = trainer.evaluate(train_dataset)
+        val_output = trainer.evaluate(val_dataset, log_results=False)
+        val_file = os.path.join(training_args.output_dir, "val_results.json")
+        utils.jdump(val_output, val_file)
+
+        train_output = trainer.evaluate(train_dataset, log_results=False)
         train_file = os.path.join(training_args.output_dir, "train_results.json")
         utils.jdump(train_output, train_file)
 
