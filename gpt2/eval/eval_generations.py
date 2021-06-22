@@ -156,7 +156,6 @@ def gen2ref(
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     # @formatter:on
 ):
-    # TODO: This is dumb; should just use the prompt as the key.
     if tokenizer is None:
         tokenizer = _create_default_tokenizer()
 
@@ -167,7 +166,7 @@ def gen2ref(
         gen_lines = g.readlines()
 
     # Add uids, since you might get repeated generations.
-    gen_lines = [f"uuid4={str(uuid.uuid4())[:uid_max_len]} || " + line.strip() for line in gen_lines]
+    gen_lines = [line.strip() for line in gen_lines]
 
     gen2ref_map = dict()
     gen_idx = -1
@@ -180,11 +179,14 @@ def gen2ref(
             src2tgt[src] = [tgt]
 
             gen_idx += 1
-            gen2ref_map[gen_lines[gen_idx]] = [tgt]
+            gen2ref_map[src] = {
+                "reference": [tgt],
+                "generation": [gen_lines[gen_idx]]
+            }
         else:
             src2tgt[src].append(tgt)
 
-            gen2ref_map[gen_lines[gen_idx]].append(tgt)
+            gen2ref_map[src]["reference"].append(tgt)
         del src, tgt
 
     today = date.today().strftime("%m%d%y")
