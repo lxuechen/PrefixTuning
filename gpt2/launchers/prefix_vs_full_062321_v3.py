@@ -9,12 +9,7 @@ date:
 purpose:
     Find best prefix-tuning setup.
 notes:
-    After fixing the generation and BLEU bugs.
-    Also fix the length bug in decoding.
-    Train for longer and generate more samples with training set prompts!
-    Only train with distilgpt2.
-    Refined search.
-    More refined learning rate search!
+    This fixes the bug in the previous batch (062321.py) of using a wrong learning rate.
 run:
     to generate running scripts:
         python -m gpt2.launchers.prefix_vs_full_062321_v3 --mode "submit"
