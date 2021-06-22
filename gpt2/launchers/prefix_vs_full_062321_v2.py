@@ -78,7 +78,7 @@ def main(
                 save_steps = 40000  # So that we don't blow up disk space.
                 time = "30-0"
 
-                for train_batch_size in (100, 300):
+                for train_batch_size in (300,):
                     for lr in (5e-4, 3e-4, 1e-4):
                         if train_batch_size < per_device_train_batch_size:
                             per_device_train_batch_size = train_batch_size
