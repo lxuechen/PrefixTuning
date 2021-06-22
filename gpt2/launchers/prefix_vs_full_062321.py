@@ -80,12 +80,14 @@ def main(
                 preseqlen = 10
                 eval_steps = 500
                 max_eval_batches = 100
+                per_device_eval_batch_size = 10
                 objective_mode = 0
                 priority = "standard"
                 save_steps = 1000  # So that we don't blow up disk space.
 
                 for train_batch_size in (200, 300, 400):
-                    for lr in (1e-3, 7e-4, 5e-5, 3e-4):
+                    # TODO: This was a bug!!!
+                    for lr in (1e-3, 7e-4, 5e-4, 3e-4):
                         # 25 is reasonable to fit on a single GPU; but this gives a problem if we want to test out 5.
                         if train_batch_size < per_device_train_batch_size:
                             per_device_train_batch_size = train_batch_size
@@ -99,7 +101,7 @@ def main(
                             eval_steps=eval_steps,
                             save_steps=save_steps,
                             max_eval_batches=max_eval_batches,
-                            per_device_eval_batch_size=per_device_train_batch_size,
+                            per_device_eval_batch_size=per_device_eval_batch_size,
 
                             per_example_max_grad_norm=max_grad_norm,
                             noise_multiplier=noise_multiplier,

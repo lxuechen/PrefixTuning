@@ -49,11 +49,12 @@ def _get_command(
     gpu=None,  # Randomly grab.
     conda_env="lxuechen-prefix-tuning",
     priority="standard",
+    time=None,
 
     script="gpt2.run_language_modeling",
     train_dir=None,
     ema_model_start_from=1000,
-    ema_model_averaging=True,
+    ema_model_averaging="yes",
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -69,12 +70,8 @@ def _get_command(
     # Check mode.
     if mode == Mode.submit:
         if tuning_mode == "fulltune" and nonprivate == "no":
-            # TODO: This disables setting batch size from the outside.
-            per_device_train_batch_size = 1
-            gradient_accumulation_steps = 5
-            gpu = "3090"  # This stupid thing needs a lot of memory!!!
-        else:
-            gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
+            gpu = "3090"  # This stupid baseline needs a lot of memory!!!
+        gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
 
         if nonprivate == "no":
             if train_dir is None:
@@ -156,7 +153,8 @@ def _get_command(
 
     if mode == Mode.submit:
         command = wrapper.mynlprun_wrapper(
-            command, train_dir=train_dir, gpu=gpu, conda_env=conda_env, priority=priority
+            command,
+            train_dir=train_dir, gpu=gpu, conda_env=conda_env, priority=priority, time=time
         )
         command += "\n"
     return command

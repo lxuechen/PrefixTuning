@@ -5,16 +5,16 @@ new experiments helps with organization and avoids the messiness once there are
 many experiments.
 
 date:
-    062221
+    062321
 purpose:
-    Non-private baseline.
+    Full fine-tuning baseline!
 notes:
-    After PPL bug fix.
+    Can only run on 3090 with a per-device batch size of 1.
 run:
     to generate running scripts:
-        python -m gpt2.launchers.prefix_vs_full_062221_v2 --mode "submit"
+        python -m gpt2.launchers.prefix_vs_full_062321_v2 --mode "submit"
     to run local:
-        python -m gpt2.launchers.prefix_vs_full_062221_v2 --mode "local"
+        python -m gpt2.launchers.prefix_vs_full_062321_v2 --mode "local"
 """
 
 import os
@@ -59,35 +59,36 @@ def main(
         commands = "#!/bin/bash\n"
 
         for seed in seeds:
-            for tuning_mode in ("prefixtune", "fulltune"):
-                for model_name_or_path in ("distilgpt2",):
-                    epochs = 5
+            for model_name_or_path in ("distilgpt2",):
+                epochs = 100  # This will take a few days with intermittent generation!
 
-                    per_device_train_batch_size = 5
-                    train_batch_size = 5
-                    max_grad_norm = 0.1
-                    noise_multiplier = 1
-                    mid_dim = 512
-                    preseqlen = 10
-                    eval_steps = 5000  # Don't eval too frequently!
-                    max_eval_batches = 100
-                    per_device_eval_batch_size = 10
-                    objective_mode = 0
-                    priority = "high"
-                    save_steps = 50000  # So that we don't blow up disk space.
-                    ema_model_averaging = "no"
+                per_device_train_batch_size = 1
+                # TODO: Need this for the non-private baselines as well,
+                #  since we want to evaluate the same set of examples.
+                max_grad_norm = 0.1
+                noise_multiplier = 0.8
+                tuning_mode = "fulltune"
+                mid_dim = 512
+                preseqlen = 10
+                eval_steps = 500
+                max_eval_batches = 100
+                per_device_eval_batch_size = 10
+                objective_mode = 0
+                priority = "high"  # So it cannot be preempted.
+                save_steps = 40000  # So that we don't blow up disk space.
+                time = "30-0"
 
-                    for lr in (1e-4, 5e-5, 1e-5):
-                        # 25 is reasonable to fit on a single GPU; but this gives a problem if we want to test out 5.
+                for train_batch_size in (100, 300):
+                    for lr in (5e-4, 3e-4, 1e-4):
                         if train_batch_size < per_device_train_batch_size:
                             per_device_train_batch_size = train_batch_size
 
                         commands += _get_command(
-                            date="0622",
+                            date="0623",
                             mode=mode,
 
                             seed=seed,
-                            nonprivate="yes",
+                            nonprivate="no",
                             eval_steps=eval_steps,
                             save_steps=save_steps,
                             max_eval_batches=max_eval_batches,
@@ -108,10 +109,10 @@ def main(
                             priority=priority,
 
                             epochs=epochs,
-                            ema_model_averaging=ema_model_averaging,
+                            time=time,
                         )
 
-        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062221_v2.sh')
+        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062321_v2.sh')
         with open(script_path, 'w') as f:
             f.write(commands)
     else:
