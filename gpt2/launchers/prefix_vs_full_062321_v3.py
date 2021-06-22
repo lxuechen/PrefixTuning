@@ -17,9 +17,9 @@ notes:
     More refined learning rate search!
 run:
     to generate running scripts:
-        python -m gpt2.launchers.prefix_vs_full_062321 --mode "submit"
+        python -m gpt2.launchers.prefix_vs_full_062321_v3 --mode "submit"
     to run local:
-        python -m gpt2.launchers.prefix_vs_full_062321 --mode "local"
+        python -m gpt2.launchers.prefix_vs_full_062321_v3 --mode "local"
 """
 
 import os
@@ -86,7 +86,7 @@ def main(
                 save_steps = 1000  # So that we don't blow up disk space.
 
                 for train_batch_size in (200, 300, 400):
-                    for lr in (1e-3, 7e-4, 5e-4, 3e-4):
+                    for lr in (7e-4,):
                         # 25 is reasonable to fit on a single GPU; but this gives a problem if we want to test out 5.
                         if train_batch_size < per_device_train_batch_size:
                             per_device_train_batch_size = train_batch_size
@@ -119,7 +119,7 @@ def main(
                             epochs=epochs,
                         )
 
-        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062321.sh')
+        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062321_v3.sh')
         with open(script_path, 'w') as f:
             f.write(commands)
     else:
