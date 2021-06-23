@@ -56,3 +56,8 @@ for model_tag in ("model", "ema_model"):
                 f"{global_steps} --img_dir {img_dir}")
 
 # python -m gpt2.eval.date_0623
+
+# @formatter:off
+# Most economical so far:
+# model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_0_80000000_learning_rate_0_00070000_train_batch_size_00000200_mid_dim_00000512_preseqlen_00000010/0/generations_model/eval/global_step_00010000.txt
+# @formatter:on
