@@ -70,7 +70,7 @@ def main(
                 tuning_mode = "scratchtune"
                 mid_dim = 512
                 preseqlen = 10
-                eval_steps = 500
+                eval_steps = 1000
                 max_eval_batches = 100
                 per_device_eval_batch_size = 10
                 objective_mode = 0
