@@ -69,7 +69,7 @@ def _get_command(
 
     # Check mode.
     if mode == Mode.submit:
-        if tuning_mode == "fulltune" and nonprivate == "no":
+        if tuning_mode in ("fulltune", "scratchtune") and nonprivate == "no":
             gpu = "3090"  # This stupid baseline needs a lot of memory!!!
         gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
 
