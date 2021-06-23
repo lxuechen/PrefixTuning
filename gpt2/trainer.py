@@ -361,19 +361,23 @@ class Trainer:
         )
         dataset.set_format(type=dataset.format["type"], columns=columns)
 
-    def _get_train_sampler(self) -> Optional[torch.utils.data.sampler.Sampler]:
+    def _get_train_sampler(self, shuffle=True) -> Optional[torch.utils.data.sampler.Sampler]:
         if isinstance(self.train_dataset, torch.utils.data.IterableDataset):
             return None
         elif is_torch_tpu_available():
             return get_tpu_sampler(self.train_dataset)
         else:
-            return (
-                RandomSampler(self.train_dataset)
-                if self.args.local_rank == -1
-                else DistributedSampler(self.train_dataset)
-            )
+            # Sometimes we don't want to shuffle!
+            if shuffle:
+                return (
+                    RandomSampler(self.train_dataset)
+                    if self.args.local_rank == -1
+                    else DistributedSampler(self.train_dataset)
+                )
+            else:
+                return SequentialSampler(self.train_dataset)
 
-    def get_train_dataloader(self) -> DataLoader:
+    def get_train_dataloader(self, train_sampler=None) -> DataLoader:
         """
         Returns the training :class:`~torch.utils.data.DataLoader`.
 
@@ -384,7 +388,9 @@ class Trainer:
         """
         if self.train_dataset is None:
             raise ValueError("Trainer: training requires a train_dataset.")
-        train_sampler = self._get_train_sampler()
+
+        if train_sampler is None:
+            train_sampler = self._get_train_sampler()
 
         return DataLoader(
             self.train_dataset,
@@ -1262,7 +1268,7 @@ class Trainer:
             logger.info("Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
             shutil.rmtree(checkpoint)
 
-    def evaluate(self, eval_dataset: Optional[Dataset] = None, log_results=True) -> Dict[str, float]:
+    def evaluate(self, log_results=True) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
 
@@ -1275,16 +1281,27 @@ class Trainer:
             eval_dataset (:obj:`Dataset`, `optional`):
                 Pass a dataset if you wish to override :obj:`self.eval_dataset`. If it is an :obj:`datasets.Dataset`,
                 columns not accepted by the ``model.forward()`` method are automatically removed.
+            log_results:
+                Store the results in `self.log_history` and print to stdout.
 
         Returns:
             A dictionary containing the evaluation loss and the potential metrics computed from the predictions.
         """
-        eval_dataloader = self.get_eval_dataloader(eval_dataset)
 
-        output = self.prediction_loop(eval_dataloader, description="Evaluation")
+        eval_dataloader = self.get_eval_dataloader(self.eval_dataset)
+        eval_output = self.prediction_loop(eval_dataloader, description="Evaluate eval split")
+
+        val_dataloader = self.get_eval_dataloader(self.val_dataset)
+        val_output = self.prediction_loop(val_dataloader, description="Evaluate val split")
+
+        train_sampler = self._get_train_sampler(shuffle=False)  # Don't shuffle during evaluation!
+        train_dataloader = self.get_train_dataloader(train_sampler=train_sampler)
+        train_output = self.prediction_loop(train_dataloader, description="Evaluate train split")
+
+        metrics = {"train": train_output.metrics, "eval": eval_output.metrics, "val": val_output.metrics}
 
         if log_results:
-            self.log(output.metrics)
+            self.log(metrics)
 
             # Save log history always! This must appear after the `log_history` is updated.
             json.dump(
@@ -1298,9 +1315,10 @@ class Trainer:
             # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
             xm.master_print(met.metrics_report())
 
+        # Sequence generation!
         self.generate_and_write_to_file()
 
-        return output.metrics
+        return metrics
 
     def _get_loader_by_split(self, split):
         if split == "train":

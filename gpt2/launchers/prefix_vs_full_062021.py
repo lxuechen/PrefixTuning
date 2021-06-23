@@ -46,7 +46,7 @@ def main(
     if mode == Mode.local:
         command = _get_command(
             seed=kwargs.pop('seed', 0),  # Make this a positional argument; treat it specially!
-            epochs=1,
+            epochs=kwargs.pop('epochs', 1),
             tuning_mode=tuning_mode,
             mode=mode,
             max_steps=max_steps,

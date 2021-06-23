@@ -350,20 +350,14 @@ def main():
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
 
-        eval_output = trainer.evaluate(eval_dataset, log_results=False)
-        eval_file = os.path.join(training_args.output_dir, "eval_results.json")
-        utils.jdump(eval_output, eval_file)
-
-        val_output = trainer.evaluate(val_dataset, log_results=False)
-        val_file = os.path.join(training_args.output_dir, "val_results.json")
-        utils.jdump(val_output, val_file)
-
-        train_output = trainer.evaluate(train_dataset, log_results=False)
-        train_file = os.path.join(training_args.output_dir, "train_results.json")
-        utils.jdump(train_output, train_file)
+        output = trainer.evaluate(log_results=False)
+        utils.jdump(
+            output,
+            os.path.join(training_args.output_dir, "final_results.json")
+        )
 
         logger.info("***** Eval results *****")
-        logger.info(train_output)
+        logger.info(output)
 
 
 def _mp_fn(index):
