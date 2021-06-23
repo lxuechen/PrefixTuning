@@ -353,7 +353,7 @@ def main():
         output = trainer.evaluate(log_results=False)
         utils.jdump(
             output,
-            os.path.join(training_args.output_dir, "final_results.json")
+            os.path.join(training_args.output_dir, "final_results.json"),
         )
 
         logger.info("***** Eval results *****")

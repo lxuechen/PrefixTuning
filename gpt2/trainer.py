@@ -1220,7 +1220,7 @@ class Trainer:
         # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
         json.dump(
-            self.log_history, open(os.path.join(output_dir, "log_history.json"), "w"), indent=2, ensure_ascii=False
+            self.log_history, open(os.path.join(output_dir, "log_history.json"), "w"), indent=4, ensure_ascii=False
         )
 
     def store_flos(self):
