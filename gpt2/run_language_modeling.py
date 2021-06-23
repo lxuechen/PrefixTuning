@@ -260,6 +260,7 @@ def main():
     elif model_args.tuning_mode == "scratchtune":  # Training from scratch.
         model = gpt2
         model.init_weights()
+        logging.warning('Reinitialized weights!')
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
