@@ -45,7 +45,7 @@ def main(
 ):
     if mode == Mode.local:
         command = _get_command(
-            seed=0,
+            seed=kwargs.pop('seed', 0),  # Make this a positional argument; treat it specially!
             epochs=1,
             tuning_mode=tuning_mode,
             mode=mode,
