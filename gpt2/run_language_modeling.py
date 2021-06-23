@@ -37,7 +37,6 @@ from transformers import (
     LineByLineWebNLGTextDataset,  # modified
     PreTrainedTokenizer,
     TextDataset,
-    Trainer,
     set_seed,
     GPT2LMHeadModel,
 )
@@ -258,6 +257,7 @@ def main():
         )
     elif model_args.tuning_mode == "fulltune":
         model = gpt2
+    # TODO: Add a train from scratch option!
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
