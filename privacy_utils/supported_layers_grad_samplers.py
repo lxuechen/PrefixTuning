@@ -302,10 +302,8 @@ def _compute_embedding_grad_sample(
 def _custom_compute_conv1d_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ):
-    gs = torch.einsum("n...i,n...j->n...ij", B, A)
-    _create_or_extend_grad_sample(
-        layer.weight, torch.einsum("n...ij->nji", gs), batch_dim
-    )
+    gs = torch.einsum("n...i,n...j->nij", B, A)
+    _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
     if layer.bias is not None:
         _create_or_extend_grad_sample(
             layer.bias,
