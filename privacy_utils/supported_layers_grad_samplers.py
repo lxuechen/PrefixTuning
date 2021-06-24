@@ -14,9 +14,9 @@ Attributes:
 from typing import Union
 
 import numpy as np
-import torch
 from opacus.layers.dp_lstm import LSTMLinear
 from opacus.layers.dp_multihead_attention import SequenceBias
+import torch
 from torch import nn
 from torch.functional import F
 
@@ -42,10 +42,12 @@ def _create_or_extend_grad_sample(
     if hasattr(param, "requires_grad") and not param.requires_grad:
         return
 
+    # This now has a similar functionality as `_create_or_accumulate_grad_sample` and if useful if a specific Linear
+    # layer is reused.
     if hasattr(param, "grad_sample"):
-        param.grad_sample += grad_sample  # Accumulate per-example gradients when parameter is reused.
+        param.grad_sample += grad_sample.detach()  # Accumulate per-example gradients when parameter is reused.
     else:
-        param.grad_sample = grad_sample
+        param.grad_sample = grad_sample.detach()
 
     # Original opacus below.
     # if hasattr(param, "grad_sample"):
@@ -92,10 +94,8 @@ def _compute_linear_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    gs = torch.einsum("n...i,n...j->n...ij", B, A)
-    _create_or_extend_grad_sample(
-        layer.weight, torch.einsum("n...ij->nij", gs), batch_dim
-    )
+    gs = torch.einsum("n...i,n...j->nij", B, A)
+    _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
     if layer.bias is not None:
         _create_or_extend_grad_sample(
             layer.bias,
@@ -117,10 +117,8 @@ def _compute_accumulate_linear_grad_sample(
         batch_dim: Batch dimension position
     """
 
-    gs = torch.einsum("n...i,n...j->n...ij", B, A)
-    _create_or_accumulate_grad_sample(
-        layer.weight, torch.einsum("n...ij->nij", gs), batch_dim, layer
-    )
+    gs = torch.einsum("n...i,n...j->nij", B, A)
+    _create_or_accumulate_grad_sample(layer.weight, gs, batch_dim, layer)
 
     if layer.bias is not None:
         _create_or_accumulate_grad_sample(
