@@ -170,7 +170,12 @@ class EfficientPrivacyEngine(object):
         # Add noise and scale by inverse batch size.
         signals, noises = [], []
         for name, param in self.named_params:
-            # It's ultra important to override the default gradients.
+            # This is only True when there are previous virtual steps.
+            # The .grad contains the summed clipped gradients of this batch.
+            # Summed clipped gradients of previous batches are in .summed_grad.
+            # When there's no gradient accumulation, .summed_grad is not created.
+            if hasattr(param, 'summed_grad'):
+                param.grad += param.summed_grad
             signals.append(param.grad.reshape(-1).norm(2))
 
             if self.noise_multiplier > 0 and self.max_grad_norm > 0:
@@ -204,21 +209,24 @@ class EfficientPrivacyEngine(object):
 
     def zero_grad(self):
         for name, param in self.named_params:
-            # `param.grad` gets cleared in `original_step`, so we need only
-            # clear the rest here!
-            if hasattr(param, "grad_sample"):
-                del param.grad_sample
-            if hasattr(param, "summed_grad"):
-                del param.summed_grad
-            # This is more memory-friendly than `tensor.zero_()`.
             if hasattr(param, "grad"):
                 del param.grad
             if hasattr(param, "norm_sample"):
                 del param.norm_sample
+            if hasattr(param, "summed_grad"):
+                del param.summed_grad
 
-    # TODO: Presumably need to store summed_grad somewhere else for this to work!
     def virtual_step(self):
-        raise ValueError
+        for name, param in self.named_params:
+            if hasattr(param, 'summed_grad'):
+                param.summed_grad += param.grad
+            else:
+                param.summed_grad = param.grad
+
+            if hasattr(param, "grad"):
+                del param.grad
+            if hasattr(param, "norm_sample"):
+                del param.norm_sample
 
     def get_clipping_coef(self):
         norm_sample = torch.stack([param.norm_sample for name, param in self.named_params], dim=0).norm(2, dim=0)

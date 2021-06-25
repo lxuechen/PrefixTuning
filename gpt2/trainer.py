@@ -1112,8 +1112,7 @@ class Trainer:
         else:
             from experimental.privacy_utils import autograd_grad_sample
 
-            # TODO: Might not work with gradient accumulation!
-            # TODO: Check the internals to make sure it's working as intended.
+            # TODO: Write a test to make sure this works! Easiest thing is to compare with for-loop.
             if hasattr(self.optimizer, 'privacy_engine') and self.args.efficient:
                 pe = self.optimizer.privacy_engine
 
