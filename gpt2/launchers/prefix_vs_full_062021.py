@@ -35,7 +35,6 @@ def main(
     # For local testing; don't modify these defaults!
     tuning_mode="prefixtune",
     nonprivate="yes",
-    max_steps=1,
     max_eval_batches=20,
 
     max_jobs_in_queue=10,  # Number of jobs in each batch.
@@ -47,9 +46,9 @@ def main(
         command = _get_command(
             seed=kwargs.pop('seed', 0),  # Make this a positional argument; treat it specially!
             epochs=kwargs.pop('epochs', 1),
+            max_steps=kwargs.pop('epochs', -1),
             tuning_mode=tuning_mode,
             mode=mode,
-            max_steps=max_steps,
             max_eval_batches=max_eval_batches,
             nonprivate=nonprivate,
             **kwargs,
