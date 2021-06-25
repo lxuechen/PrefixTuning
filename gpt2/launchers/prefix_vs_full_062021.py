@@ -46,7 +46,7 @@ def main(
         command = _get_command(
             seed=kwargs.pop('seed', 0),  # Make this a positional argument; treat it specially!
             epochs=kwargs.pop('epochs', 1),
-            max_steps=kwargs.pop('epochs', -1),
+            max_steps=kwargs.pop('max_steps', -1),
             tuning_mode=tuning_mode,
             mode=mode,
             max_eval_batches=max_eval_batches,
