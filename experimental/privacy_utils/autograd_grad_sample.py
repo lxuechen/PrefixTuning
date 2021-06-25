@@ -13,17 +13,21 @@ Notes:
     currently supported by opacus.
 """
 
+import copy
 from typing import Tuple
 
+from opacus.layers.dp_lstm import LSTMLinear
 import torch
 import torch.nn as nn
-from opacus.layers.dp_lstm import LSTMLinear
 
-from privacy_utils.supported_layers_grad_samplers import _supported_layers_grad_samplers
-from privacy_utils.utils.module_inspection import get_layer_type, requires_grad
+from experimental.privacy_utils.supported_layers_grad_samplers import _supported_layers_grad_samplers
+from experimental.privacy_utils.utils.module_inspection import get_layer_type, requires_grad
 
 # work-around for https://github.com/pytorch/pytorch/issues/25723
 _hooks_disabled: bool = False
+
+# Either `norm` or `grad`
+_hooks_mode: str = "norm"
 
 
 def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool = True):
@@ -107,6 +111,18 @@ def enable_hooks():
     _hooks_disabled = False
 
 
+def set_hooks_mode(mode):
+    if not mode in ("norm", "grad"):
+        raise ValueError(f"Unknown mode for backward hooks: {mode}")
+    global _hooks_mode
+    _hooks_mode = mode
+
+
+def get_hooks_mode():
+    global _hooks_mode
+    return copy.deepcopy(_hooks_mode)
+
+
 def is_supported(layer: nn.Module) -> bool:
     r"""Checks if the ``layer`` is supported by this library.
 
@@ -180,8 +196,13 @@ def _capture_backprops(
     if _hooks_disabled:
         return
 
-    backprops = outputs[0].detach()
-    _compute_grad_sample(layer, backprops, loss_reduction, batch_first)
+    if _hooks_mode == "grad":
+        for param in layer.parameters():
+            if hasattr(param, 'grad'):
+                del param.grad
+    else:
+        backprops = outputs[0].detach()
+        _compute_grad_sample(layer, backprops, loss_reduction, batch_first)
 
 
 def _compute_grad_sample(

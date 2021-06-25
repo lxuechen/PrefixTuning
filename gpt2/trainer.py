@@ -1110,7 +1110,25 @@ class Trainer:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
-            loss.backward()
+            from experimental.privacy_utils import autograd_grad_sample
+
+            # TODO: Might not work with gradient accumulation!
+            # TODO: Check the internals to make sure it's working as intended.
+            if hasattr(self.optimizer, 'privacy_engine') and self.args.efficient:
+                pe = self.optimizer.privacy_engine
+
+                autograd_grad_sample.set_hooks_mode(mode="norm")
+                first_loss = loss.mean(dim=0)
+                first_loss.backward(retain_graph=True)
+
+                autograd_grad_sample.set_hooks_mode(mode="grad")
+                coef_sample = pe.get_clipping_coef()
+                second_loss = (coef_sample * loss).sum(dim=0)  # Sum here, since division is taken in `step`.
+                second_loss.backward()
+
+                loss = loss.mean(dim=0)  # Just for returning.
+            else:
+                loss.mean(dim=0).backward()
 
         return loss.detach()
 

@@ -55,6 +55,7 @@ def _get_command(
     train_dir=None,
     ema_model_start_from=1000,
     ema_model_averaging="yes",
+    efficient="no",
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -148,6 +149,7 @@ def _get_command(
         --eval_prompt_file {EVAL_PROMPT_FILE} \
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
+        --efficient {efficient} \
         --overwrite_output_dir'
     # @formatter:off
 

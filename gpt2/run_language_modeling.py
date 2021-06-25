@@ -43,7 +43,6 @@ from transformers import (
 
 from gpt2.trainer import Trainer
 from lxuechen_utils import utils
-import privacy_utils
 from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
 
@@ -297,7 +296,13 @@ def main():
     if privacy_args.nonprivate == "no":
         # TODO: Why does the per_example_max_grad_norm not affect things by much???
         actual_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
-        privacy_engine = privacy_utils.privacy_engine.PrivacyEngine(
+        if training_args.efficient:
+            from experimental.privacy_utils.privacy_engine import EfficientPrivacyEngine
+            cls = EfficientPrivacyEngine
+        else:
+            import privacy_utils
+            cls = privacy_utils.privacy_engine.PrivacyEngine
+        privacy_engine = cls(
             module=model,
 
             # Privacy specific arguments.

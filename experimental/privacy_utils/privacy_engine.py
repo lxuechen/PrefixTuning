@@ -1,4 +1,3 @@
-import collections
 import logging
 import math
 import types
@@ -8,8 +7,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from privacy_utils import autograd_grad_sample
-from privacy_utils.accounting import gdp_accounting, rdp_accounting
+from experimental.privacy_utils import autograd_grad_sample
+from experimental.privacy_utils.accounting import gdp_accounting, rdp_accounting
 
 DEFAULT_ALPHAS = tuple(1 + x / 10.0 for x in range(1, 100)) + tuple(range(12, 64))
 
@@ -168,24 +167,10 @@ class EfficientPrivacyEngine(object):
     def step(self):
         self.steps += 1
 
-        norm_sample, coef_sample = self._accumulate_summed_grad()
-        self.max_clip = coef_sample.max().item()
-        self.min_clip = coef_sample.min().item()
-        self.med_clip = coef_sample.median().item()
-
         # Add noise and scale by inverse batch size.
         signals, noises = [], []
         for name, param in self.named_params:
             # It's ultra important to override the default gradients.
-            if hasattr(param, 'summed_grad'):
-                param.grad = param.summed_grad
-            else:
-                logging.warning(
-                    f"PrivacyEngine should not reach here; "
-                    f"this means either "
-                    f"1) there is parameter which requires gradient, but was not used in the computational graph, or "
-                    f"2) the backward hook registry failed to find the corresponding module to register."
-                )
             signals.append(param.grad.reshape(-1).norm(2))
 
             if self.noise_multiplier > 0 and self.max_grad_norm > 0:
@@ -228,71 +213,17 @@ class EfficientPrivacyEngine(object):
             # This is more memory-friendly than `tensor.zero_()`.
             if hasattr(param, "grad"):
                 del param.grad
+            if hasattr(param, "norm_sample"):
+                del param.norm_sample
 
+    # TODO: Presumably need to store summed_grad somewhere else for this to work!
     def virtual_step(self):
-        self._accumulate_summed_grad()
-        for name, param in self.named_params:
-            # Del everything except summed_grad to save memory!
-            if hasattr(param, "grad_sample"):
-                del param.grad_sample
-            if hasattr(param, "grad"):
-                del param.grad
+        raise ValueError
 
-    @torch.no_grad()
-    def _accumulate_summed_grad(self):
-        """Accumulate clipped per-sample gradients."""
-        norm_sample = []
-        for name, param in self.named_params:
-            # This multiplication step is solely to counter the loss
-            # division for gradient accumulation in HuggingFace's codebase:
-            # https://github.com/huggingface/transformers/blob/3d339ee6595b9e42925559ae21a0f6e77f032873/src
-            # /transformers/trainer.py#L1523
-            try:
-                # WARNING: This will raise an error if a parameter in the
-                #  computational graph requires gradients but is not used.
-                param.grad_sample *= self.gradient_accumulation_steps
-            except AttributeError as attribute_error:
-                # Clear instructions on what is wrong!
-                args = attribute_error.args
-                attribute_error.args = (args[0] + f" at `{name}`", *args[1:])
-                raise attribute_error
-            batch_size = param.grad_sample.size(0)
-            norm = param.grad_sample.reshape(batch_size, -1).norm(2, dim=1)
-            norm_sample.append(norm)
-
-        # The stack operation here is prone to error, thus clarify where the error is.
-        try:
-            norm_sample = torch.stack(norm_sample, dim=0).norm(2, dim=0)
-        except RuntimeError as runtime_error:
-            args = runtime_error.args
-
-            # Get the major shape.
-            shapes = collections.defaultdict(int)
-            for tensor in norm_sample:
-                shapes[tensor.size()] += 1
-
-            major_shape = None
-            major_count = 0
-            for shape, count in shapes.items():
-                if count > major_count:
-                    major_shape = shape
-            del shape, count
-
-            # Check which tensors don't have the major shape!
-            extra_msg = f" \n*** Major shape: {major_shape}"
-            for (name, param), tensor in zip(list(self.named_params), norm_sample):
-                if tensor.size() != major_shape:
-                    extra_msg += f", {name} wrong shape: {tensor.size()}"
-            extra_msg += " ***"
-            runtime_error.args = (args[0] + extra_msg, *args[1:])
-            raise runtime_error
-
-        coef_sample = torch.clamp_max(self.max_grad_norm / (norm_sample + 1e-6), 1.)
-        for name, param in self.named_params:
-            if not hasattr(param, 'summed_grad'):
-                param.summed_grad = 0.
-            param.summed_grad += torch.einsum("i,i...->...", coef_sample, param.grad_sample)
-        return norm_sample, coef_sample
+    def get_clipping_coef(self):
+        norm_sample = torch.stack([param.norm_sample for name, param in self.named_params], dim=0).norm(2, dim=0)
+        norm_sample *= self.gradient_accumulation_steps
+        return torch.clamp_max(self.max_grad_norm / (norm_sample + 1e-6), 1.)
 
     def get_privacy_spent(self) -> Dict:
         privacy_results = {}

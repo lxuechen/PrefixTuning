@@ -15,14 +15,14 @@
 # limitations under the License.
 """PyTorch OpenAI GPT-2 model."""
 
-import os
-import warnings
 from dataclasses import dataclass
+import os
 from typing import List, Optional, Tuple
+import warnings
 
 import torch
-import torch.nn as nn
 from torch.nn import CrossEntropyLoss
+import torch.nn as nn
 
 from .activations import ACT2FN
 from .configuration_gpt2 import GPT2Config
@@ -803,14 +803,12 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
 
             if self.objective_mode == 0:
                 loss = criterion(shift_logits, shift_labels)
-                loss = loss.mean(dim=1)
+                loss = loss.mean(dim=1)  # (batch_size,).
             elif self.objective_mode == 1:
                 loss = criterion(shift_logits, shift_labels)
-                loss = loss.sum(dim=1)
+                loss = loss.sum(dim=1)  # (batch_size,).
             else:
                 raise ValueError
-
-            loss = loss.mean(dim=0)
         else:
             loss = None
 

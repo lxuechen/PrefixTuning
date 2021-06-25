@@ -20,8 +20,9 @@ import torch
 from torch import nn
 from torch.functional import F
 
-from privacy_utils.utils.module_inspection import get_layer_type
-from privacy_utils.utils.tensor_utils import sum_over_all_but_batch_and_last_n, unfold3d
+from experimental.privacy_utils import autograd_grad_sample
+from experimental.privacy_utils.utils.module_inspection import get_layer_type
+from experimental.privacy_utils.utils.tensor_utils import sum_over_all_but_batch_and_last_n, unfold3d
 
 
 def _create_or_extend_grad_sample(
@@ -42,18 +43,12 @@ def _create_or_extend_grad_sample(
     if hasattr(param, "requires_grad") and not param.requires_grad:
         return
 
-    # This now has a similar functionality as `_create_or_accumulate_grad_sample` and if useful if a specific Linear
-    # layer is reused.
-    if hasattr(param, "grad_sample"):
-        param.grad_sample += grad_sample.detach()  # Accumulate per-example gradients when parameter is reused.
-    else:
-        param.grad_sample = grad_sample.detach()
+    grad_sample = grad_sample.detach()
 
-    # Original opacus below.
-    # if hasattr(param, "grad_sample"):
-    #     param.grad_sample = torch.cat((param.grad_sample, grad_sample), batch_dim)
-    # else:
-    #     param.grad_sample = grad_sample
+    if autograd_grad_sample.get_hooks_mode() == "norm":
+        param.norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
+    else:  # mode == "grad"; should not get here.
+        raise ValueError
 
 
 def _create_or_accumulate_grad_sample(
@@ -71,6 +66,8 @@ def _create_or_accumulate_grad_sample(
             ``grad_sample``
     """
 
+    # TODO: This is not modified to suit the double-backward memory efficient procedure, but is only
+    #  used for LSTMs, so we're fine for now.
     if hasattr(param, "grad_sample"):
         param.grad_sample[: grad_sample.shape[0]] += grad_sample
     else:
@@ -302,10 +299,8 @@ def _compute_embedding_grad_sample(
 def _custom_compute_conv1d_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ):
-    gs = torch.einsum("n...i,n...j->n...ij", B, A)
-    _create_or_extend_grad_sample(
-        layer.weight, torch.einsum("n...ij->nji", gs), batch_dim
-    )
+    gs = torch.einsum("n...i,n...j->nij", B, A)
+    _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
     if layer.bias is not None:
         _create_or_extend_grad_sample(
             layer.bias,
