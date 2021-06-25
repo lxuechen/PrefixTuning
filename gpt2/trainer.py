@@ -1126,9 +1126,10 @@ class Trainer:
                 second_loss = (coef_sample * loss).sum(dim=0)  # Sum here, since division is taken in `step`.
                 second_loss.backward()
 
-                loss = loss.mean(dim=0)  # Just for returning.
+                loss = loss.mean(dim=0)  # Just for returning; not for backward.
             else:
-                loss.mean(dim=0).backward()
+                loss = loss.mean(dim=0)
+                loss.backward()
 
         return loss.detach()
 
