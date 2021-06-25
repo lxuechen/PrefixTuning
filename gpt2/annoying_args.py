@@ -298,6 +298,7 @@ class TrainingArguments(transformers.TrainingArguments):
 
     def __post_init__(self):
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))
+        self.efficient = (self.efficient.lower() in ('y', 'yes'))
 
 
 @dataclass
