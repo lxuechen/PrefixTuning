@@ -332,3 +332,9 @@ class PrivacyArguments:
     accounting_mode: str = field(
         default="rdp_cks", metadata={"help": "One of (`rdp`, `gdp`, `rdp_cks`, `all`)."}
     )
+
+    def __post_init__(self):
+        if self.target_epsilon < 0:
+            self.target_epsilon = None
+        if self.target_delta < 0:
+            self.target_delta = None

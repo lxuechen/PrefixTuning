@@ -56,9 +56,20 @@ def _get_command(
     ema_model_start_from=1000,
     ema_model_averaging="yes",
     efficient="no",
+
+    # -1 is just a default value.
+    target_epsilon=-1,
+    target_delta=-1,
+    task_mode="data2text",
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
+
+    if target_delta < 0:
+        if task_mode == "data2text":
+            target_delta = 1e-5
+        else:
+            raise ValueError(f"Unknown task_mode: {task_mode}")
 
     # Standardize.
     learning_rate_str = wrapper.float2str(learning_rate)
@@ -101,7 +112,7 @@ def _get_command(
     logging_dir = train_dir
     command = f'python -m {script} \
         --output_dir {train_dir} \
-        --task_mode "data2text" \
+        --task_mode {task_mode} \
         --model_type {model_type} \
         --model_name_or_path {model_name_or_path} \
         --tokenizer_name {model_name_or_path} \
@@ -150,6 +161,8 @@ def _get_command(
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
         --efficient {efficient} \
+        --target_delta {target_delta} \
+        --target_epsilon {target_epsilon} \
         --overwrite_output_dir'
     # @formatter:off
 
