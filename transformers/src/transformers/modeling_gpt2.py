@@ -679,6 +679,9 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
     def get_output_embeddings(self):
         return self.lm_head
 
+    def set_output_embeddings(self, lm_head):
+        self.lm_head = lm_head
+
     def prepare_inputs_for_generation(self, input_ids, past=None, **kwargs):
         if past:
             input_ids = input_ids[:, -1].unsqueeze(-1)

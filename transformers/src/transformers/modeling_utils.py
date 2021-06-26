@@ -14,12 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import inspect
 import os
 import re
-import warnings
-from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+import warnings
 
 import torch
 from torch import Tensor, device, dtype, nn
@@ -42,7 +42,6 @@ from .file_utils import (
 )
 from .generation_utils import GenerationMixin
 from .utils import logging
-
 
 logger = logging.get_logger(__name__)
 
@@ -232,7 +231,8 @@ class ModuleUtilsMixin:
         elif attention_mask.dim() == 2:
             # Provided a padding mask of dimensions [batch_size, seq_length]
             # - if the model is a decoder, apply a causal mask in addition to the padding mask
-            # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length, seq_length]
+            # - if the model is an encoder, make the mask broadcastable to [batch_size, num_heads, seq_length,
+            # seq_length]
             if self.config.is_decoder:
                 batch_size, seq_length = input_shape
                 seq_ids = torch.arange(seq_length, device=device)
@@ -265,7 +265,8 @@ class ModuleUtilsMixin:
         Prepare the head mask if needed.
 
         Args:
-            head_mask (:obj:`torch.Tensor` with shape :obj:`[num_heads]` or :obj:`[num_hidden_layers x num_heads]`, `optional`):
+            head_mask (:obj:`torch.Tensor` with shape :obj:`[num_heads]` or :obj:`[num_hidden_layers x num_heads]`,
+            `optional`):
                 The mask indicating if we should keep the heads or not (1.0 for keep, 0.0 for discard).
             num_hidden_layers (:obj:`int`):
                 The number of hidden layers in the model.
@@ -344,7 +345,8 @@ class ModuleUtilsMixin:
         """
         Get number of (optionally, non-embeddings) floating-point operations for the forward and backward passes of a
         batch with this transformer model. Default approximation neglects the quadratic dependency on the number of
-        tokens (valid if :obj:`12 * d_model << sequence_length`) as laid out in `this paper <https://arxiv.org/pdf/2001.08361.pdf>`__ section
+        tokens (valid if :obj:`12 * d_model << sequence_length`) as laid out in `this paper
+        <https://arxiv.org/pdf/2001.08361.pdf>`__ section
         2.1. Should be  overriden for transformers with parameter re-use e.g. Albert or Universal Transformers, or
         if doing long-range modeling with very high sequence lengths.
 
@@ -523,7 +525,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
                         continue
                     elif depth > 500:
                         raise ValueError(
-                            "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is a circular dependency between two or more `nn.Modules` of your model."
+                            "Max depth of recursive function `tie_encoder_to_decoder` reached. It seems that there is "
+                            "a circular dependency between two or more `nn.Modules` of your model."
                         )
                     else:
                         decoder_name = encoder_name = name
@@ -583,6 +586,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         """
         base_model = getattr(self, self.base_model_prefix, self)  # get the base model if needed
         model_embeds = base_model._resize_token_embeddings(new_num_tokens)
+        # --- lxuechen: Enable non-sharing. ---
+        if not self.config.tie_word_embeddings:
+            self._resize_output_embeddings(new_num_tokens)
         if new_num_tokens is None:
             return model_embeds
 
@@ -594,6 +600,18 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         self.tie_weights()
 
         return model_embeds
+
+    # --- lxuechen: Enable non-sharing. ---
+    def _resize_output_embeddings(self, new_num_tokens):
+        if new_num_tokens is None:
+            return
+        old_lm_head = self.get_output_embeddings()
+        new_lm_head = nn.Linear(self.config.n_embd, new_num_tokens, bias=False).to(old_lm_head.weight.device)
+        self._init_weights(new_lm_head)
+
+        old_vocab_size = self.config.vocab_size
+        new_lm_head.weight.data[:old_vocab_size, :] = old_lm_head.weight.data[:old_vocab_size, :]
+        self.set_output_embeddings(new_lm_head)
 
     def _resize_token_embeddings(self, new_num_tokens):
         old_embeddings = self.get_input_embeddings()
@@ -823,7 +841,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             >>> # Update configuration during loading.
             >>> model = BertModel.from_pretrained('bert-base-uncased', output_attentions=True)
             >>> assert model.config.output_attentions == True
-            >>> # Loading from a TF checkpoint file instead of a PyTorch model (slower, for example purposes, not runnable).
+            >>> # Loading from a TF checkpoint file instead of a PyTorch model (slower, for example purposes,
+            not runnable).
             >>> config = BertConfig.from_json_file('./tf_model/my_tf_model_config.json')
             >>> model = BertModel.from_pretrained('./tf_model/my_tf_checkpoint.ckpt.index', from_tf=True, config=config)
         """
@@ -880,7 +899,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             elif os.path.isfile(pretrained_model_name_or_path + ".index"):
                 assert (
                     from_tf
-                ), "We found a TensorFlow checkpoint at {}, please set from_tf to True to load from this checkpoint".format(
+                ), "We found a TensorFlow checkpoint at {}, please set from_tf to True to load from this " \
+                   "checkpoint".format(
                     pretrained_model_name_or_path + ".index"
                 )
                 archive_file = pretrained_model_name_or_path + ".index"
@@ -907,8 +927,10 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
             except EnvironmentError:
                 msg = (
                     f"Can't load weights for '{pretrained_model_name_or_path}'. Make sure that:\n\n"
-                    f"- '{pretrained_model_name_or_path}' is a correct model identifier listed on 'https://huggingface.co/models'\n\n"
-                    f"- or '{pretrained_model_name_or_path}' is the correct path to a directory containing a file named one of {WEIGHTS_NAME}, {TF2_WEIGHTS_NAME}, {TF_WEIGHTS_NAME}.\n\n"
+                    f"- '{pretrained_model_name_or_path}' is a correct model identifier listed on "
+                    f"'https://huggingface.co/models'\n\n"
+                    f"- or '{pretrained_model_name_or_path}' is the correct path to a directory containing a file "
+                    f"named one of {WEIGHTS_NAME}, {TF2_WEIGHTS_NAME}, {TF_WEIGHTS_NAME}.\n\n"
                 )
                 raise EnvironmentError(msg)
 
@@ -947,7 +969,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
                     model = load_tf2_checkpoint_in_pytorch_model(model, resolved_archive_file, allow_missing_keys=True)
                 except ImportError:
                     logger.error(
-                        "Loading a TensorFlow model in PyTorch, requires both PyTorch and TensorFlow to be installed. Please see "
+                        "Loading a TensorFlow model in PyTorch, requires both PyTorch and TensorFlow to be installed. "
+                        "Please see "
                         "https://pytorch.org/ and https://www.tensorflow.org/install/ for installation instructions."
                     )
                     raise
@@ -1022,22 +1045,29 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
                 logger.warning(
                     f"Some weights of the model checkpoint at {pretrained_model_name_or_path} were not used when "
                     f"initializing {model.__class__.__name__}: {unexpected_keys}\n"
-                    f"- This IS expected if you are initializing {model.__class__.__name__} from the checkpoint of a model trained on another task "
-                    f"or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPretraining model).\n"
-                    f"- This IS NOT expected if you are initializing {model.__class__.__name__} from the checkpoint of a model that you expect "
-                    f"to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model)."
+                    f"- This IS expected if you are initializing {model.__class__.__name__} from the checkpoint of a "
+                    f"model trained on another task "
+                    f"or with another architecture (e.g. initializing a BertForSequenceClassification model from a "
+                    f"BertForPretraining model).\n"
+                    f"- This IS NOT expected if you are initializing {model.__class__.__name__} from the checkpoint "
+                    f"of a model that you expect "
+                    f"to be exactly identical (initializing a BertForSequenceClassification model from a "
+                    f"BertForSequenceClassification model)."
                 )
             else:
                 logger.info(f"All model checkpoint weights were used when initializing {model.__class__.__name__}.\n")
             if len(missing_keys) > 0:
                 logger.warning(
-                    f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at {pretrained_model_name_or_path} "
+                    f"Some weights of {model.__class__.__name__} were not initialized from the model checkpoint at "
+                    f"{pretrained_model_name_or_path} "
                     f"and are newly initialized: {missing_keys}\n"
-                    f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference."
+                    f"You should probably TRAIN this model on a down-stream task to be able to use it for predictions "
+                    f"and inference."
                 )
             else:
                 logger.info(
-                    f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at {pretrained_model_name_or_path}.\n"
+                    f"All the weights of {model.__class__.__name__} were initialized from the model checkpoint at "
+                    f"{pretrained_model_name_or_path}.\n"
                     f"If your task is similar to the task the model of the checkpoint was trained on, "
                     f"you can already use {model.__class__.__name__} for predictions without further training."
                 )
@@ -1271,17 +1301,25 @@ class SquadHeadOutput(ModelOutput):
     Base class for outputs of question answering models using a :class:`~transformers.modeling_utils.SQuADHead`.
 
     Args:
-        loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned if both :obj:`start_positions` and :obj:`end_positions` are provided):
-            Classification loss as the sum of start token, end token (and is_impossible if provided) classification losses.
-        start_top_log_probs (``torch.FloatTensor`` of shape ``(batch_size, config.start_n_top)``, `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
+        loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned if both :obj:`start_positions` and
+        :obj:`end_positions` are provided):
+            Classification loss as the sum of start token, end token (and is_impossible if provided) classification
+            losses.
+        start_top_log_probs (``torch.FloatTensor`` of shape ``(batch_size, config.start_n_top)``, `optional`,
+        returned if ``start_positions`` or ``end_positions`` is not provided):
             Log probabilities for the top config.start_n_top start token possibilities (beam-search).
-        start_top_index (``torch.LongTensor`` of shape ``(batch_size, config.start_n_top)``, `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
+        start_top_index (``torch.LongTensor`` of shape ``(batch_size, config.start_n_top)``, `optional`, returned if
+        ``start_positions`` or ``end_positions`` is not provided):
             Indices for the top config.start_n_top start token possibilities (beam-search).
-        end_top_log_probs (``torch.FloatTensor`` of shape ``(batch_size, config.start_n_top * config.end_n_top)``, `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
-            Log probabilities for the top ``config.start_n_top * config.end_n_top`` end token possibilities (beam-search).
-        end_top_index (``torch.LongTensor`` of shape ``(batch_size, config.start_n_top * config.end_n_top)``, `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
+        end_top_log_probs (``torch.FloatTensor`` of shape ``(batch_size, config.start_n_top * config.end_n_top)``,
+        `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
+            Log probabilities for the top ``config.start_n_top * config.end_n_top`` end token possibilities (
+            beam-search).
+        end_top_index (``torch.LongTensor`` of shape ``(batch_size, config.start_n_top * config.end_n_top)``,
+        `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
             Indices for the top ``config.start_n_top * config.end_n_top`` end token possibilities (beam-search).
-        cls_logits (``torch.FloatTensor`` of shape ``(batch_size,)``, `optional`, returned if ``start_positions`` or ``end_positions`` is not provided):
+        cls_logits (``torch.FloatTensor`` of shape ``(batch_size,)``, `optional`, returned if ``start_positions`` or
+        ``end_positions`` is not provided):
             Log probabilities for the ``is_impossible`` label of the answers.
 
     """
@@ -1366,7 +1404,8 @@ class SQuADHead(nn.Module):
                 loss_fct_cls = nn.BCEWithLogitsLoss()
                 cls_loss = loss_fct_cls(cls_logits, is_impossible)
 
-                # note(zhiliny): by default multiply the loss by 0.5 so that the scale is comparable to start_loss and end_loss
+                # note(zhiliny): by default multiply the loss by 0.5 so that the scale is comparable to start_loss
+                # and end_loss
                 total_loss += cls_loss * 0.5
 
             return SquadHeadOutput(loss=total_loss) if return_dict else (total_loss,)
@@ -1477,7 +1516,8 @@ class SequenceSummary(nn.Module):
         Args:
             hidden_states (:obj:`torch.FloatTensor` of shape :obj:`[batch_size, seq_len, hidden_size]`):
                 The hidden states of the last layer.
-            cls_index (:obj:`torch.LongTensor` of shape :obj:`[batch_size]` or :obj:`[batch_size, ...]` where ... are optional leading dimensions of :obj:`hidden_states`, `optional`):
+            cls_index (:obj:`torch.LongTensor` of shape :obj:`[batch_size]` or :obj:`[batch_size, ...]` where ... are
+            optional leading dimensions of :obj:`hidden_states`, `optional`):
                 Used if :obj:`summary_type == "cls_index"` and takes the last token of the sequence as classification
                 token.
 
@@ -1637,7 +1677,8 @@ def apply_chunking_to_forward(
 
         # implement a chunked forward function
         def forward(self, hidden_states):
-            return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head, self.seq_len_dim, hidden_states)
+            return apply_chunking_to_forward(self.forward_chunk, self.chunk_size_lm_head, self.seq_len_dim,
+            hidden_states)
     """
 
     assert len(input_tensors) > 0, "{} has to be a tuple/list of tensors".format(input_tensors)
