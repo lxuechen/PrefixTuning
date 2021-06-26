@@ -243,19 +243,6 @@ class PrivacyEngine(object):
         """Accumulate clipped per-sample gradients."""
         norm_sample = []
         for name, param in self.named_params:
-            # This multiplication step is solely to counter the loss
-            # division for gradient accumulation in HuggingFace's codebase:
-            # https://github.com/huggingface/transformers/blob/3d339ee6595b9e42925559ae21a0f6e77f032873/src
-            # /transformers/trainer.py#L1523
-            try:
-                # WARNING: This will raise an error if a parameter in the
-                #  computational graph requires gradients but is not used.
-                param.grad_sample *= self.gradient_accumulation_steps
-            except AttributeError as attribute_error:
-                # Clear instructions on what is wrong!
-                args = attribute_error.args
-                attribute_error.args = (args[0] + f" at `{name}`", *args[1:])
-                raise attribute_error
             batch_size = param.grad_sample.size(0)
             norm = param.grad_sample.reshape(batch_size, -1).norm(2, dim=1)
             norm_sample.append(norm)

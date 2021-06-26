@@ -465,6 +465,18 @@ GPT2_INPUTS_DOCSTRING = r"""
             Whether or not to return a :class:`~transformers.file_utils.ModelOutput` instead of a plain tuple.
 """
 
+# TODO:
+class CounterEmbedding(nn.Embedding):
+    def __init__(self, *args, **kwargs):
+        super(CounterEmbedding, self).__init__(*args, **kwargs)
+        self._count = 0
+
+    def forward(self, *args, **kwargs):
+        self._count += 1
+        print(self._count, 'fuifkckckckckckkckck')
+        import pdb; pdb.set_trace()
+        return super(CounterEmbedding, self).forward(*args, **kwargs)
+
 
 @add_start_docstrings(
     "The bare GPT2 Model transformer outputting raw hidden-states without any specific head on top.",
@@ -474,7 +486,7 @@ class GPT2Model(GPT2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        self.wte = nn.Embedding(config.vocab_size, config.n_embd)
+        self.wte = CounterEmbedding(config.vocab_size, config.n_embd)
         self.wpe = nn.Embedding(config.n_positions, config.n_embd)
         self.drop = nn.Dropout(config.embd_pdrop)
         self.h = nn.ModuleList([Block(config.n_ctx, config, scale=True) for _ in range(config.n_layer)])

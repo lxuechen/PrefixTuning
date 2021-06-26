@@ -215,6 +215,8 @@ class EfficientPrivacyEngine(object):
                 del param.norm_sample
             if hasattr(param, "summed_grad"):
                 del param.summed_grad
+            if hasattr(param, "grad_sample"):
+                del param.grad_sample
 
     def virtual_step(self):
         for name, param in self.named_params:
@@ -227,10 +229,15 @@ class EfficientPrivacyEngine(object):
                 del param.grad
             if hasattr(param, "norm_sample"):
                 del param.norm_sample
+            if hasattr(param, "grad_sample"):
+                del param.grad_sample
 
-    def get_clipping_coef(self):
+    def get_norm_sample(self):
         norm_sample = torch.stack([param.norm_sample for name, param in self.named_params], dim=0).norm(2, dim=0)
-        norm_sample *= self.gradient_accumulation_steps
+        return norm_sample
+
+    def get_coef_sample(self):
+        norm_sample = self.get_norm_sample()
         return torch.clamp_max(self.max_grad_norm / (norm_sample + 1e-6), 1.)
 
     def get_privacy_spent(self) -> Dict:

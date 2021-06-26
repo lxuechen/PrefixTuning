@@ -26,7 +26,8 @@ from experimental.privacy_utils.utils.tensor_utils import sum_over_all_but_batch
 
 
 def _create_or_extend_grad_sample(
-    param: torch.Tensor, grad_sample: torch.Tensor, batch_dim: int, notes="",
+    param: torch.Tensor, grad_sample: torch.Tensor, batch_dim: int,
+    force_grad_sample: bool = False,
 ) -> None:
     """
     Creates a ``grad_sample`` attribute in the given parameter, or appends to it
@@ -46,7 +47,14 @@ def _create_or_extend_grad_sample(
     grad_sample = grad_sample.detach()
 
     if autograd_grad_sample.get_hooks_mode() == "norm":
-        param.norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
+        # TODO: This is a hack, since only Embedding layers get reused.
+        if force_grad_sample:
+            if not hasattr(param, "grad_sample"):
+                param.grad_sample = grad_sample
+            else:
+                param.grad_sample += grad_sample
+        else:
+            param.norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
     else:  # mode == "grad"; should not get here.
         raise ValueError
 
@@ -296,7 +304,7 @@ def _compute_embedding_grad_sample(
     grad_sample.scatter_add_(1, index, B.reshape(batch_size, -1, layer.embedding_dim))
     torch.backends.cudnn.deterministic = saved
 
-    _create_or_extend_grad_sample(layer.weight, grad_sample, batch_dim, notes="embedding")
+    _create_or_extend_grad_sample(layer.weight, grad_sample, batch_dim)
 
 
 def _custom_compute_conv1d_grad_sample(

@@ -120,9 +120,7 @@ def helper_token2bpe(offsets):
         bpe2token = []
         token2bpe = []
         token_idx = -1
-        # print(example_offset)
         for bpe_idx, (a, b) in enumerate(example_offset):
-            # print(token2bpe, a, b, bpe_idx)
             if b - a > 0:
                 if a == 0:
                     # new token
@@ -630,6 +628,9 @@ class Trainer:
             trial (:obj:`optuna.Trial` or :obj:`Dict[str, Any]`, `optional`):
                 The trial run or the hyperparameter dictionary for hyperparameter search.
         """
+        self.is_private = hasattr(self.optimizer, 'privacy_engine')
+        print('is_private? ', self.is_private)
+
         # This might change the seed so needs to run first.
         self._hp_search_setup(trial)
 
@@ -765,7 +766,9 @@ class Trainer:
             model.zero_grad()
 
             epoch_pbar = tqdm(epoch_iterator, desc="Iteration", disable=disable_tqdm)
+            batches = []
             for step, inputs in enumerate(epoch_iterator):
+                batches.append(inputs)
 
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
@@ -781,13 +784,38 @@ class Trainer:
                     len(epoch_iterator) <= self.args.gradient_accumulation_steps
                     and (step + 1) == len(epoch_iterator)
                 ):
-                    if self.args.fp16 and _use_native_amp:
-                        self.scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
-                    elif self.args.fp16 and _use_apex:
-                        torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.args.max_grad_norm)
-                    else:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+                    # This clipping is evil for private learning.
+                    if not self.is_private:
+                        if self.args.fp16 and _use_native_amp:
+                            self.scaler.unscale_(self.optimizer)
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+                        elif self.args.fp16 and _use_apex:
+                            torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.args.max_grad_norm)
+                        else:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+
+                    # TODO: What is wrong????????
+                    named_params = self.optimizer.privacy_engine.named_params
+                    C = self.optimizer.privacy_engine.max_grad_norm
+                    grad1 = [param.summed_grad + param.grad for _, param in named_params]
+                    grad2 = [torch.zeros_like(param) for _, param in named_params]
+                    total = 0
+                    for batch in batches:
+                        for i in range(self.args.train_batch_size):
+                            this_inputs = {k: v[i:i+1] for k, v in batch.items()}
+                            model.zero_grad()
+                            loss = self.compute_loss(model, this_inputs)
+                            loss.mean(dim=0).backward()
+                            this_grad = [param.grad for _, param in named_params]
+                            this_norm = torch.cat([param.grad.view(-1) for _, param in named_params]).norm(2)
+                            this_ceof = torch.clamp_max(C / (this_norm + 1e-6), 1)
+                            grad2 = [a + this_ceof * b for a, b in utils.zip_(grad2, this_grad)]
+                            total += 1
+
+                    for i, (a, b) in enumerate(utils.zip_(grad1, grad2)):
+                        if not torch.allclose(a, b):
+                            print(named_params[i][0], 'broke', (a - b).norm())
+                    print('one pass')
 
                     if is_torch_tpu_available():
                         xm.optimizer_step(self.optimizer)
@@ -1101,6 +1129,7 @@ class Trainer:
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
 
+        # This is cause of all evil for per-sample gradients.
         if self.args.gradient_accumulation_steps > 1:
             loss = loss / self.args.gradient_accumulation_steps
 
@@ -1112,17 +1141,17 @@ class Trainer:
         else:
             from experimental.privacy_utils import autograd_grad_sample
 
-            # TODO: Write a test to make sure this works! Easiest thing is to compare with for-loop.
-            if hasattr(self.optimizer, 'privacy_engine') and self.args.efficient:
-                pe = self.optimizer.privacy_engine
+            if self.is_private and self.args.efficient:
+                privacy_engine = self.optimizer.privacy_engine
 
                 autograd_grad_sample.set_hooks_mode(mode="norm")
-                first_loss = loss.mean(dim=0)
+                first_loss = loss.mean(dim=0) * self.args.gradient_accumulation_steps
                 first_loss.backward(retain_graph=True)
 
                 autograd_grad_sample.set_hooks_mode(mode="grad")
-                coef_sample = pe.get_clipping_coef()
-                second_loss = (coef_sample * loss).sum(dim=0)  # Sum here, since division is taken in `step`.
+                coef_sample = privacy_engine.get_coef_sample()
+                # Sum here, since division is taken in `step`.
+                second_loss = (coef_sample * loss).sum(dim=0) * self.args.gradient_accumulation_steps
                 second_loss.backward()
 
                 loss = loss.mean(dim=0)  # Just for returning; not for backward.
