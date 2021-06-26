@@ -1098,14 +1098,10 @@ class Trainer:
             with autocast():
                 loss = self.compute_loss(model, inputs)
         else:
-            loss = self.compute_loss(model, inputs)
+            loss = self.compute_loss(model, inputs)  # (batch_size,).
 
         if self.args.n_gpu > 1:
             loss = loss.mean()  # mean() to average on multi-gpu parallel training
-
-        # This is cause of all evil for per-sample gradients.
-        if self.args.gradient_accumulation_steps > 1:
-            loss = loss / self.args.gradient_accumulation_steps
 
         if self.args.fp16 and _use_native_amp:
             self.scaler.scale(loss).backward()
@@ -1115,22 +1111,33 @@ class Trainer:
         else:
             from experimental.privacy_utils import autograd_grad_sample
 
-            if self.is_private and self.args.efficient:
-                privacy_engine = self.optimizer.privacy_engine
+            if self.is_private:
+                if self.args.efficient:
+                    privacy_engine = self.optimizer.privacy_engine
 
-                autograd_grad_sample.set_hooks_mode(mode="norm")
-                first_loss = loss.mean(dim=0) * self.args.gradient_accumulation_steps
-                first_loss.backward(retain_graph=True)
+                    autograd_grad_sample.set_hooks_mode(mode="norm")
+                    first_loss = loss.mean(dim=0)
+                    first_loss.backward(retain_graph=True)
 
-                autograd_grad_sample.set_hooks_mode(mode="grad")
-                coef_sample = privacy_engine.get_coef_sample()
-                # Sum here, since division is taken in `step`.
-                second_loss = (coef_sample * loss).sum(dim=0) * self.args.gradient_accumulation_steps
-                second_loss.backward()
+                    autograd_grad_sample.set_hooks_mode(mode="grad")
+                    coef_sample = privacy_engine.get_coef_sample()
+                    # Sum here, since division is taken in `step`.
+                    second_loss = (coef_sample * loss).sum(dim=0)  # This is usual backprop, so take sum.
+                    second_loss.backward()
+                else:
+                    first_loss = loss.mean(dim=0)  # Don't divide by accumulation steps here.
+                    first_loss.backward()
 
-                loss = loss.mean(dim=0)  # Just for returning; not for backward.
-            else:
+                # Just for returning; not for backward.
+                # Divide by gradient accumulation steps to make consistent the loss.
                 loss = loss.mean(dim=0)
+                if self.args.gradient_accumulation_steps > 1:
+                    loss = loss / self.args.gradient_accumulation_steps
+            else:
+                # This is the cause of all evil for per-sample gradients.
+                loss = loss.mean(dim=0)
+                if self.args.gradient_accumulation_steps > 1:
+                    loss = loss / self.args.gradient_accumulation_steps
                 loss.backward()
 
         return loss.detach()
