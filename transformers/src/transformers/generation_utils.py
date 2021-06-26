@@ -792,7 +792,8 @@ class GenerationMixin:
                     zip(next_tokens[batch_idx], next_scores[batch_idx])
                 ):
                     # get beam and token IDs
-                    beam_id = beam_token_id // vocab_size
+                    # lxuechen: It's actually fine, since we never really encounter negatives.
+                    beam_id = torch.div(beam_token_id, vocab_size, rounding_mode='floor')
                     token_id = beam_token_id % vocab_size
 
                     effective_beam_id = batch_idx * num_beams + beam_id
