@@ -65,6 +65,7 @@ def _get_command(
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
 
+    # TODO: Fix a delta for each dataset!
     if target_delta < 0:
         if task_mode == "data2text":
             target_delta = 1e-5
@@ -78,11 +79,11 @@ def _get_command(
     train_batch_size_str = wrapper.int2str(train_batch_size)
     mid_dim_str = wrapper.int2str(mid_dim)
     preseqlen_str = wrapper.int2str(preseqlen)
+    epochs_str = wrapper.int2str(epochs)
+    target_epsilon_str = wrapper.int2str(target_epsilon)
 
     # Check mode.
     if mode == Mode.submit:
-        if tuning_mode in ("fulltune", "scratchtune") and nonprivate == "no":
-            gpu = "3090"  # This stupid baseline needs a lot of memory!!!
         gradient_accumulation_steps = train_batch_size // per_device_train_batch_size
 
         if nonprivate == "no":
@@ -90,7 +91,7 @@ def _get_command(
                 # @formatter:off
                 train_dir = (
                     f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
+                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_per_example_max_grad_norm_{per_example_max_grad_norm_str}_noise_multiplier_{noise_multiplier_str}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}_epochs_{epochs_str}_target_epsilon_{target_epsilon_str}"
                     f"/{seed}"
                 )
                 # @formatter:on
@@ -99,7 +100,7 @@ def _get_command(
                 # @formatter:off
                 train_dir = (
                     f"/nlp/scr/lxuechen/prefixtune/date_{date}"
-                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}"
+                    f"/model_name_{model_name_or_path}_nonprivate_{nonprivate}_tuning_mode_{tuning_mode}_learning_rate_{learning_rate_str}_train_batch_size_{train_batch_size_str}_mid_dim_{mid_dim_str}_preseqlen_{preseqlen_str}_epochs_{epochs_str}_target_epsilon_{target_epsilon_str}"
                     f"/{seed}"
                 )
                 # @formatter:on
