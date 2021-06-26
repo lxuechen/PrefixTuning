@@ -62,6 +62,7 @@ def _get_command(
     target_epsilon=-1,
     target_delta=-1,
     task_mode="data2text",
+    hold_job=True,
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -172,7 +173,8 @@ def _get_command(
     if mode == Mode.submit:
         command = wrapper.mynlprun_wrapper(
             command,
-            train_dir=train_dir, gpu=gpu, conda_env=conda_env, priority=priority, time=time
+            train_dir=train_dir,
+            gpu=gpu, conda_env=conda_env, priority=priority, time=time, hold_job=hold_job,
         )
         command += "\n"
     return command

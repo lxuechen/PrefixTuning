@@ -127,6 +127,7 @@ def main(
                                     # Ensure no memory issue.
                                     efficient=efficient,
                                     max_seq_len=max_seq_len,
+                                    hold_job=True,
                                 )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062621.sh')

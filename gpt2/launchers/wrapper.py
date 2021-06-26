@@ -18,6 +18,7 @@ def mynlprun_wrapper(
     memory="16g",
     gpu=None,
     time=None,  # Timeout, e.g., "10-0" means 10 days and 0 hours.
+    hold_job=True,
 ):
     if mynlprun:
         if train_dir is not None:
@@ -38,6 +39,8 @@ def mynlprun_wrapper(
             wrapped_command += f"-d {gpu} "
         if time is not None:
             wrapped_command += f"-t {time} "
+        if hold_job:
+            wrapped_command += "--hold "
         if job_name is not None:
             # Suffix with uid just in case you get a job name collision!
             this_id = uuid.uuid4().hex[:salt_length]
