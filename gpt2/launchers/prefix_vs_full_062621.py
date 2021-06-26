@@ -78,7 +78,6 @@ def main(
                                 max_eval_batches = 100
                                 per_device_eval_batch_size = 10
                                 objective_mode = 0
-                                priority = "standard"
                                 eval_steps = 1000
                                 save_steps = 1000  # So that we don't blow up disk space.
                                 max_seq_len = 100  # You don't lose too much.
@@ -111,7 +110,6 @@ def main(
 
                                     model_name_or_path=model_name_or_path,
                                     objective_mode=objective_mode,
-                                    priority=priority,
 
                                     # Important hparams.
                                     epochs=epochs,
@@ -127,7 +125,10 @@ def main(
                                     # Ensure no memory issue.
                                     efficient=efficient,
                                     max_seq_len=max_seq_len,
+
+                                    # Faster!
                                     hold_job=True,
+                                    priority="low"
                                 )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062621.sh')
