@@ -766,10 +766,7 @@ class Trainer:
             model.zero_grad()
 
             epoch_pbar = tqdm(epoch_iterator, desc="Iteration", disable=disable_tqdm)
-            batches = []
             for step, inputs in enumerate(epoch_iterator):
-                batches.append(inputs)
-
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
@@ -793,29 +790,6 @@ class Trainer:
                             torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.args.max_grad_norm)
                         else:
                             torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
-
-                    # TODO: What is wrong????????
-                    named_params = self.optimizer.privacy_engine.named_params
-                    C = self.optimizer.privacy_engine.max_grad_norm
-                    grad1 = [param.summed_grad + param.grad for _, param in named_params]
-                    grad2 = [torch.zeros_like(param) for _, param in named_params]
-                    total = 0
-                    for batch in batches:
-                        for i in range(self.args.train_batch_size):
-                            this_inputs = {k: v[i:i+1] for k, v in batch.items()}
-                            model.zero_grad()
-                            loss = self.compute_loss(model, this_inputs)
-                            loss.mean(dim=0).backward()
-                            this_grad = [param.grad for _, param in named_params]
-                            this_norm = torch.cat([param.grad.view(-1) for _, param in named_params]).norm(2)
-                            this_ceof = torch.clamp_max(C / (this_norm + 1e-6), 1)
-                            grad2 = [a + this_ceof * b for a, b in utils.zip_(grad2, this_grad)]
-                            total += 1
-
-                    for i, (a, b) in enumerate(utils.zip_(grad1, grad2)):
-                        if not torch.allclose(a, b):
-                            print(named_params[i][0], 'broke', (a - b).norm())
-                    print('one pass')
 
                     if is_torch_tpu_available():
                         xm.optimizer_step(self.optimizer)

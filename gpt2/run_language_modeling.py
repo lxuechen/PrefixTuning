@@ -145,9 +145,6 @@ def get_dataset_wrapper(config, tokenizer, data_args, model_args, training_args)
 
 
 def main():
-    # TODO:
-    import torch
-    torch.set_default_dtype(torch.float64)
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
@@ -220,16 +217,11 @@ def main():
             "another script, save it,"
             "and load it from here, using --tokenizer_name"
         )
-    # TODO:
     # This weight tying is evil for private learning.
-    config.attn_pdrop = 0
-    config.resid_pdrop = 0
-    config.embd_pdrop = 0
     config.tie_word_embeddings = False
     gpt2 = GPT2LMHeadModel.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
     )
-    gpt2.transformer.wpe.requires_grad_(False)
 
     # 0 means the regular token level objective, which is sum / output_len
     # 1 means the sentence level objective, which is sum
