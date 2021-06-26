@@ -188,6 +188,11 @@ def main():
     # Set seed
     set_seed(training_args.seed)
 
+    # Debug mode
+    if training_args.debug:
+        import warnings
+        warnings.filterwarnings("error")
+
     # Load pretrained model and tokenizer
     #
     # Distributed training:
@@ -230,9 +235,9 @@ def main():
     # 4 means our buggy version which is sum/(input_len +output_len)
 
     if data_args.block_size <= 0:
-        data_args.block_size = tokenizer.max_len
+        data_args.block_size = tokenizer.model_max_length
     else:
-        data_args.block_size = min(data_args.block_size, tokenizer.max_len)
+        data_args.block_size = min(data_args.block_size, tokenizer.model_max_length)
 
     ##############################################################
     ################# ADJUST TOKENIZER ###########################

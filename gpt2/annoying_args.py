@@ -295,10 +295,12 @@ class TrainingArguments(transformers.TrainingArguments):
     ema_model_gamma: float = field(default=0.99)
     ema_model_start_from: int = field(default=1000)
     efficient: str = field(default="no")  # Whether to turn on memory-efficient per-sample clipping.
+    debug: str = field(default="no")
 
     def __post_init__(self):
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))
         self.efficient = (self.efficient.lower() in ('y', 'yes'))
+        self.debug = (self.debug.lower() in ('y', 'yes'))
 
 
 @dataclass

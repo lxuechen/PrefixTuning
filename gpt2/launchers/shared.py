@@ -56,6 +56,7 @@ def _get_command(
     ema_model_start_from=1000,
     ema_model_averaging="yes",
     efficient="no",
+    debug="no",
 
     # -1 is just a default value.
     target_epsilon=-1,
@@ -162,6 +163,7 @@ def _get_command(
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
         --efficient {efficient} \
+        --debug {debug} \
         --target_delta {target_delta} \
         --target_epsilon {target_epsilon} \
         --overwrite_output_dir'
