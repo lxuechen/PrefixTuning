@@ -7,7 +7,7 @@ many experiments.
 date:
     062621
 purpose:
-    Find best prefix-tuning setup.
+    Run baselines also prefixtune.
 notes:
     Efficient baseline runs.
         - Tune epochs and learning rate.
@@ -61,60 +61,73 @@ def main(
         commands = "#!/bin/bash\n"
 
         for seed in seeds:
-            # --- Important bits ---
             for model_name_or_path in ("distilgpt2",):
-                epochs = 100
-                # --- Important bits ---
 
-                if model_name_or_path == "distilgpt2":
-                    per_device_train_batch_size = 25
-                else:
-                    per_device_train_batch_size = 5  # "gpt2-medium" is large!
-                max_grad_norm = 0.1
-                noise_multiplier = 0.8
-                tuning_mode = "prefixtune"
-                mid_dim = 512
-                preseqlen = 10
-                eval_steps = 500
-                max_eval_batches = 100
-                per_device_eval_batch_size = 10
-                objective_mode = 0
-                priority = "standard"
-                save_steps = 1000  # So that we don't blow up disk space.
+                for target_epsilon in (8, 5, 2):
+                    for epochs in (60, 40, 20):
+                        for lr in (5e-4, 1e-4, 5e-3, 1e-3):
+                            for tuning_mode in ("fulltune", "scratchtune", "prefixtune"):
 
-                for train_batch_size in (200, 300, 400):
-                    for lr in (1e-3, 7e-4, 5e-4, 3e-4):
-                        # 25 is reasonable to fit on a single GPU; but this gives a problem if we want to test out 5.
-                        if train_batch_size < per_device_train_batch_size:
-                            per_device_train_batch_size = train_batch_size
+                                if model_name_or_path == "distilgpt2":
+                                    per_device_train_batch_size = 20  # This even fits on regular 12 Gig GPUs.
+                                else:
+                                    per_device_train_batch_size = 5  # "gpt2-medium" is large!
 
-                        commands += _get_command(
-                            date="0626",
-                            mode=mode,
+                                mid_dim = 512
+                                preseqlen = 10
+                                max_eval_batches = 100
+                                per_device_eval_batch_size = 10
+                                objective_mode = 0
+                                priority = "standard"
+                                eval_steps = 1000
+                                save_steps = 1000  # So that we don't blow up disk space.
+                                max_seq_len = 100  # You don't lose too much.
 
-                            seed=seed,
-                            nonprivate="no",
-                            eval_steps=eval_steps,
-                            save_steps=save_steps,
-                            max_eval_batches=max_eval_batches,
-                            per_device_eval_batch_size=per_device_eval_batch_size,
+                                # TODO: Show small dependence on these parameters!
+                                max_grad_norm = 0.1
+                                train_batch_size = 400
 
-                            per_example_max_grad_norm=max_grad_norm,
-                            noise_multiplier=noise_multiplier,
-                            tuning_mode=tuning_mode,
-                            mid_dim=mid_dim,
+                                if train_batch_size < per_device_train_batch_size:
+                                    per_device_train_batch_size = train_batch_size
 
-                            train_batch_size=train_batch_size,
-                            # Roughly 9 Gigs for prefix-tuning.
-                            per_device_train_batch_size=per_device_train_batch_size,
-                            preseqlen=preseqlen,
-                            learning_rate=lr,
-                            model_name_or_path=model_name_or_path,
-                            objective_mode=objective_mode,
-                            priority=priority,
+                                if tuning_mode in ("fulltune", "scratchtune"):
+                                    efficient = "yes"
+                                else:
+                                    efficient = "no"
 
-                            epochs=epochs,
-                        )
+                                commands += _get_command(
+                                    date="0626",
+                                    mode=mode,
+
+                                    seed=seed,
+                                    nonprivate="no",
+                                    eval_steps=eval_steps,
+                                    save_steps=save_steps,
+                                    max_eval_batches=max_eval_batches,
+                                    per_device_eval_batch_size=per_device_eval_batch_size,
+
+                                    mid_dim=mid_dim,
+                                    preseqlen=preseqlen,
+
+                                    model_name_or_path=model_name_or_path,
+                                    objective_mode=objective_mode,
+                                    priority=priority,
+
+                                    # Important hparams.
+                                    epochs=epochs,
+                                    tuning_mode=tuning_mode,
+                                    target_epsilon=target_epsilon,
+                                    learning_rate=lr,
+
+                                    # Show small dependence on these.
+                                    train_batch_size=train_batch_size,
+                                    per_device_train_batch_size=per_device_train_batch_size,
+                                    per_example_max_grad_norm=max_grad_norm,
+
+                                    # Ensure no memory issue.
+                                    efficient=efficient,
+                                    max_seq_len=max_seq_len,
+                                )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062621.sh')
         with open(script_path, 'w') as f:
