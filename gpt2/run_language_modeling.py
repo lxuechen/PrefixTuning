@@ -355,8 +355,8 @@ def main():
             f"per_device_train_batch_size: {training_args.per_device_train_batch_size}, "
             f"gradient_accumulation_steps: {training_args.gradient_accumulation_steps}"
         )
+        trainer.train(model_path=model_path)
         # TODO: Saving this is too costly and blows up disk space!
-        # trainer.train(model_path=model_path)
         # trainer.save_model()
 
     # Evaluation
