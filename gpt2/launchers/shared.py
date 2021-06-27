@@ -25,7 +25,7 @@ def _get_command(
     per_device_eval_batch_size=10,
     gradient_accumulation_steps=1,
     per_example_max_grad_norm=1.,
-    noise_multiplier=0.8,
+    noise_multiplier=-1,
     learning_rate=1e-05,
     # TODO: Artificially truncating since cannot avoid OOM with full + private...
     # TODO: This arg has only been tested for `data2text` so far...

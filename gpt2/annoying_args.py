@@ -340,3 +340,5 @@ class PrivacyArguments:
             self.target_epsilon = None
         if self.target_delta < 0:
             self.target_delta = None
+        if self.noise_multiplier < 0:
+            self.noise_multiplier = None
