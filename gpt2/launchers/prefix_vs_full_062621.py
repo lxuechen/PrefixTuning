@@ -128,7 +128,7 @@ def main(
 
                                     # Faster!
                                     hold_job=True,
-                                    priority="low"
+                                    priority="standard",
                                 )
 
         script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_062621.sh')
