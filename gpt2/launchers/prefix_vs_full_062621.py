@@ -79,7 +79,7 @@ def main(
                                 per_device_eval_batch_size = 10
                                 objective_mode = 0
                                 eval_steps = 1000
-                                save_steps = 1000  # So that we don't blow up disk space.
+                                save_steps = 50000  # So that we don't blow up disk space.
                                 max_seq_len = 100  # You don't lose too much.
 
                                 # TODO: Show small dependence on these parameters!
