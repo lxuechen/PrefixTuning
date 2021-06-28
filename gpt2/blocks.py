@@ -29,7 +29,6 @@ class LrkLinear(Lrk, nn.Module):
         super(LrkLinear, self).__init__()
         self.rank = rank
 
-        # TODO: The bias here isn't updated, serious problem for my use case.
         # WARNING: You must explicitly track the params of `self.lrk_full` in the optimizer!
         # Also don't put the parameters of left or right for the optimizer to track!
 
