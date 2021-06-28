@@ -65,6 +65,7 @@ class EfficientPrivacyEngine(object):
         accounting_mode="rdp_cks",
         alphas: Sequence[float] = DEFAULT_ALPHAS,
         verbose: bool = False,
+        named_params: Optional[Sequence] = None,
         **_,
     ):
         super(EfficientPrivacyEngine, self).__init__()
@@ -126,9 +127,12 @@ class EfficientPrivacyEngine(object):
 
         # Record parameters.
         self.module = module
-        self.named_params = tuple(
-            (name, param) for (name, param) in module.named_parameters() if param.requires_grad
-        )
+        if named_params is None:
+            self.named_params = tuple(
+                (name, param) for (name, param) in module.named_parameters() if param.requires_grad
+            )
+        else:
+            self.named_params = named_params
         self.num_params = sum(param.numel() for _, param in self.named_params)
 
     def attach(self, optimizer):
