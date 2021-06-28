@@ -31,6 +31,9 @@ class LrkLinear(Lrk, nn.Module):
 
         self.cached_weights = []
 
+    # Overall rough logic of calling the following methods:
+    #   decompose_weight -> forward + backward -> restore_weight + create_gradient -> optimizer.step
+
     # TODO: There should be an easier way of implementing all of this!
     @torch.no_grad()
     def decompose_weight(self):
