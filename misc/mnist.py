@@ -99,6 +99,8 @@ if __name__ == "__main__":
     ap.add_argument('--noise_multiplier', type=float, default=1)
     ap.add_argument('--train_batch_size', type=int, default=500)
     ap.add_argument('--test_batch_size', type=int, default=500)
+    ap.add_argument('--max_grad_norm', type=float, default=0.1)
+    ap.add_argument('--lr', type=float, default=1e-3)
     args = ap.parse_args()
 
     train_loader, test_loader = utils.get_loader(
