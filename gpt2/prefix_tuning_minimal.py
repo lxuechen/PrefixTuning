@@ -3,6 +3,8 @@ import torch
 from torch import nn
 from transformers import GPT2PreTrainedModel, GPT2LMHeadModel
 
+from gpt2 import numerical
+
 
 class _View(nn.Module):
     def __init__(self, shape):
@@ -28,6 +30,7 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
             self.gpt2 = gpt2.requires_grad_(False)
 
         self.register_buffer('extra_prefix_ids', torch.arange(model_args.preseqlen))
+        # TODO: Also introduce the easier net.
         self.extra_prefix_net = nn.Sequential(
             nn.Embedding(model_args.preseqlen, config.n_embd),
             nn.Linear(config.n_embd, model_args.mid_dim),
@@ -98,3 +101,48 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
         # TODO: This seems like a hack; check if multiply by beam size work in general.
         past_key_values = self.make_past_key_values(bsz=input_ids.size(0) * num_beams)
         return self.gpt2.generate(input_ids=input_ids, num_beams=num_beams, past_key_values=past_key_values, **kwargs)
+
+
+class LrkLinear(nn.Module):
+    def __init__(self, in_features, out_features, rank, bias=True):
+        super(LrkLinear, self).__init__()
+        self.rank = rank
+
+        # TODO: full and right are not tracked by optimizer, but only left!!!
+        self.full = nn.Linear(in_features, out_features, bias=bias).requires_grad_(False)
+        self.left = nn.Linear(rank, out_features, bias=False)
+        self.right = nn.Linear(in_features, rank, bias=False).requires_grad_(False)
+
+        self.cached_weights = []
+
+    @torch.no_grad()
+    def restore_weight(self):
+        self.full.weight.data.copy_(self.cached_weights.pop())
+
+    @torch.no_grad()
+    def decompose_weight(self):
+        full_weight = self.full.weight.data
+        self.cached_weights.append(full_weight)
+
+        left_weight, right_weight, approx_error = numerical.weight_decomposition(full_weight, rank=self.rank)
+        residual_weight = full_weight - torch.matmul(left_weight, right_weight)
+
+        self.left.weight.data.copy_(left_weight.data)
+        self.right.weight.data.copy_(right_weight.data)
+        self.full.weight.data.copy_(residual_weight.data)
+
+    @torch.no_grad()
+    def create_gradient(self):
+        partial_l = self.left.weight.grad
+        r = self.right.weight
+
+        partial_l_times_r = partial_l @ r
+        return partial_l_times_r
+
+    def forward(self, x):
+        if self.training:
+            net = self.left(self.right(x))
+            net = net + self.full(x)
+        else:
+            net = self.full(x)
+        return net
