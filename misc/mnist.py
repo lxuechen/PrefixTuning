@@ -10,13 +10,19 @@ from lxuechen_utils import utils
 from privacy_utils import privacy_engine
 
 
-def create_model_and_optimizer(dx=784, dh=500, dy=10, rank=10):
+def create_model_and_optimizer(dx=784, dh=500, dy=10):
     if args.low_rank:
+        bias_layers = [nn.Linear(dh, dh), nn.Linear(dh, dh)]
+        for bias_layer in bias_layers:
+            bias_layer.weight.data.zero_()
+            bias_layer.weight.requires_grad_(False)
         model = nn.Sequential(
             nn.Flatten(),
-            blocks.LrkLinear(dx, dh, rank=rank),
+            blocks.LrkLinear(dx, dh, rank=args.rank),
+            bias_layers[0],
             nn.Tanh(),
-            blocks.LrkLinear(dh, dh, rank=rank),
+            blocks.LrkLinear(dh, dh, rank=args.rank),
+            bias_layers[1],
             nn.Tanh(),
             nn.Linear(dh, dy)
         )
@@ -106,6 +112,7 @@ if __name__ == "__main__":
     ap.add_argument('--train_batch_size', type=int, default=500)
     ap.add_argument('--test_batch_size', type=int, default=500)
     ap.add_argument('--max_grad_norm', type=float, default=0.1)
+    ap.add_argument('--rank', type=int, default=20)
 
     ap.add_argument('--lr', type=float, default=1e-3)
     ap.add_argument('--momentum', type=float, default=0.9)
