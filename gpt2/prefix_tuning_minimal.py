@@ -108,7 +108,7 @@ class LrkLinear(nn.Module):
         super(LrkLinear, self).__init__()
         self.rank = rank
 
-        # TODO: full and right are not tracked by optimizer, but only left!!!
+        # TODO: The bias here isn't updated, serious problem for my usecase.
         self.full = nn.Linear(in_features, out_features, bias=bias).requires_grad_(False)
         self.left = nn.Linear(rank, out_features, bias=False)
         self.right = nn.Linear(in_features, rank, bias=False).requires_grad_(False)
@@ -133,11 +133,9 @@ class LrkLinear(nn.Module):
 
     @torch.no_grad()
     def create_gradient(self):
-        partial_l = self.left.weight.grad
-        r = self.right.weight
-
-        partial_l_times_r = partial_l @ r
-        return partial_l_times_r
+        partial_l_times_r = self.left.weight.grad @ self.right.weight
+        self.full.weight.grad = partial_l_times_r
+        del self.left.weight.grad
 
     def forward(self, x):
         if self.training:
