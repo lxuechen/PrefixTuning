@@ -10,7 +10,7 @@ from lxuechen_utils import utils
 from privacy_utils import privacy_engine
 
 
-def create_model_and_optimizer(dx=784, dh=200, dy=10, rank=10):
+def create_model_and_optimizer(dx=784, dh=500, dy=10, rank=10):
     if args.low_rank:
         model = nn.Sequential(
             nn.Flatten(),
