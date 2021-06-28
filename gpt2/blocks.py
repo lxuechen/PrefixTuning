@@ -1,4 +1,5 @@
 import abc
+from typing import Callable
 
 import torch
 from torch import nn
@@ -13,7 +14,16 @@ class Lrk(abc.ABC):
     def create_gradient(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def decompose_weight(self):
+        raise NotImplementedError
 
+    @abc.abstractmethod
+    def restore_weight(self):
+        raise NotImplementedError
+
+
+# TODO: `full`, `left`, and `right` are names unique to low rank models. Don't use them elsewhere!
 class LrkLinear(Lrk, nn.Module):
     def __init__(self, in_features, out_features, rank, bias=True):
         super(LrkLinear, self).__init__()
@@ -73,3 +83,20 @@ class LrkLinear(Lrk, nn.Module):
         else:
             net = self.full(x)
         return net
+
+
+# Only for low rank models.
+def create_action(action_name):
+    def recursive_action(module: nn.Module):
+        for submodule in module.modules():
+            if isinstance(submodule, Lrk):
+                action_function = getattr(submodule, action_name)
+                action_function()
+
+    return recursive_action
+
+
+decompose_weight: Callable = create_action("decompose_weight")
+restore_weight: Callable = create_action("restore_weight")
+create_gradient: Callable = create_action("create_gradient")
+¬
