@@ -26,10 +26,7 @@ def create_model_and_optimizer(dx=784, dh=500, dy=10):
             nn.Tanh(),
             nn.Linear(dh, dy)
         )
-        params = []
-        for name, param in model.named_parameters():
-            if 'left' not in name and 'right' not in name:
-                params.append(param)
+        params = blocks.get_optimizer_params(module=model)
     else:
         model = nn.Sequential(
             nn.Flatten(),
@@ -63,7 +60,7 @@ def train(model, optimizer, epochs, global_step=0):
             loss.backward()
 
             if args.low_rank:
-                blocks.create_gradient(module=model)
+                # Create gradient in privacy_engine.step.
                 blocks.restore_weight(module=model)
 
             optimizer.step()

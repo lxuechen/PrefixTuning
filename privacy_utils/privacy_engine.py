@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from gpt2 import blocks
 from privacy_utils import autograd_grad_sample
 from privacy_utils.accounting import gdp_accounting, rdp_accounting
 
@@ -205,6 +206,9 @@ class PrivacyEngine(object):
                 del noise
             if self.loss_reduction == "mean":
                 param.grad /= self.batch_size
+
+        # Only for low rank models.
+        blocks.create_gradient(module=self.module)
 
         if noises:
             self.signal, self.noise = tuple(torch.stack(lst).norm(2).item() for lst in (signals, noises))
