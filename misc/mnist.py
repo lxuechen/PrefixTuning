@@ -13,6 +13,7 @@ from privacy_utils import privacy_engine
 def create_model_and_optimizer(dx=784, dh=200, dy=10, rank=10):
     if args.low_rank:
         model = nn.Sequential(
+            nn.Flatten(),
             blocks.LrkLinear(dx, dh, rank=rank),
             nn.ReLU(inplace=True),
             blocks.LrkLinear(dh, dh, rank=rank),
@@ -45,6 +46,7 @@ def train(model, optimizer, epochs, global_step=0):
             if args.low_rank:
                 blocks.decompose_weight(module=model)
 
+            model.train()
             y = model(x)
             loss = F.cross_entropy(y, t)
             loss.backward()
@@ -79,13 +81,12 @@ def evaluate(model, loader, eval_iters=sys.maxsize):
 
 def main():
     model, optimizer = create_model_and_optimizer()
-    print(len(train_loader))
     pe = privacy_engine.PrivacyEngine(
         module=model,
         max_grad_norm=args.max_grad_norm,
         noise_multiplier=args.noise_multiplier,
         batch_size=args.train_batch_size,
-        sample_size=len(train_loader),
+        sample_size=60000,
     )
     pe.attach(optimizer=optimizer)
     train(model=model, optimizer=optimizer, epochs=args.epochs)
@@ -106,7 +107,8 @@ if __name__ == "__main__":
     train_loader, test_loader = utils.get_loader(
         root="/nlp/scr/lxuechen/data",
         data_name="mnist", data_aug=False, task="classification",
-        train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size
+        train_batch_size=args.train_batch_size, test_batch_size=args.test_batch_size,
+        num_workers=0
     )
 
     # python -m misc.mnist --low_rank

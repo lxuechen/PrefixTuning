@@ -78,7 +78,8 @@ class LrkLinear(Lrk, nn.Module):
 
     def forward(self, x):
         if self.training:
-            net = self.left(self.right(x))
+            net = self.right(x)
+            net = self.left(net)
             net = net + self.full(x)
         else:
             net = self.full(x)
