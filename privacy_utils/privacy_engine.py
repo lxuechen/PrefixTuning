@@ -8,7 +8,6 @@ import numpy as np
 import torch
 from torch import nn
 
-from gpt2 import blocks
 from privacy_utils import autograd_grad_sample
 from privacy_utils.accounting import gdp_accounting, rdp_accounting
 
@@ -177,11 +176,6 @@ class PrivacyEngine(object):
         self.max_clip = coef_sample.max().item()
         self.min_clip = coef_sample.min().item()
         self.med_clip = coef_sample.median().item()
-
-        # Create gradients for low rank layers!
-        for module in self.module.modules():
-            if isinstance(module, blocks.Lrk):
-                module.create_gradient()
 
         # Add noise and scale by inverse batch size.
         signals, noises = [], []

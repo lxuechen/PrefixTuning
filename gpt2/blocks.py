@@ -31,12 +31,10 @@ class LrkLinear(Lrk, nn.Module):
 
         self.cached_weights = []
 
-    @torch.no_grad()
-    def restore_weight(self):
-        self.full.weight.data.copy_(self.cached_weights.pop())
-
+    # TODO: There should be an easier way of implementing all of this!
     @torch.no_grad()
     def decompose_weight(self):
+        """Run this before *forward* pass."""
         full_weight = self.full.weight.data
         self.cached_weights.append(full_weight)
 
@@ -49,7 +47,17 @@ class LrkLinear(Lrk, nn.Module):
         self.full.weight.data.copy_(residual_weight.data)
 
     @torch.no_grad()
+    def restore_weight(self):
+        """Run this after backward pass and gradient accumulation but before optimizer.step."""
+        self.full.weight.data.copy_(self.cached_weights.pop())
+
+    @torch.no_grad()
     def create_gradient(self):
+        """Run this before optimizer.step.
+
+        Creates the gradient for the full matrix given the privatized gradient for the left and right weights.
+        The relative order of this and restore_weight should not matter.
+        """
         partial_l_times_r = self.left.weight.grad @ self.right.weight
         # You don't have to delete this gradient, since it's refreshed and not accumulated.
         self.full.weight.grad = partial_l_times_r
