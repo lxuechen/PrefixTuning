@@ -15,25 +15,30 @@ def create_model_and_optimizer(dx=784, dh=200, dy=10, rank=10):
         model = nn.Sequential(
             nn.Flatten(),
             blocks.LrkLinear(dx, dh, rank=rank),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             blocks.LrkLinear(dh, dh, rank=rank),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(dh, dy)
         )
         params = []
         for name, param in model.named_parameters():
             if 'left' not in name and 'right' not in name:
                 params.append(param)
-        optimizer = optim.Adam(params=params, lr=args.lr)
     else:
         model = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(dx, dh),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(dh, dh),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(dh, dy),
         )
-        optimizer = optim.Adam(params=model.parameters(), lr=args.lr)
+        params = list(model.parameters())
+    if args.optimizer == "adam":
+        optimizer = optim.Adam(params=params, lr=args.lr)
+    else:
+        optimizer = optim.SGD(params=params, lr=args.lr, momentum=args.momentum)
+
     model.to(device)
     return model, optimizer
 
@@ -101,7 +106,10 @@ if __name__ == "__main__":
     ap.add_argument('--train_batch_size', type=int, default=500)
     ap.add_argument('--test_batch_size', type=int, default=500)
     ap.add_argument('--max_grad_norm', type=float, default=0.1)
+
     ap.add_argument('--lr', type=float, default=1e-3)
+    ap.add_argument('--momentum', type=float, default=0.9)
+    ap.add_argument('--optimizer', type=str, default="sgd")
     args = ap.parse_args()
 
     train_loader, test_loader = utils.get_loader(
