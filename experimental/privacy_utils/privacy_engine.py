@@ -9,6 +9,7 @@ from torch import nn
 
 from experimental.privacy_utils import autograd_grad_sample
 from experimental.privacy_utils.accounting import gdp_accounting, rdp_accounting
+from gpt2 import blocks
 
 DEFAULT_ALPHAS = tuple(1 + x / 10.0 for x in range(1, 100)) + tuple(range(12, 64))
 
@@ -126,7 +127,12 @@ class EfficientPrivacyEngine(object):
         self.noise_limit = None
 
         # Record parameters.
+        # TODO: This does not yet work with low rank layer! Prevent unintended mistakes!
+        for module in self.module.modules():
+            if isinstance(module, blocks.Lrk):
+                raise ValueError(f"Efficient engine does not work with low rank layers.")
         self.module = module
+
         if named_params is None:
             self.named_params = tuple(
                 (name, param) for (name, param) in module.named_parameters() if param.requires_grad

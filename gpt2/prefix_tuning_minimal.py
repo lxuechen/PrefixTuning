@@ -1,11 +1,8 @@
 """Make the prefix-tuning model as minimal as possible."""
-import abc
 
 import torch
 from torch import nn
 from transformers import GPT2PreTrainedModel, GPT2LMHeadModel
-
-from gpt2 import numerical
 
 
 class _View(nn.Module):
@@ -103,53 +100,3 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
         # TODO: This seems like a hack; check if multiply by beam size work in general.
         past_key_values = self.make_past_key_values(bsz=input_ids.size(0) * num_beams)
         return self.gpt2.generate(input_ids=input_ids, num_beams=num_beams, past_key_values=past_key_values, **kwargs)
-
-
-class Lrk(abc.ABC):
-    """An abstract class used to check things."""
-    pass
-
-
-class LrkLinear(Lrk, nn.Module):
-    def __init__(self, in_features, out_features, rank, bias=True):
-        super(LrkLinear, self).__init__()
-        self.rank = rank
-
-        # TODO: The bias here isn't updated, serious problem for my use case.
-        # TODO: Call `self.create_gradient` in the privacy engine! Make it compatible with gradient accumulation!
-        # WARNING: You must explicitly track the params of `self.full` in the optimizer!
-        self.full = nn.Linear(in_features, out_features, bias=bias).requires_grad_(False)
-        self.left = nn.Linear(rank, out_features, bias=False)
-        self.right = nn.Linear(in_features, rank, bias=False).requires_grad_(False)
-
-        self.cached_weights = []
-
-    @torch.no_grad()
-    def restore_weight(self):
-        self.full.weight.data.copy_(self.cached_weights.pop())
-
-    @torch.no_grad()
-    def decompose_weight(self):
-        full_weight = self.full.weight.data
-        self.cached_weights.append(full_weight)
-
-        left_weight, right_weight, approx_error = numerical.weight_decomposition(full_weight, rank=self.rank)
-        residual_weight = full_weight - torch.matmul(left_weight, right_weight)
-
-        self.left.weight.data.copy_(left_weight.data)
-        self.right.weight.data.copy_(right_weight.data)
-        self.full.weight.data.copy_(residual_weight.data)
-
-    @torch.no_grad()
-    def create_gradient(self):
-        partial_l_times_r = self.left.weight.grad @ self.right.weight
-        self.full.weight.grad = partial_l_times_r
-        del self.left.weight.grad
-
-    def forward(self, x):
-        if self.training:
-            net = self.left(self.right(x))
-            net = net + self.full(x)
-        else:
-            net = self.full(x)
-        return net
