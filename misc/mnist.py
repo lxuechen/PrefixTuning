@@ -43,15 +43,15 @@ def train(model, optimizer, epochs, global_step=0):
             x, t = x.to(device), t.to(device)
 
             if args.low_rank:
-                blocks.decompose_weight()
+                blocks.decompose_weight(module=model)
 
             y = model(x)
             loss = F.cross_entropy(y, t)
             loss.backward()
 
             if args.low_rank:
-                blocks.create_gradient()
-                blocks.restore_weight()
+                blocks.create_gradient(module=model)
+                blocks.restore_weight(module=model)
 
             optimizer.step()
 
