@@ -3,7 +3,7 @@ from datetime import date
 import logging
 import os
 import shutil
-import uuid
+from typing import Optional, Sequence
 
 import fire
 import transformers
@@ -95,16 +95,35 @@ def eval(
 def eval_trajectory(
     # @formatter:off
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
-    # Non-private.
-    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/",
     e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
     scratch_dir="/nlp/scr/lxuechen/scratch/tmp",  # Mess around here.
-    global_steps=tuple(range(1000, 42001, 1000)) + (42025,),
 
+    global_steps: Optional[Sequence[int]] = None,
+    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/",
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     # @formatter:on
 ):
-    """Evaluate various scores and plot trajectory."""
+    """Evaluate various scores and plot trajectory.
+
+    Writes to `img_dir` a plot of the scores as a function of the global_step.
+    Also writes a json dictionary of with keys "global_step" and "score" for later easy retrieval.
+
+    Args:
+        global_steps: A list of ints of the steps with generation files.
+            Default to None, which automatically fetches.
+        gen_dir: Directory with all the generation files.
+        img_dir: Directory to write all the results.
+    """
+    if global_steps is None:
+        import re
+        global_steps = []
+        for file in utils.listfiles(gen_dir):
+            search = re.search(".*global_step_(.*).txt", file)
+            if search:
+                global_step = int(search.group(1))
+                global_steps.append(global_step)
+        global_steps.sort()
+
     # Check the files exist.
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
@@ -139,10 +158,7 @@ def eval_trajectory(
         del img_path
 
     results_path = os.path.join(img_dir, 'results.json')
-    # Key is global_step, value is score!
-    results = {
-        gs: score for gs, score in utils.zip_(global_steps, scores)
-    }
+    results = {"global_step": global_steps, "score": scores}
     utils.jdump(results, results_path)
 
 
@@ -219,6 +235,7 @@ def main(task="clean", **kwargs):
         eval(gen_path=gen_path)
         # @formatter:on
 
+    # python -m gpt2.eval.eval_generations --task eval_trajectory
     elif task == "eval_trajectory":
         eval_trajectory(**kwargs)
 
