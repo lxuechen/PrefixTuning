@@ -1,5 +1,6 @@
 # python -m gpt2.plots.gather
 import json
+import logging
 import os
 import sys
 
@@ -9,9 +10,10 @@ from lxuechen_utils import utils
 
 
 # TODO: EMA vs non-EMA.
+# TODO: Multiple seeds.
 def main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
-    seeds=(0, 1, 2),
+    seeds=(0,),
 ):
     results = dict()
     for target_epsilon in (2, 5, 8):
@@ -47,6 +49,13 @@ def main(
                             f"/results.json"
                         )
                         if not os.path.exists(record_path):
+                            logging.warning(f'Lost record_path {record_path}')
+                            logging.warning(
+                                f'lr={lr_str}, '
+                                f'epochs={epochs_str}, '
+                                f'target_epsilon={target_epsilon_str}, '
+                                f'tuning_mode={tuning_mode}'
+                            )
                             continue
 
                         record = utils.jload(record_path)
