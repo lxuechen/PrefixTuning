@@ -73,9 +73,9 @@ def cpu_job_wrapper(
     """
     if log_path is None:
         if train_dir is not None:
-            log_path = f"{train_dir}/cpu_log.out"
+            log_path = f"{train_dir}/log_cpu.out"
         else:
-            log_path = f"{logs_prefix}/cpu_{create_random_job_id()}.out"
+            log_path = f"{logs_prefix}/{create_random_job_id()}_cpu.out"
 
     wrapped_command = (
         f"nlprun -x={JAGUPARD_MACHINES} "

@@ -66,14 +66,19 @@ def main(
                             os.path.join(train_dir, 'generations_score'),
                             os.path.join(train_dir, 'generations_ema_score'),
                         )
+                        log_paths = (
+                            os.path.join(train_dir, 'log_cpu.out'),
+                            os.path.join(train_dir, 'log_ema_cpu.out'),
+                        )
 
-                        for gen_dir, img_dir in utils.zip_(gen_dirs, img_dirs):
+                        for gen_dir, img_dir, log_path in utils.zip_(gen_dirs, img_dirs, log_paths):
                             command = (
                                 f"python -m gpt2.eval.eval_generations "
                                 f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir}"
                             )
                             command = wrapper.cpu_job_wrapper(
-                                command, train_dir=train_dir, conda_env="lxuechen-prefix-tuning", hold_job=False
+                                command, train_dir=train_dir, conda_env="lxuechen-prefix-tuning", hold_job=False,
+                                log_path=log_path,
                             )
                             command += '\n'
                             commands += command
