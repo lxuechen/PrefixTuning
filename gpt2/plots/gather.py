@@ -15,13 +15,30 @@ def json2tex(
     target_epsilons=(2, 5, 8),
     metrics=('BLEU', 'NIST', 'METEOR', 'ROUGE_L', 'CIDEr'),
 ):
+    best_numbers = dict()
+    for metric in metrics:
+        best_numbers_for_this_metric = dict()
+        best_numbers[metric] = best_numbers_for_this_metric
+        for target_epsilon in target_epsilons:
+            best_score = -sys.maxsize
+            for tuning_mode in tuning_modes:
+                score = record[target_epsilon][tuning_mode][metric]
+                if score > best_score:
+                    best_score = score
+            best_numbers_for_this_metric[target_epsilon] = best_score
+            del best_score
+
     for tuning_mode in tuning_modes:
         tex = ""
         for metric in metrics:
             tex += f" & {metric}"
             for target_epsilon in target_epsilons:
                 score = record[target_epsilon][tuning_mode][metric]
-                tex += f" & {score:.4f}"
+                best_score = best_numbers[metric][target_epsilon]
+                if score == best_score:
+                    tex += " & \\textbf{{ {:.4f} }}".format(score)
+                else:
+                    tex += f" & {score:.4f}"
             tex += " & "  # Non-private no results yet.
             tex += "\\\\ \n"
         print(tuning_mode)
