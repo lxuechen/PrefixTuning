@@ -9,18 +9,40 @@ import fire
 from lxuechen_utils import utils
 
 
+def json2tex(
+    record,
+    tuning_modes,
+    target_epsilons=(2, 5, 8),
+    metrics=('BLEU', 'NIST', 'METEOR', 'ROUGE_L', 'CIDEr'),
+):
+    for tuning_mode in tuning_modes:
+        tex = ""
+        for metric in metrics:
+            tex += f" & {metric}"
+            for target_epsilon in target_epsilons:
+                score = record[target_epsilon][tuning_mode][metric]
+                tex += f" & {score}"
+            tex += " & "  # Non-private no results yet.
+            tex += "\n"
+        print(tuning_mode)
+        print(tex)
+
+
 # TODO: EMA vs non-EMA.
 # TODO: Multiple seeds.
 def main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
     seeds=(0,),
+
+    tuning_modes=("fulltune", "scratchtune", "prefixtune"),
+    target_epsilons=(2, 5, 8),
 ):
     results = dict()
-    for target_epsilon in (2, 5, 8):
+    for target_epsilon in target_epsilons:
         results_for_this_epsilon = dict()
         results[target_epsilon] = results_for_this_epsilon
 
-        for tuning_mode in ("fulltune", "scratchtune", "prefixtune"):
+        for tuning_mode in tuning_modes:
             results_for_this_tuning_mode = dict()
             results_for_this_epsilon[tuning_mode] = results_for_this_tuning_mode
 
@@ -67,6 +89,7 @@ def main(
             results_for_this_tuning_mode.update(best_scores)
 
     print(json.dumps(results, indent=4))
+    json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons, )
 
 
 if __name__ == "__main__":
