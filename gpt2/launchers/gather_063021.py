@@ -42,7 +42,6 @@ def main(
                         lr_str = utils.float2str(lr)
                         target_epsilon_str = utils.int2str(target_epsilon)
 
-                        # TODO: Do ema help?
                         # @formatter:off
                         train_dir = (
                             f"/nlp/scr/lxuechen/prefixtune/date_0626"
