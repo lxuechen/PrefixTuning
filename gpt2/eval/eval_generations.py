@@ -114,6 +114,10 @@ def eval_trajectory(
         gen_dir: Directory with all the generation files.
         img_dir: Directory to write all the results.
     """
+    if not os.path.exists(gen_dir):
+        logging.warning(f"`gen_dir` doesn't exists")
+        return
+
     if global_steps is None:
         import re
         global_steps = []
