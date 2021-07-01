@@ -18,6 +18,7 @@ run:
 """
 
 import os
+import uuid
 
 import fire
 
@@ -72,9 +73,11 @@ def main(
                         )
 
                         for gen_dir, img_dir, log_path in utils.zip_(gen_dirs, img_dirs, log_paths):
+                            scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp/{str(uuid.uuid4())}"
                             command = (
                                 f"python -m gpt2.eval.eval_generations "
-                                f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir}"
+                                f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
+                                f"--scratch_dir {scratch_dir}"
                             )
                             command = wrapper.cpu_job_wrapper(
                                 command, train_dir=train_dir, conda_env="lxuechen-prefix-tuning", hold_job=False,
