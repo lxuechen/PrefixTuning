@@ -98,9 +98,15 @@ def _main(
                             continue
 
                         record = utils.jload(record_path)
-                        # TODO: What if you don't take the end?
                         this_score = record["score"][-1]
                         this_bleu = this_score["BLEU"]
+
+                        # Taking the max yields same results.
+                        # this_score = record["score"][-1]
+                        # this_score_all = record["score"]
+                        # bleu_scores = [si["BLEU"] for si in this_score_all]
+                        # this_bleu = max(bleu_scores)
+
                         if this_bleu > best_bleu:
                             best_bleu = this_bleu
                             best_scores = this_score
