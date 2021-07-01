@@ -21,9 +21,9 @@ def json2tex(
             tex += f" & {metric}"
             for target_epsilon in target_epsilons:
                 score = record[target_epsilon][tuning_mode][metric]
-                tex += f" & {score}"
+                tex += f" & {score:.4f}"
             tex += " & "  # Non-private no results yet.
-            tex += "\n"
+            tex += "\\\\ \n"
         print(tuning_mode)
         print(tex)
 
