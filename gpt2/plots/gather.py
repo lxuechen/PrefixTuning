@@ -47,7 +47,7 @@ def json2tex(
 
 # TODO: EMA vs non-EMA.
 # TODO: Multiple seeds.
-def main(
+def _main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
     seeds=(0,),
 
@@ -98,6 +98,7 @@ def main(
                             continue
 
                         record = utils.jload(record_path)
+                        # TODO: What if you don't take the end?
                         this_score = record["score"][-1]
                         this_bleu = this_score["BLEU"]
                         if this_bleu > best_bleu:
@@ -107,6 +108,118 @@ def main(
 
     print(json.dumps(results, indent=4))
     json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons, )
+
+
+def ema(
+    base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
+    seeds=(0,),
+
+    tuning_modes=("fulltune", "scratchtune", "prefixtune"),
+    target_epsilons=(2, 5, 8),
+    lrs=(5e-4, 1e-4, 5e-3, 1e-3),
+    epochslist=(60, 40, 20),
+
+    img_dir="/Users/xuechenli/Desktop/plots",
+    metric="BLEU",
+):
+    """Check the evolution of BLEU scores for EMA vs non-EMA."""
+    for target_epsilon in target_epsilons:
+        for tuning_mode in tuning_modes:
+            for lr in lrs:
+                for epochs in epochslist:
+                    for seed in seeds:
+                        epochs_str = utils.int2str(epochs)
+                        lr_str = utils.float2str(lr)
+                        target_epsilon_str = utils.int2str(target_epsilon)
+
+                        record_path = os.path.join(
+                            base_dir,
+                            f"model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_"
+                            f"per_example_max_grad_norm_0_10000000_"
+                            f"noise_multiplier_-1_00000000_"
+                            f"learning_rate_{lr_str}_"
+                            f"train_batch_size_00000400_"
+                            f"mid_dim_00000512_"
+                            f"preseqlen_00000010_"
+                            f"epochs_{epochs_str}_"
+                            f"target_epsilon_{target_epsilon_str}"
+                            f"/{seed}"
+                            f"/generations_score"
+                            f"/results.json"
+                        )
+                        if not os.path.exists(record_path):
+                            logging.warning(f'Lost record_path {record_path}')
+                            logging.warning(
+                                f'lr={lr_str}, '
+                                f'epochs={epochs_str}, '
+                                f'target_epsilon={target_epsilon_str}, '
+                                f'tuning_mode={tuning_mode}'
+                            )
+                            continue
+
+                        plots = []
+
+                        record = utils.jload(record_path)
+                        global_step = record["global_step"]
+                        score = record["score"]
+                        score = [score_i[metric] for score_i in score]
+                        plots.append({'x': global_step, 'y': score, 'label': "vanilla"})
+
+                        # EMA score.
+                        record_path = os.path.join(
+                            base_dir,
+                            f"model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_"
+                            f"per_example_max_grad_norm_0_10000000_"
+                            f"noise_multiplier_-1_00000000_"
+                            f"learning_rate_{lr_str}_"
+                            f"train_batch_size_00000400_"
+                            f"mid_dim_00000512_"
+                            f"preseqlen_00000010_"
+                            f"epochs_{epochs_str}_"
+                            f"target_epsilon_{target_epsilon_str}"
+                            f"/{seed}"
+                            f"/generations_ema_score"
+                            f"/results.json"
+                        )
+                        if not os.path.exists(record_path):
+                            logging.warning(f'Lost record_path {record_path}')
+                            logging.warning(
+                                f'lr={lr_str}, '
+                                f'epochs={epochs_str}, '
+                                f'target_epsilon={target_epsilon_str}, '
+                                f'tuning_mode={tuning_mode}'
+                            )
+                            continue
+
+                        record = utils.jload(record_path)
+                        global_step = record["global_step"]
+                        ema_score = record["score"]
+                        ema_score = [ema_score_i["BLEU"] for ema_score_i in ema_score]
+                        plots.append({'x': global_step, 'y': ema_score, 'label': 'ema'})
+
+                        img_path = os.path.join(
+                            img_dir,
+                            f"tuning_mode_{tuning_mode}_"
+                            f"learning_rate_{lr_str}_"
+                            f"epochs_{epochs_str}_"
+                            f"target_epsilon_{target_epsilon_str}"
+                        )
+                        utils.plot(
+                            img_path=img_path,
+                            plots=plots,
+                            options={'ylabel': metric, 'xlabel': "Iterations"}
+                        )
+                        print(score, ema_score)
+
+
+def main(
+    task="_main",
+    **kwargs,
+):
+    if task == "_main":
+        _main(**kwargs)
+    elif task == "ema":
+        ema()
 
 
 if __name__ == "__main__":
