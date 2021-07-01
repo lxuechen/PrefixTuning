@@ -35,7 +35,7 @@ def main(
     elif mode == wrapper.Mode.submit:
         commands = ""
 
-        for target_epsilon in (8, 5, 3):
+        for target_epsilon in (8, 5, 2):
             for tuning_mode in ("fulltune", "scratchtune", "prefixtune"):
                 for lr in (5e-4, 1e-4, 5e-3, 1e-3):
                     for epochs in (60, 40, 20):
