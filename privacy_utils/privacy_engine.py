@@ -90,6 +90,14 @@ class PrivacyEngine(object):
                     epochs=epochs,
                     alphas=alphas,
                 )
+            elif accounting_mode == "rdp_cks":
+                noise_multiplier = get_sigma_from_rdp_cks(
+                    target_epsilon=target_epsilon,
+                    target_delta=target_delta,
+                    sample_rate=sample_rate,
+                    epochs=epochs,
+                    alphas=alphas,
+                )
             else:
                 noise_multiplier = get_sigma_from_gdp(
                     target_epsilon=target_epsilon,
@@ -289,12 +297,15 @@ class PrivacyEngine(object):
             param.summed_grad += torch.einsum("i,i...->...", coef_sample, param.grad_sample)
         return norm_sample, coef_sample
 
-    def get_privacy_spent(self) -> Dict:
+    def get_privacy_spent(self, steps=None) -> Dict:
+        if steps is None:
+            steps = self.steps
+
         privacy_results = {}
 
         kwargs = dict(
             sample_rate=self.sample_rate,
-            steps=self.steps,
+            steps=steps,
             delta=self.target_delta,
             sigma=self.noise_multiplier,
             alphas=self.alphas,
@@ -381,6 +392,38 @@ def get_sigma_from_rdp(
     def sigma_to_eps(sigma):
         """Compute ε for a given σ based on Renyi-DP."""
         eps, _ = _eps_from_rdp(
+            sample_rate=sample_rate,
+            sigma=sigma,
+            steps=steps,
+            alphas=alphas,
+            delta=target_delta,
+        )
+        return eps
+
+    return _get_sigma_with_target_epsilon(
+        sigma_hi_init=sigma_hi_init,
+        sigma_lo_init=sigma_lo_init,
+        sigma_to_eps=sigma_to_eps,
+        target_epsilon=target_epsilon,
+        threshold=threshold,
+    )
+
+
+def get_sigma_from_rdp_cks(
+    target_epsilon: float,
+    target_delta: float,
+    sample_rate: float,
+    epochs: Union[float, int],
+    alphas=DEFAULT_ALPHAS,
+    threshold=1e-7,
+    sigma_hi_init=1e1,
+    sigma_lo_init=1e-6,
+) -> float:
+    steps = epochs / sample_rate
+
+    def sigma_to_eps(sigma):
+        """Compute ε for a given σ based on Renyi-DP."""
+        eps, _ = _eps_from_rdp_cks(
             sample_rate=sample_rate,
             sigma=sigma,
             steps=steps,
