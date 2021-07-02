@@ -43,9 +43,9 @@ from transformers.trainer_utils import (BestRun, default_compute_objective, defa
                                         TrainOutput)
 from transformers.utils import logging
 
-from gpt2 import decoding_utils
-from gpt2.annoying_args import TrainingArguments
 from lxuechen_utils import utils
+from . import decoding_utils
+from .annoying_args import TrainingArguments
 
 _use_native_amp = False
 _use_apex = False

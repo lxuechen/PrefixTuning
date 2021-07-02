@@ -4,7 +4,7 @@ from typing import Callable
 import torch
 from torch import nn
 
-from gpt2 import numerical
+from . import numerical
 
 
 class Lrk(abc.ABC):

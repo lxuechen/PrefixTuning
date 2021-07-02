@@ -10,11 +10,15 @@ purpose:
     Run non-private baseline experiments.
 notes:
     prefix-tune, scratchtune, full-tune.
+
+    There's a huge refactoring for name change `gpt2` -> `gpt2stuff`.
+    This was needed just in order to load the `gpt2` (GPT2-small) model with HF API correctly.
+    Essentially fixing shit code.
 run:
     to generate running scripts:
-        python -m gpt2.launchers.prefix_vs_full_070221 --mode "submit"
+        python -m gpt2stuff.launchers.prefix_vs_full_070221 --mode "submit"
     to run local:
-        python -m gpt2.launchers.prefix_vs_full_070221 --mode "local"
+        python -m gpt2stuff.launchers.prefix_vs_full_070221 --mode "local"
 """
 
 import os
@@ -98,6 +102,7 @@ def main(
                                 commands += _get_command(
                                     date="0702",
                                     mode=mode,
+                                    script="gpt2stuff.run_language_modeling",
 
                                     seed=seed,
                                     nonprivate=nonprivate,
@@ -131,7 +136,7 @@ def main(
                                     priority="low",
                                 )
 
-        script_path = os.path.join('.', 'gpt2', 'scripts', f'prefix_vs_full_070221.sh')
+        script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'prefix_vs_full_070221.sh')
         with open(script_path, 'w') as f:
             f.write(commands)
     else:

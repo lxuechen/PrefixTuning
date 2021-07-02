@@ -41,10 +41,10 @@ from transformers import (
     GPT2LMHeadModel,
 )
 
-from gpt2.trainer import Trainer
 from lxuechen_utils import utils
 from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
+from .trainer import Trainer
 
 logger = logging.getLogger(__name__)
 
