@@ -218,7 +218,7 @@ def gen2ref(
 
 
 def main(task="clean", **kwargs):
-    # python -m gpt2.eval.eval_generations --task clean
+    # python -m gpt2stuff.eval.eval_generations --task clean
     if task == "clean":
         for split in ('valid', 'test', 'train'):
             file_path = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_{split}.txt"
@@ -229,7 +229,7 @@ def main(task="clean", **kwargs):
             out_file_path = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_{split}.txt"
             extract_prompts(file_path=file_path, out_file_path=out_file_path, **kwargs)
 
-    # python -m gpt2.eval.eval_generations --task eval
+    # python -m gpt2stuff.eval.eval_generations --task eval
     elif task == "eval":
         eval(**kwargs)
 
@@ -239,12 +239,12 @@ def main(task="clean", **kwargs):
         eval(gen_path=gen_path)
         # @formatter:on
 
-    # python -m gpt2.eval.eval_generations --task eval_trajectory
+    # python -m gpt2stuff.eval.eval_generations --task eval_trajectory
     elif task == "eval_trajectory":
         eval_trajectory(**kwargs)
 
     elif task == "eval_best_private_trajectory":
-        # python -m gpt2.eval.eval_generations --task eval_best_private_trajectory
+        # python -m gpt2stuff.eval.eval_generations --task eval_best_private_trajectory
 
         # Private.
         # @formatter:off
@@ -268,12 +268,12 @@ def main(task="clean", **kwargs):
             img_dir=img_dir,
         )
 
-    # python -m gpt2.eval.eval_generations --task gen2ref
+    # python -m gpt2stuff.eval.eval_generations --task gen2ref
     elif task == "gen2ref":
         gen2ref(**kwargs)
 
     # Best private generation for today!
-    # python -m gpt2.eval.eval_generations --task gen2ref_061821
+    # python -m gpt2stuff.eval.eval_generations --task gen2ref_061821
     elif task == "gen2ref_061821":
         gen2ref(
             gen_path="/nlp/scr/lxuechen/prefixtune/date_0620"
