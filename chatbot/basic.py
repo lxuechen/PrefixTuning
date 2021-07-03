@@ -6,6 +6,14 @@ from transformers import OpenAIGPTTokenizer, OpenAIGPTDoubleHeadsModel
 
 def test_chatbot_example():
     tokenizer = OpenAIGPTTokenizer.from_pretrained('openai-gpt')
+    SPECIAL_TOKENS = {
+        "bos_token": "<bos>",
+        "eos_token": "<eos>",
+        "pad_token": "<pad>",
+        "additional_special_tokens": ("<speaker1>", "<speaker2>")
+    }
+    tokenizer.add_special_tokens(SPECIAL_TOKENS)
+    print('special_tokens_map', tokenizer.special_tokens_map)
 
     # Let's define our contexts and special tokens
     persona = [["i", "like", "playing", "football", "."], ["i", "am", "from", "NYC", "."]]
@@ -31,6 +39,8 @@ def test_chatbot_example():
     words = tokenizer.convert_tokens_to_ids(words)
     segments = tokenizer.convert_tokens_to_ids(segments)
 
+    # lxuechen: Here starts the third code segment.
+
     # Let's add a distractor to our previously defined persona, history and reply
     distractor = ["sorry", "to", "hear", "that"]
 
@@ -38,11 +48,12 @@ def test_chatbot_example():
     words_distractor, segments_distractor, _, _ = build_inputs(persona, history, distractor)
     words_distractor = tokenizer.convert_tokens_to_ids(words_distractor)
     segments_distractor = tokenizer.convert_tokens_to_ids(segments_distractor)
+    # lxuechen: Check these should not be 0 (0 is for unknown token, or '<unk>').
+    print('segments_distractor', segments_distractor)
 
-    # lxuechen: Only predict the 'reply' part of the true sentence; don't predict anything part of the distractor.
     # Prepare our language modeling targets: keep only the reply segment, -1 on the rest
-    lm_targets = ([-1] * sum(len(s) for s in sequence[:-1])) \
-                 + [-1] + tokenizer.convert_tokens_to_ids(sequence[-1][1:])
+    lm_targets = (([-1] * sum(len(s) for s in sequence[:-1])) +
+                  [-1] + tokenizer.convert_tokens_to_ids(sequence[-1][1:]))
     lm_distractor = [-1] * len(words_distractor)
 
     # Store the position of the last tokens for the next-sentence prediction loss
@@ -55,18 +66,19 @@ def test_chatbot_example():
     def pad(x, padding):
         return x + [padding] * (padding_length - len(x))
 
-    (words, words_distractor,
-     segments, segments_distractor) = [pad(x, tokenizer.convert_tokens_to_ids('<pad>'))
-                                       for x in (words, words_distractor,
-                                                 segments, segments_distractor)]
+    (words, words_distractor, segments, segments_distractor) = [
+        pad(x, tokenizer.convert_tokens_to_ids('<pad>'))
+        for x in (words, words_distractor, segments, segments_distractor)
+    ]
 
+    # Need -1 to avoid computing the loss!
     (lm_targets, lm_distractor) = [pad(x, -1) for x in (lm_targets, lm_distractor)]
 
     # And gather reply and distractor inputs to build the input tensors: words tokens
     input_ids = torch.tensor([[words, words_distractor]], dtype=torch.long)
 
-    # TODO: Why are these all 0s?
     # segment tokens
+    # lxuechen: Check these aren't 0. They can't be to have things work correctly.
     token_type_ids = torch.tensor([[segments, segments_distractor]], dtype=torch.long)
 
     # Positions tokens can be automatically created by the model as (0, 1, ..., N)
@@ -77,8 +89,7 @@ def test_chatbot_example():
     # Next-sentence prediction labels
     mc_labels = torch.tensor([0], dtype=torch.long)  # Gold reply is 1st (index 0)
 
-    print('mc_token_ids', mc_token_ids)
-    # TODO: What is mc_labels?
+    # TODO: Why should mc_labels have the current format?
 
 
 @torch.no_grad()
@@ -102,4 +113,8 @@ def test_double_heads_model():
 
 
 if __name__ == '__main__':
+    print('test 1')
+    test_chatbot_example()
+
+    print('test 2')
     test_double_heads_model()
