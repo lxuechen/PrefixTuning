@@ -5,18 +5,20 @@ from datetime import datetime
 import json
 import logging
 import os
+import socket
 import tarfile
 import tempfile
-import socket
 
 import torch
-
 from transformers import cached_path
 
 PERSONACHAT_URL = "https://s3.amazonaws.com/datasets.huggingface.co/personachat/personachat_self_original.json"
-HF_FINETUNED_MODEL = "https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/gpt_personachat_cache.tar.gz"
+HF_FINETUNED_MODEL = (
+    "https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/gpt_personachat_cache.tar.gz"
+)
 
 logger = logging.getLogger(__file__)
+
 
 def download_pretrained_model():
     """ Download and extract finetuned model from S3 """
@@ -38,17 +40,20 @@ def get_dataset(tokenizer, dataset_path, dataset_cache):
     else:
         logger.info("Download dataset from %s", dataset_path)
         personachat_file = cached_path(dataset_path)
+        logger.info("Local cache of the dataset is at %s", personachat_file)
         with open(personachat_file, "r", encoding="utf-8") as f:
             dataset = json.loads(f.read())
-
         logger.info("Tokenize and encode the dataset")
+
         def tokenize(obj):
             if isinstance(obj, str):
                 return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
             if isinstance(obj, dict):
                 return dict((n, tokenize(o)) for n, o in obj.items())
             return list(tokenize(o) for o in obj)
+
         dataset = tokenize(dataset)
+        logger.info("Save processed dataset at %s", dataset_cache)
         torch.save(dataset, dataset_cache)
     return dataset
 
