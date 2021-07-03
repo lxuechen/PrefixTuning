@@ -72,7 +72,7 @@ def main(
                             for gen_dir, img_dir, log_path in utils.zip_(gen_dirs, img_dirs, log_paths):
                                 scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp/{str(uuid.uuid4())}"
                                 command = (
-                                    f"python -m gpt2.eval.eval_generations "
+                                    f"python -m gpt2stuff.eval.eval_generations "
                                     f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
                                     f"--scratch_dir {scratch_dir}"
                                 )
