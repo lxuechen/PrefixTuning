@@ -96,8 +96,9 @@ def main(
                                     else:
                                         efficient = "no"
 
-                                    nonprivate = "yes"
+                                    nonprivate = "no"
                                     priority = "standard"
+                                    ema_model_averaging = "no"
 
                                     commands += _get_command(
                                         date="0702_v2",
@@ -130,6 +131,7 @@ def main(
 
                                         # Ensure no memory issue.
                                         efficient=efficient,
+                                        ema_model_averaging=ema_model_averaging,
                                         max_seq_len=max_seq_len,
 
                                         # Faster!
