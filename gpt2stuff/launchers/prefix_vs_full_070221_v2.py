@@ -66,11 +66,10 @@ def main(
                             for lr in (5e-4,):
                                 for tuning_mode in ("fulltune",):
 
-                                    # TODO: Get the `per_device_train_batch_size` right!
                                     if model_name_or_path == "distilgpt2":
-                                        per_device_train_batch_size = 25  # This even fits on regular 12 Gig GPUs.
+                                        per_device_train_batch_size = 40  # This even fits on regular 12 Gig GPUs.
                                     elif model_name_or_path == "gpt2":
-                                        per_device_train_batch_size = 20
+                                        per_device_train_batch_size = 30
                                     elif model_name_or_path == "gpt2-medium":
                                         per_device_train_batch_size = 15  # "gpt2-medium" is large!
                                     else:
