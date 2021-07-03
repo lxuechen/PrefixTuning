@@ -8,6 +8,7 @@ import os
 import socket
 import tarfile
 import tempfile
+import time
 
 import torch
 from transformers import cached_path
@@ -46,13 +47,18 @@ def get_dataset(tokenizer, dataset_path, dataset_cache):
         logger.info("Tokenize and encode the dataset")
 
         def tokenize(obj):
+            """Handles tokenization recursively."""
             if isinstance(obj, str):
                 return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
             if isinstance(obj, dict):
                 return dict((n, tokenize(o)) for n, o in obj.items())
             return list(tokenize(o) for o in obj)
 
+        # This should be a one-time cost!
+        now = time.perf_counter()
         dataset = tokenize(dataset)
+        logger.info(f"Tokenized the dataset, time elapse: {time.perf_counter() - now:.4f}")
+
         logger.info("Save processed dataset at %s", dataset_cache)
         torch.save(dataset, dataset_cache)
     return dataset
