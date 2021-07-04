@@ -105,8 +105,11 @@ def fig1(
     img_path = os.path.join(base_dir, 'fig1.pdf')
     x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
     x, y = [np.array(l) for l in (x, y)]
-    c = sigmoid(-y)
-    scatters = ({'x': x, 'y': y, 'c': c, 'cmap': 'ocean'},)
+    c = sigmoid((y - np.mean(y)) * 20)
+    # Use `vmin` to avoid default color normalization.
+    scatters = (
+        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1},
+    )
     utils.plot(
         img_path=img_path,
         scatters=scatters,
