@@ -1,4 +1,4 @@
-# python -m gpt2.plots.gather
+# python -m gpt2stuff.plots.gather
 import json
 import logging
 import os
@@ -14,6 +14,7 @@ def json2tex(
     tuning_modes,
     target_epsilons=(2, 5, 8),
     metrics=('BLEU', 'NIST', 'METEOR', 'ROUGE_L', 'CIDEr'),
+    nonprivate_record=None,
 ):
     best_numbers = dict()
     for metric in metrics:
@@ -39,7 +40,12 @@ def json2tex(
                     tex += " & \\textbf{{ {:.4f} }}".format(score)
                 else:
                     tex += f" & {score:.4f}"
-            tex += " & "  # Non-private no results yet.
+
+            if nonprivate_record is not None:
+                nonprivate_score = nonprivate_record[tuning_mode][metric]
+                tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+            else:
+                tex += f" & "
             tex += "\\\\ \n"
         print(tuning_mode)
         print(tex)
@@ -49,6 +55,8 @@ def json2tex(
 # TODO: Multiple seeds.
 def _main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
+    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702",
+
     seeds=(0,),
 
     tuning_modes=("fulltune", "scratchtune", "prefixtune"),
@@ -112,8 +120,34 @@ def _main(
                             best_scores = this_score
             results_for_this_tuning_mode.update(best_scores)
 
+    nonprivate_record = dict()
+    for seed in seeds:
+        for tuning_mode in tuning_modes:
+            record_path = os.path.join(
+                nonprivate_base_dir,
+                "model_name_distilgpt2_"
+                "nonprivate_yes_"
+                f"tuning_mode_{tuning_mode}_"
+                "learning_rate_0_00005000_"
+                "train_batch_size_00000005_"
+                "mid_dim_00000512_"
+                "preseqlen_00000010_"
+                "epochs_00000005_"
+                "target_epsilon_-0000001"
+                f"/{seed}"
+                f"/generations_score"
+                f"/results.json"
+            )
+            if not os.path.exists(record_path):
+                logging.warning(f'Lost record_path {record_path}')
+                continue
+            record = utils.jload(record_path)
+            this_score = record["score"][-1]
+            nonprivate_record[tuning_mode] = this_score
+
     print(json.dumps(results, indent=4))
-    json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons, )
+    json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons,
+             nonprivate_record=nonprivate_record)
 
 
 def ema(
