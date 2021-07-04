@@ -28,7 +28,7 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --nonprivate "no"\
   --per_device_train_batch_size 40 \
   --gradient_accumulation_steps 10 \
-  --eval_steps 1000 \
+  --eval_steps 200 \
   --objective_mode 0 \
   --max_generations 40 \
   --learning_rate 5e-4 \
