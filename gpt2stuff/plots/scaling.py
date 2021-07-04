@@ -3,6 +3,7 @@
 import os
 
 import fire
+import numpy as np
 
 from lxuechen_utils import utils
 
@@ -98,9 +99,14 @@ def fig1(
         index = xx.index(target_global_step)
         y.append(yy[index])
 
+    def sigmoid(t):
+        return np.exp(t) / (1 + np.exp(t))
+
     img_path = os.path.join(base_dir, 'fig1.pdf')
     x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
-    scatters = ({'x': x, 'y': y},)
+    x, y = [np.array(l) for l in (x, y)]
+    c = sigmoid(-y)
+    scatters = ({'x': x, 'y': y, 'c': c, 'cmap': 'ocean'},)
     utils.plot(
         img_path=img_path,
         scatters=scatters,
