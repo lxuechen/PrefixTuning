@@ -26,8 +26,8 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --tuning_mode "prefixtune" \
   --max_seq_len 100 \
   --nonprivate "no"\
-  --per_device_train_batch_size 100 \
-  --gradient_accumulation_steps 4 \
+  --per_device_train_batch_size 40 \
+  --gradient_accumulation_steps 10 \
   --eval_steps 1000 \
   --objective_mode 0 \
   --max_generations 40 \
