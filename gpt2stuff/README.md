@@ -21,19 +21,21 @@ python -m gpt2.launchers.prefix_vs_full_062021 --mode "local"     \
 After refactor on July 2, 2021 (rename folder `gpt2` with `gpt2stuff`)
 
 ```bash
-python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local"     \
-  --tuning_mode "prefixtune"      \
-  --max_steps 10000 \
-  --max_seq_len 96 \
+python -m gpt2stuff.launchers.prefix_vs_full_062021 \
+  --mode "local" \
+  --tuning_mode "prefixtune" \
+  --max_seq_len 100 \
   --nonprivate "no"\
-  --per_device_train_batch_size 5 \
-  --gradient_accumulation_steps 1 \
-  --noise_multiplier 0.7 \
-  --eval_steps 100 \
+  --per_device_train_batch_size 100 \
+  --gradient_accumulation_steps 4 \
+  --eval_steps 1000 \
   --objective_mode 0 \
   --max_generations 40 \
-  --learning_rate 1e-5 \
+  --learning_rate 5e-4 \
   --per_example_max_grad_norm 0.1 \
+  --target_epsilon 5 \
+  --target_delta 1e-5 \
+  --epochs 40 \
   --mid_dim 512 \
   --preseqlen 10
 ```
