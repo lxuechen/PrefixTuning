@@ -54,7 +54,7 @@ def _get_command(
     script="gpt2stuff.run_language_modeling",
     train_dir=None,
     ema_model_start_from=1000,
-    ema_model_averaging="yes",
+    ema_model_averaging="no",
     efficient="no",
     debug="no",
 
