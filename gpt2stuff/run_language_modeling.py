@@ -264,6 +264,10 @@ def main():
         model = gpt2
         model.init_weights()
         logging.warning('Reinitialized weights!')
+    elif model_args.tuning_mode == "lineartune":
+        gpt2.transformer.requires_grad_(False)
+        model = gpt2
+        logger.warning("Freezing base transformer weights!")
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
