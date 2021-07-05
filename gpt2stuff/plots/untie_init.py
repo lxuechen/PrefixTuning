@@ -64,5 +64,8 @@ def main(
 
 
 if __name__ == "__main__":
+    # Membership inference attacks are ran on the record-level (line level),
+    # and thus token-level logprob differences in the train, val, test doesn't really mean anything.
+
     # python -m gpt2stuff.plots.untie_init
     fire.Fire(main)
