@@ -473,7 +473,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         the weights instead.
         """
         output_embeddings = self.get_output_embeddings()
-        if output_embeddings is not None and self.config.tie_word_embeddings:
+        if output_embeddings is not None:
             self._tie_or_clone_weights(output_embeddings, self.get_input_embeddings())
 
         if self.config.is_encoder_decoder and self.config.tie_encoder_decoder:
@@ -550,7 +550,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
 
     def _tie_or_clone_weights(self, output_embeddings, input_embeddings):
         """Tie or clone module weights depending of whether we are using TorchScript or not"""
-        if self.config.torchscript:
+        if self.config.torchscript or not self.config.tie_word_embeddings:
             output_embeddings.weight = nn.Parameter(input_embeddings.weight.clone())
         else:
             output_embeddings.weight = input_embeddings.weight
@@ -586,9 +586,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         """
         base_model = getattr(self, self.base_model_prefix, self)  # get the base model if needed
         model_embeds = base_model._resize_token_embeddings(new_num_tokens)
-        # --- lxuechen: Enable non-sharing. ---
-        if not self.config.tie_word_embeddings:
-            self._resize_output_embeddings(new_num_tokens)
         if new_num_tokens is None:
             return model_embeds
 
@@ -600,18 +597,6 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin):
         self.tie_weights()
 
         return model_embeds
-
-    # --- lxuechen: Enable non-sharing. ---
-    def _resize_output_embeddings(self, new_num_tokens):
-        if new_num_tokens is None:
-            return
-        old_lm_head = self.get_output_embeddings()
-        new_lm_head = nn.Linear(self.config.n_embd, new_num_tokens, bias=False).to(old_lm_head.weight.device)
-        self._init_weights(new_lm_head)
-
-        old_vocab_size = self.config.vocab_size
-        new_lm_head.weight.data[:old_vocab_size, :] = old_lm_head.weight.data[:old_vocab_size, :]
-        self.set_output_embeddings(new_lm_head)
 
     def _resize_token_embeddings(self, new_num_tokens):
         old_embeddings = self.get_input_embeddings()
