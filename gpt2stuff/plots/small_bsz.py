@@ -30,14 +30,25 @@ def main(
         x = record['global_step']
         y = [this[metric] for this in record['score']]
         plots.append(
-            {'x': x, 'y': y, 'label': f'batch size {train_batch_size}'}
+            {'x': x, 'y': y, 'label': f'batch size={train_batch_size}'}
         )
+
+        argparse_path = os.path.join(
+            base_dir,
+            f"model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00500000_train_batch_size_{train_batch_size_str}_mid_dim_00000512_preseqlen_00000010_epochs_00000060_target_epsilon_{target_epsilon_str}",
+            f"{seed}",
+            "argparse.json",
+        )
+        argparse = utils.jload(argparse_path)
+        print(argparse["tuning_mode"])
+        print(argparse["learning_rate"])
+        print(argparse["model_name_or_path"])
 
     img_path = os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', 'date_0629')
     utils.plot(
         img_path=img_path,
         plots=plots,
-        options={'ylabel': metric, 'xlabel': 'iteration'}
+        options={'ylabel': metric, 'xlabel': 'iteration',}
     )
 
 
