@@ -61,10 +61,14 @@ def _main(
     )
 
 
+def sigmoid(t):
+    return np.exp(t) / (1 + np.exp(t))
+
+
 def fig1(
     base_dir="/Users/xuechenli/Desktop/dump/date_0702_v2",
+    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/date_0702_v4",
     model_name_or_paths=("distilgpt2", "gpt2", "gpt2-medium"),
-    seeds=(0,),
     metric="BLEU",
     target_epsilon=3,
     target_global_step=5000,
@@ -73,6 +77,7 @@ def fig1(
     """First attempt at creating a figure 1."""
     target_epsilon_str = utils.int2str(target_epsilon)
 
+    # private.
     y = []
     for model_name_or_path in model_name_or_paths:
         record_path = os.path.join(
@@ -99,17 +104,40 @@ def fig1(
         index = xx.index(target_global_step)
         y.append(yy[index])
 
-    def sigmoid(t):
-        return np.exp(t) / (1 + np.exp(t))
+    scatters = []
 
-    img_path = os.path.join(base_dir, 'fig1.pdf')
     x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
     x, y = [np.array(l) for l in (x, y)]
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
-    scatters = (
-        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1},
-    )
+    scatters.append({'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1})
+    del x, y, c
+
+    # non-private.
+    y = []
+    for model_name_or_path in model_name_or_paths:
+        record_path = os.path.join(
+            nonprivate_base_dir,
+            f"model_name_"
+            f"{model_name_or_path}_nonprivate_yes_tuning_mode_fulltune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010_epochs_00000005_target_epsilon_-0000001",
+            f'{seed}',
+            'generations_score',
+            'results.json'
+        )
+        record = utils.jload(record_path)
+        xx = record['global_step']
+        yy = [item[metric] for item in record['score']]
+
+        index = xx.index(target_global_step)
+        y.append(yy[index])
+    x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
+    x, y = [np.array(l) for l in (x, y)]
+    c = sigmoid((y - np.mean(y)) * 20)
+    # Use `vmin` to avoid default color normalization.
+    scatters.append({'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1})
+    del x, y, c
+
+    img_path = os.path.join(base_dir, 'fig1.pdf')
     utils.plot(
         img_path=img_path,
         scatters=scatters,
