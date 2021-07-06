@@ -1271,6 +1271,7 @@ def plot(
     bars: Sequence = (),
     fill_betweens: Sequence = (),
     options: Optional[Dict] = None,
+    annotates=(),
 
     plots2: Sequence = (),
     vlines2: Sequence = (),
@@ -1280,6 +1281,7 @@ def plot(
     bars2: Sequence = (),
     fill_betweens2: Sequence = (),
     options2: Optional[Dict] = None,
+    annotates2=(),
 
     legend_options: Optional[Dict] = None,
     disable_legend: Optional[bool] = False
@@ -1342,6 +1344,7 @@ def plot(
         bars=bars,
         fill_betweens=fill_betweens,
         options=options,
+        annotates=annotates
     )
 
     # Twin-x plot: Share xaxis.
@@ -1355,7 +1358,8 @@ def plot(
             errorbars=errorbars2,
             bars=bars2,
             fill_betweens=fill_betweens2,
-            options=options2
+            options=options2,
+            annotates=annotates2
         )
 
     if legend_options is None: legend_options = {}
@@ -1390,7 +1394,7 @@ def _feed_args(options, key, func):
             func(params)
 
 
-def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, options):
+def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, options, annotates):
     if options is None: options = {}
 
     _feed_args(options, 'xscale', ax.set_xscale)
@@ -1440,6 +1444,10 @@ def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, op
         # Each bar has width, the starting position is - (l-1) / 2 * width.
         x, height = [np.array(entry[key]) for key in ('x', 'height')]
         ax.bar(x - width * (len(bars) - 1) / 2 + width * i, height, width=width, **kwargs)
+
+    for annotate in annotates:
+        text, xy = annotate.pop("text"), annotate.pop("xy")
+        ax.annotate(text, xy, **annotate)
 
     return ax
 

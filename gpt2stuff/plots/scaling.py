@@ -105,6 +105,7 @@ def fig1(
         y.append(yy[index])
 
     scatters = []
+    annotates = []
 
     x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
     x, y = [np.array(l) for l in (x, y)]
@@ -113,6 +114,9 @@ def fig1(
     scatters.append(
         {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': '$\epsilon=3$'}
     )
+    annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
+    annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
+    annotates.append({'text': 'gpt2-medium', 'xy': (x[2], y[2]), 'xytext': (x[2] - 45, y[2] - 0.05)})
     del x, y, c
 
     # non-private.
@@ -142,10 +146,11 @@ def fig1(
     )
     del x, y, c
 
-    img_path = os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.pdf')
+    img_path = os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.png')
     utils.plot(
         img_path=img_path,
         scatters=scatters,
+        annotates=annotates,
         options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}}
     )
 
