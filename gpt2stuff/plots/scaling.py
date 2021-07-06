@@ -110,7 +110,9 @@ def fig1(
     x, y = [np.array(l) for l in (x, y)]
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
-    scatters.append({'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1})
+    scatters.append(
+        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': '$\epsilon=3$'}
+    )
     del x, y, c
 
     # non-private.
@@ -134,7 +136,9 @@ def fig1(
     x, y = [np.array(l) for l in (x, y)]
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
-    scatters.append({'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1})
+    scatters.append(
+        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private'}
+    )
     del x, y, c
 
     img_path = os.path.join(base_dir, 'fig1.pdf')
