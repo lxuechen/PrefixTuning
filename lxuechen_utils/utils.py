@@ -1446,8 +1446,9 @@ def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, op
         ax.bar(x - width * (len(bars) - 1) / 2 + width * i, height, width=width, **kwargs)
 
     for annotate in annotates:
-        text, xy = annotate.pop("text"), annotate.pop("xy")
-        ax.annotate(text, xy, **annotate)
+        kwargs = copy.deepcopy(annotate)
+        text, xy = kwargs.pop("text"), kwargs.pop("xy")
+        ax.annotate(text, xy, **kwargs)
 
     return ax
 

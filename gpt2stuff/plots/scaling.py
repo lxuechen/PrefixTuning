@@ -112,7 +112,7 @@ def fig1(
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
     scatters.append(
-        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': '$\epsilon=3$'}
+        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': '$\epsilon_{\mathrm{RDP}}=3$'}
     )
     annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
     annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
@@ -146,13 +146,16 @@ def fig1(
     )
     del x, y, c
 
-    img_path = os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.png')
-    utils.plot(
-        img_path=img_path,
-        scatters=scatters,
-        annotates=annotates,
-        options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}}
-    )
+    for img_path in (
+        os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.pdf')
+    ):
+        utils.plot(
+            img_path=img_path,
+            scatters=scatters,
+            annotates=annotates,
+            options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}}
+        )
 
 
 def main(task="fig1", **kwargs):
