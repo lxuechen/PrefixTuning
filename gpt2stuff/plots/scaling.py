@@ -137,15 +137,16 @@ def fig1(
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
     scatters.append(
-        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private'}
+        {'x': x, 'y': y, 'c': c,
+         'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x'}
     )
     del x, y, c
 
-    img_path = os.path.join(base_dir, 'fig1.pdf')
+    img_path = os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.pdf')
     utils.plot(
         img_path=img_path,
         scatters=scatters,
-        options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)"}
+        options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}}
     )
 
 
