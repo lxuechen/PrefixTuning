@@ -12,6 +12,7 @@ def main(
     target_epsilon=8,
     seed=0,
     metric="BLEU",
+    tuning_mode="fulltune",
 ):
     plots = []
 
@@ -21,7 +22,7 @@ def main(
 
         record_path = os.path.join(
             base_dir,
-            f"model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00500000_train_batch_size_{train_batch_size_str}_mid_dim_00000512_preseqlen_00000010_epochs_00000060_target_epsilon_{target_epsilon_str}",
+            f"model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00500000_train_batch_size_{train_batch_size_str}_mid_dim_00000512_preseqlen_00000010_epochs_00000060_target_epsilon_{target_epsilon_str}",
             f"{seed}",
             "generations_score",
             "results.json"
@@ -35,7 +36,7 @@ def main(
 
         argparse_path = os.path.join(
             base_dir,
-            f"model_name_distilgpt2_nonprivate_no_tuning_mode_prefixtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00500000_train_batch_size_{train_batch_size_str}_mid_dim_00000512_preseqlen_00000010_epochs_00000060_target_epsilon_{target_epsilon_str}",
+            f"model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00500000_train_batch_size_{train_batch_size_str}_mid_dim_00000512_preseqlen_00000010_epochs_00000060_target_epsilon_{target_epsilon_str}",
             f"{seed}",
             "argparse.json",
         )
