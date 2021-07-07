@@ -26,7 +26,7 @@ from .wrapper import Mode
 
 
 def main(
-    seeds=(0,),  # Seeds over which to randomize.
+    seeds=(0, 1),  # Seeds over which to randomize.
     mode=Mode.local,
 
     # For local testing; don't modify these defaults!
@@ -75,7 +75,7 @@ def main(
                                 else:
                                     per_device_train_batch_size = 5  # "gpt2-medium" is large!
 
-                                lr = base_lr / 2 ** i
+                                lr = base_lr / (2 ** i)
                                 mid_dim = 512
                                 preseqlen = 10
                                 max_eval_batches = 100
