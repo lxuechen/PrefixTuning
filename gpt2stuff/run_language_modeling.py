@@ -47,6 +47,7 @@ from . import prefix_tuning_minimal
 from .annoying_args import DataTrainingArguments, ModelArguments, PrivacyArguments, TrainingArguments
 from .trainer import Trainer
 
+
 logger = logging.getLogger(__name__)
 
 MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
@@ -302,7 +303,7 @@ def main():
     t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
     trainer.create_optimizer_and_scheduler(t_total)
     if not training_args.lr_decay:
-        trainer.scheduler = torch.optim.lr_scheduler.LambdaLR(trainer.optimizer, lambda _: 1.)
+        trainer.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(trainer.optimizer, lambda _: 1.)
 
     if privacy_args.nonprivate == "no":
         # TODO: Why does the per_example_max_grad_norm not affect things by much???
