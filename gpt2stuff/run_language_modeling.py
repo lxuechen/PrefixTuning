@@ -23,6 +23,7 @@ import logging
 import os
 from typing import Optional
 
+import torch
 from transformers import (
     CONFIG_MAPPING,
     MODEL_WITH_LM_HEAD_MAPPING,
@@ -300,6 +301,8 @@ def main():
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)
     t_total = int(num_update_steps_per_epoch * trainer.args.num_train_epochs)
     trainer.create_optimizer_and_scheduler(t_total)
+    if not training_args.lr_decay:
+        trainer.scheduler = torch.optim.lr_scheduler.LambdaLR(trainer.optimizer, lambda _: 1.)
 
     if privacy_args.nonprivate == "no":
         # TODO: Why does the per_example_max_grad_norm not affect things by much???

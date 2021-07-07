@@ -63,6 +63,7 @@ def _get_command(
     target_delta=-1,
     task_mode="data2text",
     hold_job=True,
+    lr_decay="yes",
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -167,7 +168,8 @@ def _get_command(
         --debug {debug} \
         --target_delta {target_delta} \
         --target_epsilon {target_epsilon} \
-        --overwrite_output_dir'
+        --overwrite_output_dir \
+        --lr_decay {lr_decay}'
     # @formatter:off
 
     if mode == Mode.submit:
