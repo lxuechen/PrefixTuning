@@ -23,11 +23,11 @@ After refactor on July 2, 2021 (rename folder `gpt2` with `gpt2stuff`)
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --mode "local" \
-  --tuning_mode "prefixtune" \
+  --tuning_mode "fulltune" \
   --max_seq_len 100 \
   --nonprivate "no"\
-  --per_device_train_batch_size 40 \
-  --gradient_accumulation_steps 10 \
+  --per_device_train_batch_size 20 \
+  --gradient_accumulation_steps 20 \
   --eval_steps 200 \
   --objective_mode 0 \
   --max_generations 40 \
@@ -35,9 +35,7 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --per_example_max_grad_norm 0.1 \
   --target_epsilon 5 \
   --target_delta 1e-5 \
-  --epochs 40 \
-  --mid_dim 512 \
-  --preseqlen 10
+  --epochs 50
 ```
 
 ## Running evaluation
