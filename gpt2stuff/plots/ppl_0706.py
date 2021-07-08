@@ -72,7 +72,7 @@ def _plot(
         os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', f'{metric}_train.pdf'),
     ):
         utils.plot(
-            img_path=img_path, plots=train_plots, options={'xlabel': 'Iterations', "ylabel": f'Training {ylabel}'}
+            img_path=img_path, plots=train_plots, options={'xlabel': 'Iterations', "ylabel": f'Train {ylabel}'}
         )
 
     for img_path in (
