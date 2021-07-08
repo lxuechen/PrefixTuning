@@ -6,10 +6,16 @@ import fire
 
 from lxuechen_utils import utils
 
+metric2label = {
+    "tok_logprobs": "token NLL",
+    "lin_logprobs": "line NLL",
+}
 
-def main(
+
+def _plot(
+    metric,
     base_dir="/Users/xuechenli/Desktop/dump/date_0706",
-    seeds=(0,)
+    seeds=(0,),
 ):
     train_plots = []
     test_plots = []
@@ -32,13 +38,13 @@ def main(
                             # @formatter:off
                             train_dir = os.path.join(
                                 base_dir,
-                                "model_name_distilgpt2_nonprivate_no_"
+                                f"model_name_{model_name_or_path}_nonprivate_no_"
                                 f"tuning_mode_{tuning_mode}_"
                                 f"per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_"
                                 f"learning_rate_{lr_str}_"
                                 f"train_batch_size_{train_batch_size_str}_"
                                 f"mid_dim_00000512_preseqlen_00000010_"
-                                f"epochs_{epochs_str}_target_epsilon_00000003",
+                                f"epochs_{epochs_str}_target_epsilon_{target_epsilon_str}",
                                 f"{seed}"
                             )
                             # @formatter:on
@@ -49,32 +55,40 @@ def main(
                             record = utils.jload(record_path)
 
                             x = [ri["step"] for ri in record]
-                            y = [ri["train"]["model"]["tok_logprobs"] for ri in record]
+                            y = [ri["train"]["model"][metric] for ri in record]
                             train_plots.append(
                                 {"x": x, "y": y, 'label': f"batch size={train_batch_size}"},
                             )
 
                             x = [ri["step"] for ri in record]
-                            y = [ri["eval"]["model"]["tok_logprobs"] for ri in record]
+                            y = [ri["eval"]["model"][metric] for ri in record]
                             test_plots.append(
                                 {"x": x, "y": y, 'label': f"batch size={train_batch_size}", 'linestyle': '-.'},
                             )
 
+    ylabel = metric2label[metric]
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', 'correct_scaling_train.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', 'correct_scaling_train.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', f'{metric}_train.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', f'{metric}_train.pdf'),
     ):
         utils.plot(
-            img_path=img_path, plots=train_plots, options={'xlabel': 'Iterations', "ylabel": 'Training token log-prob'}
+            img_path=img_path, plots=train_plots, options={'xlabel': 'Iterations', "ylabel": f'Training {ylabel}'}
         )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', 'correct_scaling_test.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', 'correct_scaling_test.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', f'{metric}_test.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'small_bsz', f'{metric}_test.pdf'),
     ):
         utils.plot(
-            img_path=img_path, plots=test_plots, options={'xlabel': 'Iterations', "ylabel": 'Test token log-prob'}
+            img_path=img_path, plots=test_plots, options={'xlabel': 'Iterations', "ylabel": f'Test {ylabel}'}
         )
+
+
+def main(
+    metrics=('tok_logprobs', 'lin_logprobs'),
+):
+    for metric in metrics:
+        _plot(metric=metric)
 
 
 if __name__ == "__main__":
