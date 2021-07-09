@@ -58,6 +58,7 @@ def _get_command(
     ema_model_averaging="no",
     efficient="no",
     debug="no",
+    evaluation_strategy="epoch",
 
     # -1 is just a default value.
     target_epsilon=-1,
@@ -156,7 +157,7 @@ def _get_command(
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
         --max_eval_batches {max_eval_batches} \
-        --evaluation_strategy "epoch" \
+        --evaluation_strategy {evaluation_strategy} \
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \
