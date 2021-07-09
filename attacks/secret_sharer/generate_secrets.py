@@ -22,6 +22,7 @@ from typing import Dict, List
 import numpy as np
 
 
+# TODO: How is pattern structured?
 def generate_random_sequences(vocab: List[str], pattern: str, n: int,
                               seed: int = 1) -> List[str]:
     """Generate random sequences.
@@ -109,18 +110,18 @@ def construct_secret(secret_config: SecretConfig, seqs: List[str]) -> Secrets:
     Returns:
       a secret instance.
     """
-    if len(seqs) < sum(
-        secret_config.num_secrets_for_repetitions) + secret_config.num_references:
+    if len(seqs) < sum(secret_config.num_secrets_for_repetitions) + secret_config.num_references:
         raise ValueError('seqs does not contain enough elements.')
     secrets = {}
     i = 0
-    for num_repetition, num_secrets in zip(
-        secret_config.num_repetitions, secret_config.num_secrets_for_repetitions):
+    for num_repetition, num_secrets in zip(secret_config.num_repetitions, secret_config.num_secrets_for_repetitions):
         secrets[num_repetition] = seqs[i:i + num_secrets]
         i += num_secrets
-    return Secrets(config=secret_config,
-                   secrets=secrets,
-                   references=seqs[-secret_config.num_references:])
+    return Secrets(
+        config=secret_config,
+        secrets=secrets,
+        references=seqs[-secret_config.num_references:]
+    )
 
 
 def generate_secrets_and_references(secret_configs: List[SecretConfig],

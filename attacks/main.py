@@ -7,16 +7,22 @@ patterns = [
     '{}' * 5,
     'Info ' + '{}' * 5,
     '{}{}-{}{}-{}',
-    '{}' * 10
+    '{}' * 10,
 ]
-vocabs = [list('ABCDEFGHIJ')] * 4
+vocabs = [list('ABCDEFGHIJ')] * len(patterns)
 
-num_repetitions = [1, 10, 100]
-num_secrets_for_repetitions = [20] * len(num_repetitions)
+# A list of the possible number of repetitions, e.g. [2, 3] means that canaries appear either 2 or 3 times.
+num_repetitions = [1]
+num_secrets_for_repetitions = [3] * len(num_repetitions)
 num_references = 65536
 secret_configs = [
-    SecretConfig(vocab, pattern, num_repetitions, num_secrets_for_repetitions, num_references)
+    SecretConfig(
+        vocab=vocab,
+        pattern=pattern,
+        num_repetitions=num_repetitions,
+        num_secrets_for_repetitions=num_secrets_for_repetitions,
+        num_references=num_references
+    )
     for vocab, pattern in zip(vocabs, patterns)
 ]
 secrets = generate_secrets_and_references(secret_configs)
-print(secrets)
