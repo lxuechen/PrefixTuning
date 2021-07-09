@@ -7,7 +7,7 @@ many experiments.
 date:
     070721
 purpose:
-    Run small batch size experiments.
+    Run lr_decay vs no lr_decay experiments.
 notes:
 
 run:

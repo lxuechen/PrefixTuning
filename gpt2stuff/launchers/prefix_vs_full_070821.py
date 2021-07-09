@@ -7,9 +7,9 @@ many experiments.
 date:
     070821
 purpose:
-    Run small batch size experiments.
+    Run batch size scaling experiments.
 notes:
-
+    This one only evaluates once in a few epochs.
 run:
     to generate running scripts:
         python -m gpt2stuff.launchers.prefix_vs_full_070821 --mode "submit"
