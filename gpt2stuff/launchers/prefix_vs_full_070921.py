@@ -64,73 +64,76 @@ def main(
                     for epochs in (50,):
                         for lr in (5e-4,):
                             for tuning_mode in ("scratchtune",):
-                                if model_name_or_path == "distilgpt2":
-                                    if tuning_mode == "prefixtune":
-                                        per_device_train_batch_size = 40  # Speed up prefix-tuning.
+                                for target_epsilon in (3, 5, 8, 2):
+
+                                    if model_name_or_path == "distilgpt2":
+                                        if tuning_mode == "prefixtune":
+                                            per_device_train_batch_size = 40  # Speed up prefix-tuning.
+                                        else:
+                                            per_device_train_batch_size = 20  # This even fits on regular 12 Gig GPUs.
                                     else:
-                                        per_device_train_batch_size = 20  # This even fits on regular 12 Gig GPUs.
-                                else:
-                                    per_device_train_batch_size = 5  # "gpt2-medium" is large!
+                                        per_device_train_batch_size = 5  # "gpt2-medium" is large!
 
-                                mid_dim = 512
-                                preseqlen = 10
-                                max_eval_batches = 100
-                                per_device_eval_batch_size = 10
-                                objective_mode = 0
-                                eval_epochs = 5
-                                save_steps = 50000  # So that we don't blow up disk space.
-                                max_seq_len = 100  # You don't lose too much.
+                                    mid_dim = 512
+                                    preseqlen = 10
+                                    max_eval_batches = 100
+                                    per_device_eval_batch_size = 10
+                                    objective_mode = 0
+                                    eval_epochs = 5
+                                    save_steps = 50000  # So that we don't blow up disk space.
+                                    max_seq_len = 100  # You don't lose too much.
 
-                                # TODO: Show small dependence on these parameters!
-                                max_grad_norm = 0.1
+                                    # TODO: Show small dependence on these parameters!
+                                    max_grad_norm = 0.1
 
-                                if train_batch_size < per_device_train_batch_size:
-                                    per_device_train_batch_size = train_batch_size
+                                    if train_batch_size < per_device_train_batch_size:
+                                        per_device_train_batch_size = train_batch_size
 
-                                if tuning_mode in ("fulltune", "scratchtune"):
-                                    efficient = "yes"
-                                else:
-                                    efficient = "no"
+                                    if tuning_mode in ("fulltune", "scratchtune"):
+                                        efficient = "yes"
+                                    else:
+                                        efficient = "no"
 
-                                nonprivate = "yes"
+                                    nonprivate = "no"
 
-                                commands += _get_command(
-                                    date="0709",
-                                    mode=mode,
-                                    script="gpt2stuff.run_language_modeling",
+                                    commands += _get_command(
+                                        date="0709",
+                                        mode=mode,
+                                        script="gpt2stuff.run_language_modeling",
 
-                                    seed=seed,
-                                    nonprivate=nonprivate,
-                                    eval_epochs=eval_epochs,
-                                    evaluation_strategy="epoch",
-                                    save_steps=save_steps,
-                                    max_eval_batches=max_eval_batches,
-                                    per_device_eval_batch_size=per_device_eval_batch_size,
+                                        seed=seed,
+                                        nonprivate=nonprivate,
+                                        eval_epochs=eval_epochs,
+                                        evaluation_strategy="epoch",
+                                        save_steps=save_steps,
+                                        max_eval_batches=max_eval_batches,
+                                        per_device_eval_batch_size=per_device_eval_batch_size,
 
-                                    mid_dim=mid_dim,
-                                    preseqlen=preseqlen,
+                                        mid_dim=mid_dim,
+                                        preseqlen=preseqlen,
 
-                                    model_name_or_path=model_name_or_path,
-                                    objective_mode=objective_mode,
+                                        model_name_or_path=model_name_or_path,
+                                        objective_mode=objective_mode,
 
-                                    # Important hparams.
-                                    epochs=epochs,
-                                    tuning_mode=tuning_mode,
-                                    learning_rate=lr,
+                                        # Important hparams.
+                                        epochs=epochs,
+                                        tuning_mode=tuning_mode,
+                                        learning_rate=lr,
+                                        target_epsilon=target_epsilon,
 
-                                    # Show small dependence on these.
-                                    train_batch_size=train_batch_size,
-                                    per_device_train_batch_size=per_device_train_batch_size,
-                                    per_example_max_grad_norm=max_grad_norm,
+                                        # Show small dependence on these.
+                                        train_batch_size=train_batch_size,
+                                        per_device_train_batch_size=per_device_train_batch_size,
+                                        per_example_max_grad_norm=max_grad_norm,
 
-                                    # Ensure no memory issue.
-                                    efficient=efficient,
-                                    max_seq_len=max_seq_len,
+                                        # Ensure no memory issue.
+                                        efficient=efficient,
+                                        max_seq_len=max_seq_len,
 
-                                    # Faster!
-                                    hold_job=True,
-                                    priority="low",
-                                )
+                                        # Faster!
+                                        hold_job=True,
+                                        priority="low",
+                                    )
 
         script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'prefix_vs_full_070921.sh')
         with open(script_path, 'w') as f:
