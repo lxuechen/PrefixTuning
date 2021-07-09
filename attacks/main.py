@@ -1,0 +1,15 @@
+"""Test out the basic exposure attacks."""
+
+from tensorflow_privacy.privacy.privacy_tests.secret_sharer.generate_secrets import SecretConfig, generate_secrets_and_references, construct_secret
+patterns = ['{}' * 5,
+            'Info ' + '{}' * 5,
+            '{}{}-{}{}-{}',
+            '{}' * 10]
+vocabs = [list('ABCDEFGHIJ')] * 4
+num_repetitions = [1, 10, 100]
+num_secrets_for_repetitions = [20] * len(num_repetitions)
+num_references = 65536
+secret_configs = [SecretConfig(vocab, pattern, num_repetitions,
+                              num_secrets_for_repetitions, num_references)
+                  for vocab, pattern in zip(vocabs, patterns)]
+secrets = generate_secrets_and_references(secret_configs)
