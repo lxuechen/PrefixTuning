@@ -297,6 +297,7 @@ class TrainingArguments(transformers.TrainingArguments):
     efficient: str = field(default="no")  # Whether to turn on memory-efficient per-sample clipping.
     debug: str = field(default="no")
     lr_decay: str = field(default="yes")
+    eval_epochs: int = field(default=10)
 
     def __post_init__(self):
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))

@@ -38,6 +38,7 @@ def _get_command(
     objective_mode=0,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
+    eval_epochs=10,
     max_steps=-1,
     max_eval_batches=-1,
     mid_dim=512,
@@ -149,12 +150,13 @@ def _get_command(
         --objective_mode {objective_mode} \
         --evaluate_during_training \
         --eval_steps {eval_steps} \
+        --eval_epochs {eval_epochs} \
         --noise_multiplier {noise_multiplier} \
         --nonprivate {nonprivate} \
         --cache_dir /nlp/scr/lxuechen/hfcache/control/gpt2/ \
         --max_steps {max_steps} \
         --max_eval_batches {max_eval_batches} \
-        --evaluation_strategy "steps" \
+        --evaluation_strategy "epoch" \
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \

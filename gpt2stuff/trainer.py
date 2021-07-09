@@ -831,10 +831,8 @@ class Trainer:
                         self.args.evaluation_strategy == EvaluationStrategy.STEPS
                         and self.global_step % self.args.eval_steps == 0
                     ):
-                        metrics = self.evaluate()
+                        metrics = self.evaluate(epoch=epoch)
                         self._report_to_hp_search(trial, epoch, metrics)
-
-                        # TODO: Early stopping!
 
                     if self.args.save_steps > 0 and self.global_step % self.args.save_steps == 0:
                         # In all cases (even distributed/parallel), self.model is always a reference
@@ -877,11 +875,12 @@ class Trainer:
                 epoch_pbar.update(1)
                 if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
                     break
+
             epoch_pbar.close()
             train_pbar.update(1)
 
-            if self.args.evaluation_strategy == EvaluationStrategy.EPOCH:
-                metrics = self.evaluate()
+            if self.args.evaluation_strategy == EvaluationStrategy.EPOCH and (epoch + 1) % self.args.eval_epochs == 0:
+                metrics = self.evaluate(epoch=epoch)
                 self._report_to_hp_search(trial, epoch, metrics)
 
             if self.args.tpu_metrics_debug or self.args.debug:
@@ -1296,7 +1295,7 @@ class Trainer:
             logger.info("Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
             shutil.rmtree(checkpoint)
 
-    def evaluate(self, log_results=True) -> Dict[str, float]:
+    def evaluate(self, log_results=True, epoch=None) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
 
@@ -1306,9 +1305,6 @@ class Trainer:
         You can also subclass and override this method to inject custom behavior.
 
         Args:
-            eval_dataset (:obj:`Dataset`, `optional`):
-                Pass a dataset if you wish to override :obj:`self.eval_dataset`. If it is an :obj:`datasets.Dataset`,
-                columns not accepted by the ``model.forward()`` method are automatically removed.
             log_results:
                 Store the results in `self.log_history` and print to stdout.
 
@@ -1326,7 +1322,12 @@ class Trainer:
         train_dataloader = self.get_train_dataloader(train_sampler=train_sampler)
         train_output = self.prediction_loop(train_dataloader, description="Evaluate train split")
 
-        metrics = {"train": train_output.metrics, "eval": eval_output.metrics, "val": val_output.metrics}
+        metrics = {
+            "train": train_output.metrics,
+            "eval": eval_output.metrics,
+            "val": val_output.metrics,
+            "epoch": epoch
+        }
 
         if log_results:
             self.log(metrics)
