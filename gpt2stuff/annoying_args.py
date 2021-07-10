@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+import logging
+import os
 import sys
 from typing import Optional
 
@@ -194,13 +196,23 @@ class DataTrainingArguments:
     Arguments pertaining to what data we are going to input our model for training and eval.
     """
 
+    # Files for training and evaluation.
     train_data_file: Optional[str] = field(default=None)
     val_data_file: Optional[str] = field(default=None)
     eval_data_file: Optional[str] = field(default=None)
 
+    # Files with only prompts; useful for generation.
     train_prompt_file: Optional[str] = field(default=None)
     val_prompt_file: Optional[str] = field(default=None)
     eval_prompt_file: Optional[str] = field(default=None)
+
+    # Files for secret sharer.
+    secs_file: Optional[str] = field(default=None, metadata={'help': 'File for storing unrepeated secrets.'})
+    refs_file: Optional[str] = field(default=None, metadata={'help': 'File for storing references.'})
+    secs_reps: Optional[int] = field(default=None, metadata={'help': 'How many times the secrets are repeated.'})
+
+    # Specifying this is easier, as it's just one time!
+    data_folder: Optional[str] = field(default=None, metadata={"help": "Path to folder with all the data."})
 
     line_by_line: bool = field(
         default=False,
@@ -284,6 +296,26 @@ class DataTrainingArguments:
     train_embs: str = field(default="yes")
 
     max_seq_len: int = field(default=sys.maxsize)
+
+    def __post_init__(self):
+        if self.data_folder is not None:
+            logging.warning(f'Overriding dataset paths using those given in `data_folder`')
+
+            self.train_data_file = os.path.join(self.data_folder, 'src1_train.txt')
+            self.val_data_file = os.path.join(self.data_folder, 'src1_valid.txt')
+            self.eval_data_file = os.path.join(self.data_folder, 'src1_test.txt')
+
+            self.train_prompt_file = os.path.join(self.data_folder, 'prompts_train.txt')
+            self.val_prompt_file = os.path.join(self.data_folder, 'prompts_valid.txt')
+            self.eval_prompt_file = os.path.join(self.data_folder, 'prompts_test.txt')
+
+            secs_file = os.path.join(self.data_folder, 'ss_secs.txt')
+            if os.path.exists(secs_file):
+                self.secs_file = secs_file
+
+            refs_file = os.path.join(self.data_folder, 'ss_refs.txt')
+            if os.path.exists(refs_file):
+                self.refs_file = refs_file
 
 
 @dataclass

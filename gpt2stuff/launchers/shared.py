@@ -66,6 +66,8 @@ def _get_command(
     task_mode="data2text",
     hold_job=True,
     lr_decay="yes",
+
+    data_folder="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data",
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -130,6 +132,7 @@ def _get_command(
         --do_eval \
         --line_by_line \
         --save_total_limit 1 \
+        --data_folder {data_folder} \
         --train_data_file {TRAIN_FILE} \
         --val_data_file {VAL_FILE} \
         --eval_data_file {EVAL_FILE} \

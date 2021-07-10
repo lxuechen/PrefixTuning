@@ -58,13 +58,15 @@ def get_dataset(
     tokenizer: PreTrainedTokenizer,
     split: str = "train",
     cache_dir: Optional[str] = None,
+    file_path: Optional[str] = None,
     **_,
 ):
-    file_path = {
-        "train": args.train_data_file,
-        "val": args.val_data_file,
-        "eval": args.eval_data_file,
-    }[split]
+    if file_path is None:
+        file_path = {
+            "train": args.train_data_file,
+            "val": args.val_data_file,
+            "eval": args.eval_data_file,
+        }[split]
     if file_path is None:
         return None
 
@@ -279,6 +281,17 @@ def main():
         config=config, tokenizer=tokenizer,
         data_args=data_args, training_args=training_args, model_args=model_args,
     )
+
+    if data_args.secs_file is not None:
+        secs_dataset = get_dataset(
+            data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, file_path=data_args.secs_file,
+        )
+
+    if data_args.refs_file is not None:
+        refs_dataset = get_dataset(
+            data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, file_path=data_args.refs_file,
+        )
+    # TODO: Use secs_dataset and refs_dataset
 
     # Materialize the prompts.
     generation_stuff = dict(
