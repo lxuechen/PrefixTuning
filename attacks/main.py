@@ -50,6 +50,8 @@ def _play():
 
 
 def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_for_repetitions=None, vocab_size=10):
+    np.random.seed(13)
+
     if num_secrets_for_repetitions is None:
         num_secrets_for_repetitions = [40] * len(num_repetitions)
 
@@ -59,6 +61,8 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     vocab_ids = np.random.permutation(len(tokenizer))[:vocab_size]
     vocab = tokenizer.convert_ids_to_tokens(vocab_ids, skip_special_tokens=False)
     vocab = [word[len('Ġ'):] if word.startswith('Ġ') else word for word in vocab]
+    print('vocab')
+    print(vocab)
 
     pattern = "name : {} | Type : {} | area : {} || {} {} {} {} ."
     secret_configs = [
@@ -73,6 +77,7 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     secrets = generate_secrets_and_references(secret_configs)
 
     # Load clean data, insert canaries, and store new data as well as the secrets file (it has all the references)!
+    # TODO:
 
 
 def main(task="create_canaries"):
@@ -91,5 +96,4 @@ def _sp():
 
 if __name__ == "__main__":
     # python -m attacks.main
-    np.random.seed(13)
     fire.Fire(main)
