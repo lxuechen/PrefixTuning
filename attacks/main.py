@@ -71,8 +71,8 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
         )
     ]
     secrets = generate_secrets_and_references(secret_configs)
-    print(len(secrets))
-    print(secrets[0].secrets)
+
+    # Load clean data, insert canaries, and store new data as well as the secrets file (it has all the references)!
 
 
 def main(task="create_canaries"):
