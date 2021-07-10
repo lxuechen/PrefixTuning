@@ -1,6 +1,13 @@
-"""Test out the basic exposure attacks."""
+"""Test out the basic exposure attacks.
+
+`_create_canaries` right now creates the "canarized" dataset for e2e.
+
+To run:
+python -m attacks.main
+"""
 import os
 import pickle
+import json
 
 import fire
 import numpy as np
@@ -113,6 +120,15 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
         f.writelines(secret_data_no_dup)
     del f
 
+    info = {
+        "num_references": num_references,
+        "num_repetitions": num_repetitions,
+        "num_secrets_for_repetitions": num_secrets_for_repetitions,
+        "vocab_size": vocab_size,
+    }
+    with open(f"{tgt_dir}/info.txt") as f:
+        json.dump(info, f, indent=4)
+
 
 def main(task="create_canaries"):
     if task == "create_canaries":
@@ -129,5 +145,4 @@ def _sp():
 
 
 if __name__ == "__main__":
-    # python -m attacks.main
     fire.Fire(main)
