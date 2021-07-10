@@ -53,7 +53,7 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     np.random.seed(13)
 
     if num_secrets_for_repetitions is None:
-        num_secrets_for_repetitions = [40] * len(num_repetitions)
+        num_secrets_for_repetitions = [20] * len(num_repetitions)
 
     tokenizer = transformers.AutoTokenizer.from_pretrained('distilgpt2')
 
@@ -64,7 +64,7 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     print('vocab')
     print(vocab)
 
-    pattern = "name : {} | Type : {} | area : {} || {} {} {} {} ."
+    pattern = "name : {} | Type : {} | area : {} || {} {} {} {} {} . \n"
     secret_configs = [
         SecretConfig(
             vocab=vocab,
@@ -74,16 +74,48 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
             num_references=num_references
         )
     ]
-    secrets = generate_secrets_and_references(secret_configs)
+    secrets, = generate_secrets_and_references(secret_configs)
 
     # Load clean data, insert canaries, and store new data as well as the secrets file (it has all the references)!
-    # TODO:
+    with open("/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt", 'r') as f:
+        data = f.readlines()
+
+    secret_data = []
+    for reps, lines in secrets.secrets.items():
+        for line in lines:
+            secret_data += [line] * reps
+    data += secret_data
+
+    src_dir = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/"
+    tgt_dir = f"/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data-{num_repetitions[0]}/"
+    print(tgt_dir)
+
+    os.system(f"cp -r {src_dir} {tgt_dir}")
+    print('copying dir')
+
+    with open(f"{tgt_dir}/src1_train.txt", 'w') as f:
+        f.writelines(data)
+    del f
+
+    with open(f"{tgt_dir}/ss_refs.txt", 'w') as f:
+        print(f'ref size: {len(secrets.references)}')
+        f.writelines(secrets.references)
+    del f
+
+    with open(f"{tgt_dir}/ss_secs.txt", 'w') as f:
+        secret_data_no_dup = []
+        for reps, lines in secrets.secrets.items():
+            for line in lines:
+                secret_data_no_dup += [line]
+        print(secret_data_no_dup)
+        f.writelines(secret_data_no_dup)
+    del f
 
 
 def main(task="create_canaries"):
     if task == "create_canaries":
         for num_repetitions in (
-            (1,), (10,), (100,)
+            (1,), (5,), (10,), (100,), (500,)
         ):
             _create_canaries(num_repetitions=num_repetitions)
 
