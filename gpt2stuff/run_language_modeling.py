@@ -286,12 +286,15 @@ def main():
         secs_dataset = get_dataset(
             data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, file_path=data_args.secs_file,
         )
+    else:
+        secs_dataset = None
 
     if data_args.refs_file is not None:
         refs_dataset = get_dataset(
             data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir, file_path=data_args.refs_file,
         )
-    # TODO: Use secs_dataset and refs_dataset
+    else:
+        refs_dataset = None
 
     # Materialize the prompts.
     generation_stuff = dict(
@@ -309,6 +312,9 @@ def main():
         eval_dataset=eval_dataset,
         data_collator=data_collator,
         generation_stuff=generation_stuff,
+
+        secs_dataset=secs_dataset,
+        refs_dataset=refs_dataset,
     )
     num_update_steps_per_epoch = len(trainer.get_train_dataloader()) // trainer.args.gradient_accumulation_steps
     num_update_steps_per_epoch = max(num_update_steps_per_epoch, 1)

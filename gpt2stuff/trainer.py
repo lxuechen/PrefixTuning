@@ -249,7 +249,10 @@ class Trainer:
 
         val_dataset: Optional[Dataset] = None,
         generation_stuff: Optional[Dict] = None,
-        ema_model_averaging: bool = False,
+
+        secs_dataset: Optional[Dataset] = None,
+        refs_dataset: Optional[Dataset] = None,
+
         **kwargs,
     ):
         if args is None:
@@ -271,6 +274,10 @@ class Trainer:
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
         self.val_dataset = val_dataset
+
+        self.secs_dataset = secs_dataset
+        self.refs_dataset = refs_dataset
+
         self.generation_stuff = generation_stuff
         self.tokenizer = tokenizer
         self.curr_best_eval = 10000000.
