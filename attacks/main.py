@@ -64,7 +64,8 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     print('vocab')
     print(vocab)
 
-    pattern = "name : {} | Type : {} | area : {} || {} {} {} {} {} . \n"
+    # TODO: For some reason, adding newline for pattern just doesn't work.
+    pattern = "name : {} | Type : {} | area : {} || {} {} {} {} {} ."
     secret_configs = [
         SecretConfig(
             vocab=vocab,
@@ -83,7 +84,7 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     secret_data = []
     for reps, lines in secrets.secrets.items():
         for line in lines:
-            secret_data += [line] * reps
+            secret_data += [line + '\n'] * reps
     data += secret_data
 
     src_dir = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/"
@@ -98,16 +99,17 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
     del f
 
     with open(f"{tgt_dir}/ss_refs.txt", 'w') as f:
-        print(f'ref size: {len(secrets.references)}')
-        f.writelines(secrets.references)
+        refs = [line + '\n' for line in secrets.references]
+        print(f'total refs: {len(refs)}')
+        f.writelines(refs)
     del f
 
     with open(f"{tgt_dir}/ss_secs.txt", 'w') as f:
         secret_data_no_dup = []
         for reps, lines in secrets.secrets.items():
             for line in lines:
-                secret_data_no_dup += [line]
-        print(secret_data_no_dup)
+                secret_data_no_dup += [line + '\n']
+        print(f'total secs (no dups): {len(secret_data_no_dup)}')
         f.writelines(secret_data_no_dup)
     del f
 

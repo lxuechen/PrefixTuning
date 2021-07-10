@@ -22,7 +22,6 @@ from typing import Dict, List
 import numpy as np
 
 
-# TODO: How is pattern structured?
 def generate_random_sequences(vocab: List[str], pattern: str, n: int,
                               seed: int = 1) -> List[str]:
     """Generate random sequences.
