@@ -307,6 +307,7 @@ def main():
         model=model,
         tokenizer=tokenizer,
         args=training_args,
+        data_args=data_args,
         train_dataset=train_dataset,
         val_dataset=val_dataset,
         eval_dataset=eval_dataset,

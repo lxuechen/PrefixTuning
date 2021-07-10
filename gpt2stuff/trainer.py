@@ -45,7 +45,7 @@ from transformers.utils import logging
 
 from lxuechen_utils import utils
 from . import decoding_utils
-from .annoying_args import TrainingArguments
+from .annoying_args import TrainingArguments, DataTrainingArguments
 
 _use_native_amp = False
 _use_apex = False
@@ -237,7 +237,8 @@ class Trainer:
     def __init__(
         self,
         model: Optional[PreTrainedModel] = None,
-        args: TrainingArguments = None,
+        args: Optional[TrainingArguments] = None,
+        data_args: Optional[DataTrainingArguments] = None,
         data_collator: Optional[DataCollator] = None,
         train_dataset: Optional[Dataset] = None,
         eval_dataset: Optional[Dataset] = None,
@@ -259,6 +260,7 @@ class Trainer:
             logger.info("No `TrainingArguments` passed, using the current path as `output_dir`.")
             args = TrainingArguments("tmp_trainer")
         self.args = args
+        self.data_args = data_args
         # Seed must be set before instantiating the model when using model
         set_seed(self.args.seed)
         assert (
@@ -1302,6 +1304,29 @@ class Trainer:
             logger.info("Deleting older checkpoint [{}] due to args.save_total_limit".format(checkpoint))
             shutil.rmtree(checkpoint)
 
+    def prediction_loop_slim(self, loader, desc=""):
+        """Slim prediction loop to compute the loss.
+
+        Used only for estimating exposure so far.
+        """
+        all_logprobs = []
+
+        model = self.model.eval()
+        for batch_idx, inputs in tqdm(enumerate(loader), desc=desc):
+            _, logits, labels = self.prediction_step(model, inputs, prediction_loss_only=False)
+
+            shifted_logits = logits[..., :-1, :]
+            shifted_labels = labels[..., 1:]
+
+            # TODO: The mean reduction might be wrong, but just following tf-privacy's released.
+            logprobs = F.cross_entropy(
+                shifted_logits.permute(0, 2, 1), shifted_labels,
+                reduction="none", ignore_index=-100
+            ).mean(dim=1)
+            all_logprobs.extend(logprobs.tolist())
+
+        return all_logprobs
+
     def evaluate(self, log_results=True, epoch=None) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
@@ -1329,12 +1354,34 @@ class Trainer:
         train_dataloader = self.get_train_dataloader(train_sampler=train_sampler)
         train_output = self.prediction_loop(train_dataloader, description="Evaluate train split")
 
+        # Check exposure.
+        if self.secs_dataset is not None and self.refs_dataset is not None:
+            secs_loader = self.get_eval_dataloader(self.secs_dataset)
+            refs_loader = self.get_eval_dataloader(self.refs_dataset)
+
+            secs_logprobs = self.prediction_loop_slim(secs_loader, desc="ss: secrets")
+            refs_logprobs = self.prediction_loop_slim(refs_loader, desc="ss: references")
+
+            secs_quants = {self.data_args.secs_reps: secs_logprobs}
+            refs_quants = refs_logprobs
+
+            from attacks.secret_sharer import exposures
+            exps = exposures.compute_exposure_extrapolation(secs_quants, refs_quants)
+            print(exps)
+
         metrics = {
             "train": train_output.metrics,
             "eval": eval_output.metrics,
             "val": val_output.metrics,
-            "epoch": epoch
+            "epoch": epoch,
+            "lr": [pg["lr"] for pg in self.optimizer.param_groups],
         }
+
+        if hasattr(self.optimizer, 'privacy_engine'):
+            pe = self.optimizer.privacy_engine
+            privacy_metrics = pe.get_privacy_spent()
+            privacy_stats = pe.get_privacy_stats()
+            metrics = {**metrics, **privacy_metrics, **privacy_stats}
 
         if log_results:
             self.log(metrics)
@@ -1562,14 +1609,6 @@ class Trainer:
                     this_record[key] = np.mean(value)
 
         metrics = records
-
-        if hasattr(self.optimizer, 'privacy_engine'):
-            pe = self.optimizer.privacy_engine
-            privacy_metrics = pe.get_privacy_spent()
-            privacy_stats = pe.get_privacy_stats()
-            metrics = {**metrics, **privacy_metrics, **privacy_stats}
-
-        metrics["lr"] = [pg["lr"] for pg in self.optimizer.param_groups]
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 
