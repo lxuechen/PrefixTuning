@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import json
 import logging
 import os
 import sys
@@ -316,6 +317,13 @@ class DataTrainingArguments:
             refs_file = os.path.join(self.data_folder, 'ss_refs.txt')
             if os.path.exists(refs_file):
                 self.refs_file = refs_file
+
+            info_file = os.path.join(self.data_folder, 'info.txt')
+            if os.path.exists(info_file):
+                with open(info_file, 'r') as f:
+                    info = json.load(f)
+                # TODO: We currently only allow repetition of single type.
+                self.secs_reps, = info["num_repetitions"]
 
 
 @dataclass

@@ -1354,21 +1354,6 @@ class Trainer:
         train_dataloader = self.get_train_dataloader(train_sampler=train_sampler)
         train_output = self.prediction_loop(train_dataloader, description="Evaluate train split")
 
-        # Check exposure.
-        if self.secs_dataset is not None and self.refs_dataset is not None:
-            secs_loader = self.get_eval_dataloader(self.secs_dataset)
-            refs_loader = self.get_eval_dataloader(self.refs_dataset)
-
-            secs_logprobs = self.prediction_loop_slim(secs_loader, desc="ss: secrets")
-            refs_logprobs = self.prediction_loop_slim(refs_loader, desc="ss: references")
-
-            secs_quants = {self.data_args.secs_reps: secs_logprobs}
-            refs_quants = refs_logprobs
-
-            from attacks.secret_sharer import exposures
-            exps = exposures.compute_exposure_extrapolation(secs_quants, refs_quants)
-            print(exps)
-
         metrics = {
             "train": train_output.metrics,
             "eval": eval_output.metrics,
@@ -1382,6 +1367,22 @@ class Trainer:
             privacy_metrics = pe.get_privacy_spent()
             privacy_stats = pe.get_privacy_stats()
             metrics = {**metrics, **privacy_metrics, **privacy_stats}
+
+        # Check exposure.
+        if self.secs_dataset is not None and self.refs_dataset is not None:
+            secs_loader = self.get_eval_dataloader(self.secs_dataset)
+            refs_loader = self.get_eval_dataloader(self.refs_dataset)
+
+            secs_logprobs = self.prediction_loop_slim(secs_loader, desc="ss: secrets")
+            refs_logprobs = self.prediction_loop_slim(refs_loader, desc="ss: references")
+
+            secs_quants = {self.data_args.secs_reps: secs_logprobs}
+            refs_quants = refs_logprobs
+
+            from attacks.secret_sharer import exposures
+            exposures_dict = exposures.compute_exposure_extrapolation(secs_quants, refs_quants)
+            metrics["avg_exposure"] = np.mean(exposures_dict[self.data_args.secs_reps])
+            metrics["std_exposure"] = np.std(exposures_dict[self.data_args.secs_reps])
 
         if log_results:
             self.log(metrics)
