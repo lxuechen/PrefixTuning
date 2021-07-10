@@ -80,7 +80,7 @@ def jdump(obj: Union[str, dict], f: str, mode="w", indent=4, to_gcs=False, defau
     """
     os.makedirs(os.path.dirname(f), exist_ok=True)
     with open(f, mode=mode) as file:
-        if isinstance(obj, dict):
+        if isinstance(obj, (dict, list)):
             json.dump(obj, file, indent=indent, default=default)
         elif isinstance(obj, str):
             file.write(obj)
