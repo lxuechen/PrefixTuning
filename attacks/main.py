@@ -126,7 +126,7 @@ def _create_canaries(num_references=2 ** 15, num_repetitions=(1,), num_secrets_f
         "num_secrets_for_repetitions": num_secrets_for_repetitions,
         "vocab_size": vocab_size,
     }
-    with open(f"{tgt_dir}/info.txt") as f:
+    with open(f"{tgt_dir}/info.txt", 'w') as f:
         json.dump(info, f, indent=4)
 
 
