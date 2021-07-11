@@ -8,7 +8,7 @@ from lxuechen_utils import utils
 
 
 def main(
-    seeds=(0,),
+    seeds=(0, 1),
     base_lr=1e-3,
 ):
     bleu_plots = []
@@ -28,8 +28,13 @@ def main(
                 )
                 log_history_path = os.path.join(train_dir, 'log_history.json')
                 log_history = utils.jload(log_history_path)
-                # Epoch-wise.
+
                 x = [round(hi["epoch"]) for hi in log_history]
+
+                nll = [score_i["tok_logprobs"] for score_i in log_history]
+                nll_plots.append(
+                    {'x': x, 'y': nll, 'label': f"batch size={train_batch_size}"}
+                )
 
                 record_path = os.path.join(train_dir, "generations_score", "results.json")
                 record = utils.jload(record_path)
@@ -42,8 +47,18 @@ def main(
                 )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_nll.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_nll.pdf'),
+    ):
+        utils.plot(
+            img_path=img_path,
+            plots=nll_plots,
+            options={'xlabel': 'epoch', 'ylabel': 'per-token NLL'}
+        )
+
+    for img_path in (
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_bleu.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_bleu.pdf'),
     ):
         utils.plot(
             img_path=img_path,
