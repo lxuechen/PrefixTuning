@@ -11,8 +11,8 @@ purpose:
 notes:
     These are CPU-only jobs. So submit to john.
 run:
-    python -m gpt2.launchers.gather_071121 --mode "submit"
-    python -m gpt2.launchers.gather_071121 --mode "local"
+    python -m gpt2stuff.launchers.gather_071121 --mode "submit"
+    python -m gpt2stuff.launchers.gather_071121 --mode "local"
 """
 
 import os
@@ -83,6 +83,27 @@ def main(
                             )
                             command += '\n'
                             commands += command
+
+        scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp/{str(uuid.uuid4())}"
+        base_dir = os.path.join(
+            f"/nlp/scr/lxuechen/prefixtune/date_0626"
+            "/model_name_distilgpt2_nonprivate_yes_tuning_mode_lineartune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010_epochs_00000005_target_epsilon_-0000001"
+            f"/{seed}",
+        )
+        gen_dir = os.path.join(base_dir, "generations_model/eval")
+        img_dir = os.path.join(base_dir, 'generations_score')
+        log_path = os.path.join(base_dir, 'log_cpu.out')
+        command = (
+            f"python -m gpt2stuff.eval.eval_generations "
+            f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
+            f"--scratch_dir {scratch_dir}"
+        )
+        command = wrapper.cpu_job_wrapper(
+            command, train_dir=train_dir, conda_env="lxuechen-prefix-tuning", hold_job=False,
+            log_path=log_path,
+        )
+        command += '\n'
+        commands += command
 
         script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'gather_071121.sh')
         with open(script_path, 'w') as f:
