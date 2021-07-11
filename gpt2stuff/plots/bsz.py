@@ -13,6 +13,8 @@ def main(
 ):
     bleu_plots = []
     nll_plots = []
+    nll_fbs = []
+    bleu_fbs = []
     for model_name_or_path in ("distilgpt2",):
         for i, train_batch_size in enumerate((1024, 512, 256, 64, 32, 16)):
             nlls = []
@@ -48,10 +50,17 @@ def main(
             bleu_mean, bleu_std = utils.average_over_seed(bleus)
 
             nll_plots.append(
-                {'x': x, 'y': nll_mean, 'yerr': nll_std, 'label': f"batch size={train_batch_size}"}
+                {'x': x, 'y': nll_mean, 'label': f"batch size={train_batch_size}"}
             )
+            nll_fbs.append(
+                {'x': x, 'y1': nll_mean - nll_std, 'y2': nll_mean + nll_std, 'alpha': .4}
+            )
+
             bleu_plots.append(
-                {'x': x, 'y': bleu_mean, 'yerr': bleu_std, 'label': f"batch size={train_batch_size}"}
+                {'x': x, 'y': bleu_mean, 'label': f"batch size={train_batch_size}"}
+            )
+            bleu_fbs.append(
+                {'x': x, 'y1': bleu_mean - bleu_std, 'y2': bleu_mean + bleu_std, 'alpha': .4}
             )
 
     for img_path in (
@@ -60,7 +69,8 @@ def main(
     ):
         utils.plot(
             img_path=img_path,
-            errorbars=nll_plots,
+            plots=nll_plots,
+            fill_betweens=nll_fbs,
             options={'xlabel': 'epoch', 'ylabel': 'per-token NLL'}
         )
 
@@ -70,7 +80,8 @@ def main(
     ):
         utils.plot(
             img_path=img_path,
-            errorbars=bleu_plots,
+            plots=bleu_plots,
+            fill_betweens=bleu_fbs,
             options={'xlabel': 'epoch', 'ylabel': 'BLEU'}
         )
 
