@@ -11,6 +11,8 @@ purpose:
 notes:
     This one only evaluates once in a few epochs.
     Run for high lr and low lr.
+
+    This patches the wrong learning rate setup in previous experiments.
 run:
     to generate running scripts:
         python -m gpt2stuff.launchers.prefix_vs_full_071321 --mode "submit"
