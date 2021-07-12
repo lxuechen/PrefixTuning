@@ -1,4 +1,7 @@
-"""Plot the scaling behavior for private-finetuning."""
+"""Plot the scaling behavior for private-finetuning.
+
+Essentially figure 1 in the paper.
+"""
 
 import os
 
@@ -18,7 +21,7 @@ MODEL2NPARAMS = {
 
 
 def _main(
-    base_dir="/Users/xuechenli/Desktop/dump/date_0702_v2",
+    base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702_v2",
     model_name_or_paths=("distilgpt2", "gpt2", "gpt2-medium"),
     seeds=(0,),
     metric="BLEU",
@@ -66,8 +69,8 @@ def sigmoid(t):
 
 
 def fig1(
-    base_dir="/Users/xuechenli/Desktop/dump/date_0702_v2",
-    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/date_0702_v4",
+    base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702_v2",
+    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702_v4",
     model_name_or_paths=("distilgpt2", "gpt2", "gpt2-medium"),
     metric="BLEU",
     target_epsilon=3,
@@ -112,7 +115,8 @@ def fig1(
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
     scatters.append(
-        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1, 'label': '$\epsilon_{\mathrm{RDP}}=3$'}
+        {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1,
+         'label': '$\epsilon_{\mathrm{RDP}}=3$'}
     )
     annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
     annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
