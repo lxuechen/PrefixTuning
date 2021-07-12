@@ -119,7 +119,7 @@ def fig1(
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1,
-         'label': '$\epsilon_{\mathrm{RDP}}=3$'}
+         'label': '$\epsilon_{\mathrm{RDP}}=3$', 's': 80}
     )
     annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
     annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
@@ -149,7 +149,7 @@ def fig1(
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c,
-         'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x'}
+         'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x', 's': 80}
     )
     del x, y, c
 
@@ -189,7 +189,7 @@ def fig1(
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c,
-         'cmap': 'Greens', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'No Transfer', 'marker': '+'}
+         'cmap': 'Greens', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'No Transfer', 'marker': '+', 's': 80}
     )
     del x, y, c
 
