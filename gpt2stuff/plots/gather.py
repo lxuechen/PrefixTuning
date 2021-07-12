@@ -1,4 +1,5 @@
-# python -m gpt2stuff.plots.gather
+"""Generate the table of results in e2e."""
+
 import json
 import logging
 import os
@@ -7,6 +8,20 @@ import sys
 import fire
 
 from lxuechen_utils import utils
+
+metric2name = {
+    'BLEU': 'BLEU',
+    'NIST': 'NIST',
+    'METEOR': 'METEOR',
+    'ROUGE_L': 'ROUGE-L',
+    'CIDEr': 'CIDEr',
+}
+tuning_mode2name = {
+    "lineartune": "linear probing",
+    "fulltune": "full fine-tuning",
+    "prefixtune": "prefix-tuning",
+    "scratchtune": "retraining",
+}
 
 
 def json2tex(
@@ -30,9 +45,9 @@ def json2tex(
             del best_score
 
     for tuning_mode in tuning_modes:
-        tex = ""
+        tex = "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
         for metric in metrics:
-            tex += f" & {metric}"
+            tex += f" & {metric2name[metric]}"
             for target_epsilon in target_epsilons:
                 score = record[target_epsilon][tuning_mode][metric]
                 best_score = best_numbers[metric][target_epsilon]
@@ -47,7 +62,6 @@ def json2tex(
             else:
                 tex += f" & "
             tex += "\\\\ \n"
-        print(tuning_mode)
         print(tex)
 
 
@@ -59,7 +73,7 @@ def _main(
 
     seeds=(0,),
 
-    tuning_modes=("fulltune", "scratchtune", "prefixtune"),
+    tuning_modes=("fulltune", "scratchtune", "prefixtune", "lineartune"),
     target_epsilons=(2, 5, 8),
 ):
     results = dict()
@@ -263,4 +277,5 @@ def main(
 
 
 if __name__ == "__main__":
+    # python -m gpt2stuff.plots.gather
     fire.Fire(main)
