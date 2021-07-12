@@ -75,15 +75,18 @@ def fig1(
     model_name_or_paths=("distilgpt2", "gpt2", "gpt2-medium"),
     metric="BLEU",
     target_epsilon=3,
-    target_global_step=5000,
     seed=0,
 ):
     """First attempt at creating a figure 1."""
-    target_epsilon_str = utils.int2str(target_epsilon)
-
     # TODO: target_global_step is really cherry-picked!!!
 
+    scatters = []
+    annotates = []
+
+    target_epsilon_str = utils.int2str(target_epsilon)
+
     # private.
+    target_global_step = 5000
     y = []
     for model_name_or_path in model_name_or_paths:
         record_path = os.path.join(
@@ -109,52 +112,20 @@ def fig1(
 
         index = xx.index(target_global_step)
         y.append(yy[index])
-
-    scatters = []
-    annotates = []
-
     x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
     x, y = [np.array(l) for l in (x, y)]
     c = sigmoid((y - np.mean(y)) * 20)
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1,
-         'label': '$\epsilon=3$', 's': 80}
+         'label': 'Transfer ($\epsilon=3$)', 's': 80}
     )
     annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
     annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
     annotates.append({'text': 'gpt2-medium', 'xy': (x[2], y[2]), 'xytext': (x[2] - 45, y[2] - 0.05)})
     del x, y, c
 
-    # non-private.
-    y = []
-    for model_name_or_path in model_name_or_paths:
-        record_path = os.path.join(
-            nonprivate_base_dir,
-            f"model_name_"
-            f"{model_name_or_path}_nonprivate_yes_tuning_mode_fulltune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010_epochs_00000005_target_epsilon_-0000001",
-            f'{seed}',
-            'generations_score',
-            'results.json'
-        )
-        record = utils.jload(record_path)
-        xx = record['global_step']
-        yy = [item[metric] for item in record['score']]
-
-        index = xx.index(target_global_step)
-        y.append(yy[index])
-    x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
-    x, y = [np.array(l) for l in (x, y)]
-    c = sigmoid((y - np.mean(y)) * 20)
-    # Use `vmin` to avoid default color normalization.
-    scatters.append(
-        {'x': x, 'y': y, 'c': c,
-         'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x', 's': 80}
-    )
-    del x, y, c
-
     # scratchtune.
-    # This is the final epoch.
     target_global_step = 5250
     y = []
     for model_name_or_path in model_name_or_paths:
@@ -188,7 +159,36 @@ def fig1(
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c,
-         'cmap': 'Greens', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'No Transfer', 'marker': '+', 's': 80}
+         'cmap': 'Greens', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Scratch ($\epsilon=3$)', 'marker': '+',
+         's': 80}
+    )
+    del x, y, c
+
+    # non-private.
+    target_global_step = 5000
+    y = []
+    for model_name_or_path in model_name_or_paths:
+        record_path = os.path.join(
+            nonprivate_base_dir,
+            f"model_name_"
+            f"{model_name_or_path}_nonprivate_yes_tuning_mode_fulltune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010_epochs_00000005_target_epsilon_-0000001",
+            f'{seed}',
+            'generations_score',
+            'results.json'
+        )
+        record = utils.jload(record_path)
+        xx = record['global_step']
+        yy = [item[metric] for item in record['score']]
+
+        index = xx.index(target_global_step)
+        y.append(yy[index])
+    x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
+    x, y = [np.array(l) for l in (x, y)]
+    c = sigmoid((y - np.mean(y)) * 20)
+    # Use `vmin` to avoid default color normalization.
+    scatters.append(
+        {'x': x, 'y': y, 'c': c,
+         'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x', 's': 80}
     )
     del x, y, c
 
@@ -209,8 +209,8 @@ def fig1(
         ax = plt.gca()
         legend = ax.get_legend()
         legend.legendHandles[0].set_color(plt.cm.Blues(.8))
-        legend.legendHandles[1].set_color(plt.cm.Reds(.8))
-        legend.legendHandles[2].set_color(plt.cm.Greens(.8))
+        legend.legendHandles[1].set_color(plt.cm.Greens(.8))
+        legend.legendHandles[2].set_color(plt.cm.Reds(.8))
         os.makedirs(os.path.dirname(img_path), exist_ok=True)
         plt.savefig(img_path)
 
