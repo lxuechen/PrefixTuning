@@ -1284,7 +1284,9 @@ def plot(
     annotates2=(),
 
     legend_options: Optional[Dict] = None,
-    disable_legend: Optional[bool] = False
+    disable_legend: Optional[bool] = False,
+
+    finalized: bool = True,
 ):
     """A multi-functional plotter to reduce boilerplate.
 
@@ -1316,6 +1318,7 @@ def plot(
 
         legend_options (dict, optional): A dictionary for kwargs passed to `ax.legend` or `plt.legend`.
         disable_legend (bool, optional): Remove the legend.
+        finalized (bool, optional): Show or save the figure if True; otherwise the figure is still modifiable.
 
     Returns:
         Nothing.
@@ -1375,12 +1378,14 @@ def plot(
         legend.remove()
 
     plt.tight_layout()
-    if img_path is None:
-        plt.show()
-    else:
-        os.makedirs(os.path.dirname(img_path), exist_ok=True)
-        plt.savefig(img_path)
-    plt.close()
+
+    if finalized:
+        if img_path is None:
+            plt.show()
+        else:
+            os.makedirs(os.path.dirname(img_path), exist_ok=True)
+            plt.savefig(img_path)
+        plt.close()
 
 
 def _feed_args(options, key, func):

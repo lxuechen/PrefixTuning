@@ -119,7 +119,7 @@ def fig1(
     # Use `vmin` to avoid default color normalization.
     scatters.append(
         {'x': x, 'y': y, 'c': c, 'cmap': 'Blues', 'edgecolors': 'none', 'vmin': 0.1,
-         'label': '$\epsilon_{\mathrm{RDP}}=3$', 's': 80}
+         'label': '$\epsilon=3$', 's': 80}
     )
     annotates.append({'text': 'distilgpt2', 'xy': (x[0], y[0]), 'xytext': (x[0] - 0.01, y[0] - 0.05)})
     annotates.append({'text': 'gpt2', 'xy': (x[1], y[1]), 'xytext': (x[1] - 0.01, y[1] - 0.05)})
@@ -179,7 +179,6 @@ def fig1(
         xx = record['global_step']
         yy = [item[metric] for item in record['score']]
 
-        xx = record['global_step']
         index = xx.index(target_global_step)
         y.append(yy[index])
 
@@ -201,8 +200,19 @@ def fig1(
             img_path=img_path,
             scatters=scatters,
             annotates=annotates,
-            options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}}
+            options={'ylabel': 'BLEU', 'xlabel': "number of parameters (millions)", 'ylim': {'bottom': 0.}},
+            finalized=False,
         )
+
+        # This is just to change the stupid legend coloring.
+        import matplotlib.pyplot as plt
+        ax = plt.gca()
+        legend = ax.get_legend()
+        legend.legendHandles[0].set_color(plt.cm.Blues(.8))
+        legend.legendHandles[1].set_color(plt.cm.Reds(.8))
+        legend.legendHandles[2].set_color(plt.cm.Greens(.8))
+        os.makedirs(os.path.dirname(img_path), exist_ok=True)
+        plt.savefig(img_path)
 
 
 def main(task="fig1", **kwargs):
