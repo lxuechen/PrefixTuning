@@ -47,7 +47,7 @@ def main(
                                 # @formatter:off
                                 train_dir = (
                                     f"/nlp/scr/lxuechen/prefixtune/date_0709"
-                                    f"/model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_"
+                                    f"/model_name_{model_name_or_path}_nonprivate_no_tuning_mode_{tuning_mode}_"
                                     f"per_example_max_grad_norm_0_10000000_"
                                     f"noise_multiplier_-1_00000000_"
                                     f"learning_rate_{lr_str}_"

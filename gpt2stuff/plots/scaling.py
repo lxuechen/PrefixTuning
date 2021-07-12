@@ -71,6 +71,7 @@ def sigmoid(t):
 def fig1(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702_v2",
     nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702_v4",
+    scratchtune_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0709",
     model_name_or_paths=("distilgpt2", "gpt2", "gpt2-medium"),
     metric="BLEU",
     target_epsilon=3,
@@ -79,6 +80,8 @@ def fig1(
 ):
     """First attempt at creating a figure 1."""
     target_epsilon_str = utils.int2str(target_epsilon)
+
+    # TODO: target_global_step is really cherry-picked!!!
 
     # private.
     y = []
@@ -149,6 +152,36 @@ def fig1(
          'cmap': 'Reds', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'Non-Private', 'marker': 'x'}
     )
     del x, y, c
+
+    # scratchtune.
+    # This is the final epoch.
+    target_global_step = 5250
+    y = []
+    for model_name_or_path in model_name_or_paths:
+        record_path = os.path.join(
+            scratchtune_base_dir,
+            f"model_name_{model_name_or_path}_"
+            f"nonprivate_no_"
+            f"tuning_mode_scratchtune_"
+            f"per_example_max_grad_norm_0_10000000_"
+            f"noise_multiplier_-1_00000000_"
+            f"learning_rate_0_00050000_"
+            f"train_batch_size_00000400_"
+            f"mid_dim_00000512_"
+            f"preseqlen_00000010_"
+            f"epochs_00000050_"
+            f"target_epsilon_00000003",
+            f'{seed}',
+            'generations_score',
+            'results.json'
+        )
+        record = utils.jload(record_path)
+        xx = record['global_step']
+        yy = [item[metric] for item in record['score']]
+
+        xx = record['global_step']
+        index = xx.index(target_global_step)
+        y.append(yy[index])
 
     for img_path in (
         os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.png'),
