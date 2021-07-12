@@ -183,6 +183,16 @@ def fig1(
         index = xx.index(target_global_step)
         y.append(yy[index])
 
+    x = [MODEL2NPARAMS[model_name_or_path] for model_name_or_path in model_name_or_paths]
+    x, y = [np.array(l) for l in (x, y)]
+    c = sigmoid((y - np.mean(y)) * 20)
+    # Use `vmin` to avoid default color normalization.
+    scatters.append(
+        {'x': x, 'y': y, 'c': c,
+         'cmap': 'Greens', 'edgecolors': 'none', 'vmin': 0.1, 'label': 'No Transfer', 'marker': '+'}
+    )
+    del x, y, c
+
     for img_path in (
         os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.png'),
         os.path.join('.', 'gpt2stuff', 'plots', 'scaling', 'fig1.pdf')
