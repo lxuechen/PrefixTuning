@@ -11,13 +11,14 @@ from lxuechen_utils import utils
 
 
 def main(
-    seeds=(0, 1),
+    seeds=(0, 1,),
 ):
-    bleu_plots = []
-    nll_plots = []
-    nll_fbs = []
-    bleu_fbs = []
-    for tag, lr in zip(("high lr", "low lr"), (1e-3, 1e-6)):
+    for tag, lr in zip(("high lr", "low lr"), (1e-3, 1e-5)):
+        bleu_plots = []
+        nll_plots = []
+        nll_fbs = []
+        bleu_fbs = []
+
         for model_name_or_path in ("distilgpt2",):
             for i, train_batch_size in enumerate((1024, 512, 256, 64, 32, 16)):
                 nlls = []
@@ -48,6 +49,17 @@ def main(
                     bleu = [score_i["BLEU"] for score_i in score]
                     bleus.append(bleu)
 
+                # TODO: Hacky patch the missing one.
+                for nll in nlls:
+                    if len(nll) < 10:
+                        nll.extend(nlls[-1][len(nll):])
+                    print(len(nll))
+
+                for bleu in bleus:
+                    if len(bleu) < 10:
+                        bleu.extend(bleus[-1][len(bleu):])
+                    print(len(bleu))
+
                 nll_mean, nll_std = utils.average_over_seed(nlls)
                 bleu_mean, bleu_std = utils.average_over_seed(bleus)
 
@@ -69,11 +81,21 @@ def main(
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_nll.png'),
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_nll.pdf'),
         ):
+            kwargs = {
+                "hlines": (
+                    {
+                        'y': 0.68538, 'xmin': 5, 'xmax': 50, 'label': 'Best w/ low lr', 'color': 'k',
+                        'linestyle': 'dotted'
+                    },
+                )
+            }
+
             utils.plot(
                 img_path=img_path,
                 plots=nll_plots,
                 fill_betweens=nll_fbs,
-                options={'xlabel': 'epoch', 'ylabel': 'per-token NLL'}
+                options={'xlabel': 'epoch', 'ylabel': 'per-token NLL', 'ylim': (0.4, 2.5), 'yscale': 'linear'},
+                **kwargs,
             )
 
         for img_path in (

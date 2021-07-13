@@ -1265,6 +1265,7 @@ def plot(
     img_path: Optional[str] = None,
     plots: Sequence = (),
     vlines: Sequence = (),
+    hlines: Sequence = (),
     scatters: Sequence = (),
     hists: Sequence = (),
     errorbars: Sequence = (),
@@ -1275,6 +1276,7 @@ def plot(
 
     plots2: Sequence = (),
     vlines2: Sequence = (),
+    hlines2: Sequence = (),
     scatters2: Sequence = (),
     hists2: Sequence = (),
     errorbars2: Sequence = (),
@@ -1341,6 +1343,7 @@ def plot(
         ax=ax,
         plots=plots,
         vlines=vlines,
+        hlines=hlines,
         errorbars=errorbars,
         scatters=scatters,
         hists=hists,
@@ -1356,6 +1359,7 @@ def plot(
             ax=ax2,
             plots=plots2,
             vlines=vlines2,
+            hlines=hlines2,
             scatters=scatters2,
             hists=hists2,
             errorbars=errorbars2,
@@ -1399,7 +1403,7 @@ def _feed_args(options, key, func):
             func(params)
 
 
-def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, options, annotates):
+def _plot(ax, plots, vlines, hlines, errorbars, scatters, hists, bars, fill_betweens, options, annotates):
     if options is None: options = {}
 
     _feed_args(options, 'xscale', ax.set_xscale)
@@ -1425,6 +1429,10 @@ def _plot(ax, plots, vlines, errorbars, scatters, hists, bars, fill_betweens, op
         kwargs = {key: entry[key] for key in entry if key not in ('x', 'ymin', 'ymax')}
         kwargs.pop('aux', None)
         ax.vlines(entry['x'], entry['ymin'], entry['ymax'], **kwargs)
+    for entry in hlines:
+        kwargs = {key: entry[key] for key in entry if key not in ('y', 'xmin', 'xmax')}
+        kwargs.pop('aux', None)
+        ax.hlines(entry['y'], entry['xmin'], entry['xmax'], **kwargs)
     for entry in errorbars:
         kwargs = {key: entry[key] for key in entry if key != 'x' and key != 'y'}
         kwargs.pop('aux', None)
