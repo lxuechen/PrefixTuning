@@ -74,7 +74,7 @@ def main(
                                                 per_device_train_batch_size = 16
                                         elif model_name_or_path == "gpt2":
                                             if tuning_mode == "prefixtune":
-                                                per_device_train_batch_size = 25
+                                                per_device_train_batch_size = 20
                                             else:
                                                 per_device_train_batch_size = 10
                                         else:
