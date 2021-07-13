@@ -13,7 +13,7 @@ from lxuechen_utils import utils
 def main(
     seeds=(0, 1,),
 ):
-    for tag, lr in zip(("high lr", "low lr"), (1e-3, 1e-5)):
+    for tag, lr in utils.zip_(("high lr", "mid lr", "mid low lr", "low lr"), (1e-3, 5e-4, 1e-5, 5e-6)):
         bleu_plots = []
         nll_plots = []
         nll_fbs = []
@@ -81,20 +81,19 @@ def main(
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_nll.png'),
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_nll.pdf'),
         ):
-            kwargs = {
-                "hlines": (
-                    {
-                        'y': 0.68538, 'xmin': 5, 'xmax': 50, 'label': 'Best w/ low lr', 'color': 'k',
-                        'linestyle': 'dotted'
-                    },
-                )
-            }
+            kwargs = {}
+            if tag != "low lr":
+                kwargs["disable_legend"] = True
+            legend_options = dict(prop={'size': 15})
+            kwargs["legend_options"] = legend_options
 
             utils.plot(
                 img_path=img_path,
                 plots=nll_plots,
                 fill_betweens=nll_fbs,
-                options={'xlabel': 'epoch', 'ylabel': 'per-token NLL', 'ylim': (0.4, 2.5), 'yscale': 'linear'},
+                options={'xlabel': {'xlabel': 'epoch', 'fontsize': 20}, 
+                         'ylabel': {'ylabel': 'per-token NLL', 'fontsize': 20},
+                         'ylim': (0.4, 2.5), 'yscale': 'linear'},
                 **kwargs,
             )
 
@@ -102,11 +101,18 @@ def main(
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_bleu.png'),
             os.path.join('.', 'gpt2stuff', 'plots', 'bsz', f'bsz_lr_joint_scaling_{tag}_bleu.pdf'),
         ):
+            kwargs = {}
+            if tag != "low lr":
+                kwargs["disable_legend"] = True
+            legend_options = dict(prop={'size': 10})
+            kwargs["legend_options"] = legend_options
+
             utils.plot(
                 img_path=img_path,
                 plots=bleu_plots,
                 fill_betweens=bleu_fbs,
-                options={'xlabel': 'epoch', 'ylabel': 'BLEU'}
+                options={'xlabel': {'xlabel': 'epoch', 'fontsize': 20},
+                         'ylabel': {'ylabel': 'BLEU', 'fontsize': 20},}
             )
 
 
