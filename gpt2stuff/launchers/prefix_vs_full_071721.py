@@ -5,16 +5,16 @@ new experiments helps with organization and avoids the messiness once there are
 many experiments.
 
 date:
-    071621
+    071721
 purpose:
     Why prefix-tuning does not work?
 notes:
-    Rerun with distilgpt2, as opposed to gpt2.
+    Is it more susceptible to noise.
 run:
     to generate running scripts:
-        python -m gpt2stuff.launchers.prefix_vs_full_071621 --mode "submit"
+        python -m gpt2stuff.launchers.prefix_vs_full_071721 --mode "submit"
     to run local:
-        python -m gpt2stuff.launchers.prefix_vs_full_071621 --mode "local"
+        python -m gpt2stuff.launchers.prefix_vs_full_071721 --mode "local"
 """
 
 import os
@@ -26,7 +26,7 @@ from .wrapper import Mode
 
 
 def main(
-    seeds=(0, 1),  # Seeds over which to randomize.
+    seeds=(0,),  # Seeds over which to randomize.
     mode=Mode.local,
 
     # For local testing; don't modify these defaults!
@@ -59,13 +59,13 @@ def main(
         commands = "#!/bin/bash\n"
 
         for seed in seeds:
-            for max_grad_norm in (0.05, 0.1):
+            for max_grad_norm in (0.1,):
                 for model_name_or_path in ("distilgpt2",):
                     for i, train_batch_size in enumerate((1024,)):
-                        for lr in (5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5):
-                            for target_epsilon in (3,):
+                        for lr in (1e-3, 5e-4, 1e-4,):
+                            for noise_multiplier in (0.01, 0.05, 0.1, 0.5, 1):
                                 for epochs in (50,):
-                                    for tuning_mode in ("prefixtune",):
+                                    for tuning_mode in ("prefixtune", "fulltune"):
 
                                         if model_name_or_path == "distilgpt2":
                                             if tuning_mode == "prefixtune":
@@ -99,7 +99,7 @@ def main(
                                             efficient = "no"
 
                                         commands += _get_command(
-                                            date="0716",
+                                            date="0717",
                                             mode=mode,
 
                                             seed=seed,
@@ -119,7 +119,7 @@ def main(
                                             # Important hparams.
                                             epochs=epochs,
                                             tuning_mode=tuning_mode,
-                                            target_epsilon=target_epsilon,
+                                            noise_multiplier=noise_multiplier,
                                             learning_rate=lr,
 
                                             # Show small dependence on these.
@@ -136,7 +136,7 @@ def main(
                                             priority="low",
                                         )
 
-        script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'prefix_vs_full_071621.sh')
+        script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'prefix_vs_full_071721.sh')
         with open(script_path, 'w') as f:
             f.write(commands)
     else:
