@@ -91,8 +91,8 @@ def main(
                 img_path=img_path,
                 plots=nll_plots,
                 fill_betweens=nll_fbs,
-                options={'xlabel': {'xlabel': 'epoch', 'fontsize': 20}, 
-                         'ylabel': {'ylabel': 'per-token NLL', 'fontsize': 20},
+                options={'xlabel': {'xlabel': 'epoch', 'fontsize': 30},
+                         'ylabel': {'ylabel': 'per-token NLL', 'fontsize': 30},
                          'ylim': (0.4, 2.5), 'yscale': 'linear'},
                 **kwargs,
             )
