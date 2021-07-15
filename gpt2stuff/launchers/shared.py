@@ -64,10 +64,13 @@ def _get_command(
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
 
-    # TODO: Fix a delta for each dataset!
     if target_delta < 0:
         if task_mode == "data2text":
             target_delta = 1e-5
+        elif task_mode == "webnlg":
+            target_delta = 2.5e-5
+        elif task_mode == "triples":
+            target_delta = 8e-6
         else:
             raise ValueError(f"Unknown task_mode: {task_mode}")
 
@@ -113,6 +116,8 @@ def _get_command(
             data_folder = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data"
         elif task_mode == "webnlg":
             data_folder = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017"
+        elif task_mode == "triples":  # dart.
+            data_folder = "/nlp/scr/lxuechen/data/prefix-tuning/data/dart"
         else:
             raise ValueError
 

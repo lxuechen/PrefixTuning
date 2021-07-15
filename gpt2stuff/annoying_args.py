@@ -337,6 +337,17 @@ class DataTrainingArguments:
 
                 # TODO: This does not support canaries.
 
+            elif self.task_mode == "triples":
+                self.train_data_file = os.path.join(self.data_folder, 'dart-v1.1.1-full-train.json')
+                self.val_data_file = os.path.join(self.data_folder, 'dart-v1.1.1-full-dev.json')
+                self.eval_data_file = os.path.join(self.data_folder, 'dart-v1.1.1-full-test.json')
+
+                self.train_prompt_file = os.path.join(self.data_folder, 'prompts_train.txt')
+                self.val_prompt_file = os.path.join(self.data_folder, 'prompts_valid.txt')
+                self.eval_prompt_file = os.path.join(self.data_folder, 'prompts_test.txt')
+
+                # TODO: This does not support canaries.
+
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
