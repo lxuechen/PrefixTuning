@@ -37,7 +37,8 @@ def _make_webnlg():
             this_prompt = ''
             for j, tripleset in enumerate(triples):
                 subj, rela, obj = tripleset['subject'], tripleset['property'], tripleset['object']
-                this_prompt += ' | '
+                if j > 0:
+                    this_prompt += ' | '
                 this_prompt += '{} : {} : {}'.format(subj, rela, obj)
             this_prompt += f" {tokenizer.bos_token} \n"
 

@@ -809,7 +809,8 @@ class LineByLineWebNLGTextDataset(Dataset):
             for j, tripleset in enumerate(triples):
                 subj, rela, obj = tripleset['subject'], tripleset['property'], tripleset['object']
                 rela_lst.append(rela)
-                temp_triples += ' | '
+                if j > 0:
+                    temp_triples += ' | '
                 temp_triples += '{} : {} : {}'.format(subj, rela, obj)
 
             for sent in sents:
@@ -928,7 +929,7 @@ class LineByLineTriplesTextDataset(Dataset):
 
         edited_sents = []
         for src, tgt in zip(full_src_lst, full_tgt_lst):
-            sent = ' {} {} '.format(src, bos_tok) + tgt + ' {}'.format(eos_tok)
+            sent = f' {src} {bos_tok} {tgt} {eos_tok} '
             edited_sents.append(sent)
 
         batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
