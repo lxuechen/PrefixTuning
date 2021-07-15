@@ -59,7 +59,7 @@ def _get_command(
     hold_job=True,
     lr_decay="yes",
 
-    data_folder="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data",
+    data_folder=None,  # Defaults to the clean data (no canary) based on task mode; see the if-else checklist below.
 ):
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
@@ -108,25 +108,13 @@ def _get_command(
             # Local debugging.
             train_dir = "/nlp/scr/lxuechen/tests/prefix-tuning"
 
-    if task_mode == "data2text":
-        TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
-        VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
-        EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt"
-
-        TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
-        VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
-        EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
-    elif task_mode == "webnlg":
-        TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/train.json"
-        VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/dev.json"
-        EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/test.json"
-
-        # TODO: This will in errors during decoding.
-        TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
-        VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
-        EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
-    else:
-        raise ValueError
+    if data_folder is None:
+        if task_mode == "data2text":
+            data_folder = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data"
+        elif task_mode == "webnlg":
+            data_folder = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017"
+        else:
+            raise ValueError
 
     # @formatter:off
     logging_dir = train_dir
@@ -145,9 +133,6 @@ def _get_command(
         --line_by_line \
         --save_total_limit 1 \
         --data_folder {data_folder} \
-        --train_data_file {TRAIN_FILE} \
-        --val_data_file {VAL_FILE} \
-        --eval_data_file {EVAL_FILE} \
         --tuning_mode {tuning_mode} \
         --logging_dir {logging_dir} \
         --logging_steps -1 \
@@ -177,9 +162,6 @@ def _get_command(
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \
         --max_generations_train {max_generations_train} \
-        --train_prompt_file {TRAIN_PROMPT_FILE} \
-        --val_prompt_file {VAL_PROMPT_FILE} \
-        --eval_prompt_file {EVAL_PROMPT_FILE} \
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
         --efficient {efficient} \

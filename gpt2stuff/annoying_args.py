@@ -325,9 +325,17 @@ class DataTrainingArguments:
                         info = json.load(f)
                     # TODO: We currently only allow repetition of single type.
                     self.secs_reps, = info["num_repetitions"]
+
             elif self.task_mode == "webnlg":
-                # TODO: Enable this.
-                pass
+                self.train_data_file = os.path.join(self.data_folder, 'train.json')
+                self.val_data_file = os.path.join(self.data_folder, 'dev.json')
+                self.eval_data_file = os.path.join(self.data_folder, 'test.json')
+
+                self.train_prompt_file = os.path.join(self.data_folder, 'prompts_train.txt')
+                self.val_prompt_file = os.path.join(self.data_folder, 'prompts_valid.txt')
+                self.eval_prompt_file = os.path.join(self.data_folder, 'prompts_test.txt')
+
+                # TODO: This does not support canaries.
 
 
 @dataclass
