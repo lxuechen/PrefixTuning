@@ -7,6 +7,7 @@ import os
 import sys
 
 import fire
+import seaborn as sns
 
 from lxuechen_utils import utils
 
@@ -22,14 +23,17 @@ def main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0717",
     seed=0,
     metric="BLEU",
+    noise_multipliers=(0.05, 0.1, 0.5, 1),  # Not including 0.01, since it's too small.
 ):
+    # Each noise multiplier has a color; we repeat this for both prefix and full tune.
+    colors = sns.color_palette()[:len(noise_multipliers)]
+
     # Collect plots.
     bleus = []
     nlls = []
 
     for tuning_mode in ("prefixtune", "fulltune"):
-        # for noise_multiplier in (0.01, 0.05, 0.1, 0.5, 1):
-        for noise_multiplier in (0.01, 0.05, 0.1, 0.5,):
+        for color, noise_multiplier in utils.zip_(colors, noise_multipliers):
             best_bleu = -sys.maxsize
             bleu_x = bleu_y = None
 
@@ -51,34 +55,48 @@ def main(
                 log_history_path = os.path.join(train_dir, 'log_history.json')
                 log_history = utils.jload(log_history_path)
 
-                x = [round(hi["epoch"]) for hi in log_history]
-                y = [score_i["eval"]["model"]["tok_logprobs"] for score_i in log_history]
-                if y[-1] < best_nll:
-                    nll_x = x
-                    nll_y = y
-                del y
-
                 score_path = os.path.join(train_dir, 'generations_score', 'results.json')
-
                 score = utils.jload(score_path)
-                y = [si[metric] for si in score['score']]
-                if y[-1] > best_bleu:
+
+                x = [round(hi["epoch"]) for hi in log_history]
+                this_nll = [score_i["eval"]["model"]["tok_logprobs"] for score_i in log_history]
+                this_bleu = [si[metric] for si in score['score']]
+
+                if len(x) != 10:
+                    print('x fail')
+                    print(train_dir)
+                    continue
+                if len(this_nll) != 10 or len(this_bleu) != 10:
+                    print('y fail')
+                    print(train_dir)
+                    if len(this_nll) < 10:
+                        print(this_nll)
+                    if len(this_bleu) < 10:
+                        print(this_bleu)
+                    continue
+
+                if this_nll[-1] < best_nll:
+                    best_nll = this_nll[-1]
+                    nll_x = x
+                    nll_y = this_nll
+
+                if this_bleu[-1] > best_bleu:
+                    best_bleu = this_bleu[-1]
                     bleu_x = x
-                    bleu_y = y
-                del x, y
+                    bleu_y = this_bleu
 
             label = f'{tuning_mode_to_label(tuning_mode)} $\sigma={noise_multiplier}$'
             linestyle = 'dotted' if tuning_mode == "prefixtune" else '-'
             bleus.append(
-                {'x': bleu_x, 'y': bleu_y, 'label': label, 'linestyle': linestyle}
+                {'x': bleu_x, 'y': bleu_y, 'label': label, 'linestyle': linestyle, 'color': color}
             )
             nlls.append(
-                {'x': nll_x, 'y': nll_y, 'label': label, 'linestyle': linestyle}
+                {'x': nll_x, 'y': nll_y, 'label': label, 'linestyle': linestyle, 'color': color}
             )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'bleu.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'bleu.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'prefix_fails_bleu.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'prefix_fails_bleu.pdf'),
     ):
         utils.plot(
             img_path=img_path,
@@ -87,8 +105,8 @@ def main(
         )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'nll.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'nll.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'prefix_fails_nll.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'prefix_fails', 'prefix_fails_nll.pdf'),
     ):
         utils.plot(
             img_path=img_path,
