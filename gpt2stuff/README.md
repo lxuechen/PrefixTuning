@@ -19,7 +19,7 @@ python -m gpt2.launchers.prefix_vs_full_062021 --mode "local"     \
 ```
 
 After refactor on July 2, 2021 (rename folder `gpt2` with `gpt2stuff`)
-
+### Private
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --mode "local" \
@@ -36,6 +36,22 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --target_epsilon 5 \
   --target_delta 1e-5 \
   --epochs 50
+```
+
+### Non-private
+```bash
+python -m gpt2stuff.launchers.prefix_vs_full_062021 \
+  --mode "local" \
+  --tuning_mode "fulltune" \
+  --max_seq_len 100 \
+  --nonprivate "yes"\
+  --per_device_train_batch_size 5 \
+  --gradient_accumulation_steps 1 \
+  --eval_steps 100 \
+  --objective_mode 0 \
+  --max_generations 40 \
+  --learning_rate 5e-5 \
+  --epochs 5
 ```
 
 ## Running evaluation
