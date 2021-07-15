@@ -302,28 +302,32 @@ class DataTrainingArguments:
         if self.data_folder is not None:
             logging.warning(f'Overriding dataset paths using those given in `data_folder`')
 
-            self.train_data_file = os.path.join(self.data_folder, 'src1_train.txt')
-            self.val_data_file = os.path.join(self.data_folder, 'src1_valid.txt')
-            self.eval_data_file = os.path.join(self.data_folder, 'src1_test.txt')
+            if self.task_mode == "data2text":
+                self.train_data_file = os.path.join(self.data_folder, 'src1_train.txt')
+                self.val_data_file = os.path.join(self.data_folder, 'src1_valid.txt')
+                self.eval_data_file = os.path.join(self.data_folder, 'src1_test.txt')
 
-            self.train_prompt_file = os.path.join(self.data_folder, 'prompts_train.txt')
-            self.val_prompt_file = os.path.join(self.data_folder, 'prompts_valid.txt')
-            self.eval_prompt_file = os.path.join(self.data_folder, 'prompts_test.txt')
+                self.train_prompt_file = os.path.join(self.data_folder, 'prompts_train.txt')
+                self.val_prompt_file = os.path.join(self.data_folder, 'prompts_valid.txt')
+                self.eval_prompt_file = os.path.join(self.data_folder, 'prompts_test.txt')
 
-            secs_file = os.path.join(self.data_folder, 'ss_secs.txt')
-            if os.path.exists(secs_file):
-                self.secs_file = secs_file
+                secs_file = os.path.join(self.data_folder, 'ss_secs.txt')
+                if os.path.exists(secs_file):
+                    self.secs_file = secs_file
 
-            refs_file = os.path.join(self.data_folder, 'ss_refs.txt')
-            if os.path.exists(refs_file):
-                self.refs_file = refs_file
+                refs_file = os.path.join(self.data_folder, 'ss_refs.txt')
+                if os.path.exists(refs_file):
+                    self.refs_file = refs_file
 
-            info_file = os.path.join(self.data_folder, 'info.txt')
-            if os.path.exists(info_file):
-                with open(info_file, 'r') as f:
-                    info = json.load(f)
-                # TODO: We currently only allow repetition of single type.
-                self.secs_reps, = info["num_repetitions"]
+                info_file = os.path.join(self.data_folder, 'info.txt')
+                if os.path.exists(info_file):
+                    with open(info_file, 'r') as f:
+                        info = json.load(f)
+                    # TODO: We currently only allow repetition of single type.
+                    self.secs_reps, = info["num_repetitions"]
+            elif self.task_mode == "webnlg":
+                # TODO: Enable this.
+                pass
 
 
 @dataclass

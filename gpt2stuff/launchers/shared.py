@@ -3,14 +3,6 @@ import sys
 from . import wrapper
 from .wrapper import Mode
 
-TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
-VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
-EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt"
-
-TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
-VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
-EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
-
 
 def _get_command(
     seed,
@@ -115,6 +107,26 @@ def _get_command(
         if train_dir is None:
             # Local debugging.
             train_dir = "/nlp/scr/lxuechen/tests/prefix-tuning"
+
+    if task_mode == "data2text":
+        TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_train.txt"
+        VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_valid.txt"
+        EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/src1_test.txt"
+
+        TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
+        VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
+        EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
+    elif task_mode == "webnlg":
+        TRAIN_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/train.json"
+        VAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/dev.json"
+        EVAL_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/webnlg_challenge_2017/test.json"
+
+        # TODO: This will in errors during decoding.
+        TRAIN_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_train.txt"
+        VAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_valid.txt"
+        EVAL_PROMPT_FILE = "/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/prompts_test.txt"
+    else:
+        raise ValueError
 
     # @formatter:off
     logging_dir = train_dir
