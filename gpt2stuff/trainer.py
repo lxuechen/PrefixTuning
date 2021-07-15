@@ -713,13 +713,13 @@ class Trainer:
                 * self.args.gradient_accumulation_steps
                 * (torch.distributed.get_world_size() if self.args.local_rank != -1 else 1)
             )
-        logger.info("***** Running training *****")
-        logger.info("  Num examples = %d", self.num_examples(train_dataloader))
-        logger.info("  Num Epochs = %d", num_train_epochs)
-        logger.info("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
-        logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d", total_train_batch_size)
-        logger.info("  Gradient Accumulation steps = %d", self.args.gradient_accumulation_steps)
-        logger.info("  Total optimization steps = %d", t_total)
+        logger.warning("***** Running training *****")
+        logger.warning("  Num examples = %d", self.num_examples(train_dataloader))
+        logger.warning("  Num Epochs = %d", num_train_epochs)
+        logger.warning("  Instantaneous batch size per device = %d", self.args.per_device_train_batch_size)
+        logger.warning("  Total train batch size (w. parallel, distributed & accumulation) = %d", total_train_batch_size)
+        logger.warning("  Gradient Accumulation steps = %d", self.args.gradient_accumulation_steps)
+        logger.warning("  Total optimization steps = %d", t_total)
 
         self.global_step = 0
         self.epoch = 0
