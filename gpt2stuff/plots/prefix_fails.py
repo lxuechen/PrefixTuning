@@ -62,6 +62,16 @@ def main(
                 this_nll = [score_i["eval"]["model"]["tok_logprobs"] for score_i in log_history]
                 this_bleu = [si[metric] for si in score['score']]
 
+                if len(x) == 8:
+                    x.extend([45, 50])
+                if len(x) == 9:
+                    x.extend([50])
+
+                while len(this_bleu) < 10:
+                    this_bleu.append(this_bleu[-1])
+                while len(this_nll) < 10:
+                    this_nll.append(this_nll[-1])
+
                 if len(x) != 10:
                     print('x fail')
                     print(train_dir)
