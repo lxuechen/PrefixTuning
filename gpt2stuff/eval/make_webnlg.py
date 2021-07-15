@@ -39,7 +39,7 @@ def _make_webnlg():
                 subj, rela, obj = tripleset['subject'], tripleset['property'], tripleset['object']
                 this_prompt += ' | '
                 this_prompt += '{} : {} : {}'.format(subj, rela, obj)
-            this_prompt += f"{tokenizer.bos_token} \n"
+            this_prompt += f" {tokenizer.bos_token} \n"
 
             this_references = []
             for sent in sents:
