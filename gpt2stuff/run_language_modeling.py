@@ -271,6 +271,13 @@ def main():
         gpt2.transformer.requires_grad_(False)
         model = gpt2
         logger.warning("Freezing base transformer weights!")
+    elif model_args.tuning_mode == "lasttune":
+        gpt2.requires_grad_(False)
+        for name, module in gpt2.named_modules():
+            if name in ("transformer.h.5", "lm_head", "transformer.ln_f"):
+                module.requires_grad_(True)
+        model = gpt2
+        logger.warning("Freezing base transformer except last block of weights.")
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
