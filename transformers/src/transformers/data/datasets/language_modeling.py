@@ -895,7 +895,15 @@ class LineByLineTriplesTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizer,
+        file_path: str,
+        block_size: int,
+        bos_tok: str,
+        eos_tok: str,
+        max_seq_len=sys.maxsize,
+    ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -931,6 +939,24 @@ class LineByLineTriplesTextDataset(Dataset):
         for src, tgt in zip(full_src_lst, full_tgt_lst):
             sent = f' {src} {bos_tok} {tgt} {eos_tok} '
             edited_sents.append(sent)
+
+        # --- Filter out super long sentences ---
+        this_full_rela_lst = []
+        this_full_src_lst = []
+        this_full_tgt_lst = []
+        this_edited_sents = []
+        for rela, src, tgt, edited_sent in zip(full_rela_lst, full_src_lst, full_tgt_lst, edited_sents):
+            tokenized_edited_sent = tokenizer.tokenize(edited_sent)
+            if len(tokenized_edited_sent) <= max_seq_len:
+                this_full_rela_lst.append(rela)
+                this_full_src_lst.append(src)
+                this_full_tgt_lst.append(tgt)
+                this_edited_sents.append(edited_sent)
+        full_rela_lst = this_full_rela_lst
+        full_src_lst = this_full_src_lst
+        full_tgt_lst = this_full_tgt_lst
+        edited_sents = this_edited_sents
+        # ---------------------------------------
 
         batch_encoding = tokenizer(edited_sents, add_special_tokens=True, truncation=True, max_length=block_size,
                                    is_split_into_words=False)

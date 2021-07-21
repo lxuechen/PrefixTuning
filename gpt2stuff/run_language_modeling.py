@@ -84,8 +84,10 @@ def get_dataset(
             dataset = LineByLineTriplesTextDataset(
                 tokenizer=tokenizer,
                 file_path=file_path,
-                block_size=args.block_size, bos_tok=tokenizer.bos_token,
-                eos_tok=tokenizer.eos_token
+                block_size=args.block_size,
+                bos_tok=tokenizer.bos_token,
+                eos_tok=tokenizer.eos_token,
+                max_seq_len=args.max_seq_len
             )
         elif args.task_mode == 'webnlg':
             dataset = LineByLineWebNLGTextDataset(
