@@ -680,6 +680,7 @@ class GPT2LMHeadModel(GPT2PreTrainedModel):
         return self.lm_head
 
     def set_output_embeddings(self, lm_head):
+        del self.lm_head
         self.lm_head = lm_head
 
     def prepare_inputs_for_generation(self, input_ids, past=None, **kwargs):
@@ -989,7 +990,7 @@ class GPT2DoubleHeadsModel(GPT2PreTrainedModel):
             >>> from transformers import GPT2Tokenizer, GPT2DoubleHeadsModel
 
             >>> tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-            >>> model = GPT2DoubleHeadsModel.from_pretrained('gpt2, return_dict=True)
+            >>> model = GPT2DoubleHeadsModel.from_pretrained('gpt2', return_dict=True)
 
             >>> # Add a [CLS] to the vocabulary (we should train it also!)
             >>> num_added_tokens = tokenizer.add_special_tokens({'cls_token': '[CLS]'})
