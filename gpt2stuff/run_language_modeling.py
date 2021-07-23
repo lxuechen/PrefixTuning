@@ -227,8 +227,9 @@ def main():
             "another script, save it,"
             "and load it from here, using --tokenizer_name"
         )
-    # This weight tying is evil for private learning.
+    # Don't tie the weights, but still copy the input embedding initialization.
     config.tie_word_embeddings = False
+    config.copy_word_embeddings = True
     gpt2 = GPT2LMHeadModel.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
     )
@@ -254,8 +255,8 @@ def main():
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     gpt2.resize_token_embeddings(len(tokenizer))
     print('len(tokenizer) = ', len(tokenizer))
-    print(tokenizer.eos_token, tokenizer.eos_token_id)
-    print(tokenizer.bos_token, tokenizer.bos_token_id)
+    print('tokenizer.eos_token:', tokenizer.eos_token, tokenizer.eos_token_id)
+    print('tokenizer.bos_token:', tokenizer.bos_token, tokenizer.bos_token_id)
 
     config.vocab_size = len(tokenizer)
     # TODO: This creation needs to be at the end, since the tokenizer is expanded, hence embedding is expanded.
