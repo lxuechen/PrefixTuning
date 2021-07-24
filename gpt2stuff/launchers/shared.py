@@ -27,6 +27,9 @@ def _get_command(
     max_seq_len=96,
     max_generations=sys.maxsize,
     max_generations_train=60,
+    max_train_examples=sys.maxsize,
+    max_valid_examples=sys.maxsize,
+    max_eval_examples=sys.maxsize,
     objective_mode=0,  # 1 is line-level; 0 is token-level (not suitable with DP).
 
     eval_steps=100,  # Evaluate every such steps.
@@ -170,6 +173,9 @@ def _get_command(
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \
         --max_generations_train {max_generations_train} \
+        --max_train_examples {max_train_examples} \
+        --max_valid_examples {max_valid_examples} \
+        --max_eval_examples {max_eval_examples} \
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
         --efficient {efficient} \

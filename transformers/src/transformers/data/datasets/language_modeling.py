@@ -383,6 +383,7 @@ class LineByLineData2TextTextDataset(Dataset):
         eos_tok: str,
         lowdata_token: Optional[str] = None,
         max_seq_len=sys.maxsize,
+        max_examples=sys.maxsize,
     ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
@@ -400,7 +401,10 @@ class LineByLineData2TextTextDataset(Dataset):
         src_lines, tgt_lines = list(zip(*lines))
         src_lines = list(src_lines)
         tgt_lines = list(tgt_lines)
-        # TODO: Inspect the source and targets here!
+
+        # Truncate the dataset if necessary.
+        src_lines = src_lines[:max_examples]
+        tgt_lines = tgt_lines[:max_examples]
 
         if lowdata_token is None:
             edited_sents = []
@@ -786,7 +790,14 @@ class LineByLineWebNLGTextDataset(Dataset):
     soon.
     """
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, bos_tok: str, eos_tok: str):
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizer,
+        file_path: str,
+        block_size: int,
+        bos_tok: str,
+        eos_tok: str,
+    ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
@@ -903,6 +914,7 @@ class LineByLineTriplesTextDataset(Dataset):
         bos_tok: str,
         eos_tok: str,
         max_seq_len=sys.maxsize,
+        max_examples=sys.maxsize,
     ):
         assert os.path.isfile(file_path), f"Input file path {file_path} not found"
         # Here, we do not cache the features, operating under the assumption
@@ -931,6 +943,11 @@ class LineByLineTriplesTextDataset(Dataset):
                 full_tgt_lst.append(sent['text'])
                 full_src_lst.append(temp_triples)
                 full_rela_lst.append(rela_lst)
+
+        # Truncate the dataset if necessary.
+        full_rela_lst = full_rela_lst[:max_examples]
+        full_src_lst = full_src_lst[:max_examples]
+        full_tgt_lst = full_tgt_lst[:max_examples]
 
         assert len(full_rela_lst) == len(full_src_lst)
         assert len(full_rela_lst) == len(full_tgt_lst)

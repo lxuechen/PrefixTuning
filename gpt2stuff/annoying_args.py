@@ -215,6 +215,11 @@ class DataTrainingArguments:
     # Specifying this is easier, as it's just one time!
     data_folder: Optional[str] = field(default=None, metadata={"help": "Path to folder with all the data."})
 
+    # Useful for truncating the dataset.
+    max_train_examples: Optional[int] = field(default=sys.maxsize)
+    max_valid_examples: Optional[int] = field(default=sys.maxsize)
+    max_eval_examples: Optional[int] = field(default=sys.maxsize)
+
     line_by_line: bool = field(
         default=False,
         metadata={"help": "Whether distinct lines of text in the dataset are to be handled as distinct sequences."},

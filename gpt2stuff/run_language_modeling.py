@@ -70,6 +70,12 @@ def get_dataset(
     if file_path is None:
         return None
 
+    max_examples = {
+        'train': args.max_train_examples,
+        'val': args.max_valid_examples,
+        'eval': args.max_eval_examples,
+    }[split]
+
     if args.line_by_line:
         if args.task_mode == 'data2text':
             dataset = LineByLineData2TextTextDataset(
@@ -78,7 +84,8 @@ def get_dataset(
                 block_size=args.block_size,
                 bos_tok=tokenizer.bos_token,
                 eos_tok=tokenizer.eos_token,
-                max_seq_len=args.max_seq_len
+                max_seq_len=args.max_seq_len,
+                max_examples=max_examples,
             )
         elif args.task_mode == 'triples':
             dataset = LineByLineTriplesTextDataset(
@@ -87,15 +94,17 @@ def get_dataset(
                 block_size=args.block_size,
                 bos_tok=tokenizer.bos_token,
                 eos_tok=tokenizer.eos_token,
-                max_seq_len=args.max_seq_len
+                max_seq_len=args.max_seq_len,
+                max_examples=max_examples,
             )
         elif args.task_mode == 'webnlg':
+            # TODO: Add max_seq_len and max_examples,
             dataset = LineByLineWebNLGTextDataset(
                 tokenizer=tokenizer,
                 file_path=file_path,
                 block_size=args.block_size,
                 bos_tok=tokenizer.bos_token,
-                eos_tok=tokenizer.eos_token
+                eos_tok=tokenizer.eos_token,
             )
         else:
             raise ValueError(f"Unknown `args.task_mode`: {args.task_mode}")
