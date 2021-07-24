@@ -29,6 +29,13 @@ def _create_or_extend_norm_sample(param: torch.Tensor, norm_sample: torch.Tensor
         param.norm_sample = norm_sample
 
 
+@torch.jit.script
+def _fast_norm_sample(A, B):
+    return torch.sqrt(
+        (torch.bmm(A, A.permute(0, 2, 1)) * torch.bmm(B, B.permute(0, 2, 1))).sum(dim=(1, 2))
+    )
+
+
 def _compute_linear_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ) -> None:
@@ -40,9 +47,7 @@ def _compute_linear_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    a = torch.bmm(A, A.permute(0, 2, 1))
-    b = torch.bmm(B, B.permute(0, 2, 1))
-    norm_sample = torch.sqrt((a * b).sum(dim=(1, 2)))
+    norm_sample = _fast_norm_sample(A, B)
     _create_or_extend_norm_sample(layer.weight, norm_sample)
     if layer.bias is not None:
         norm_sample = B.sum(dim=1).norm(2, dim=1)
@@ -95,32 +100,16 @@ def _compute_embedding_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    saved = torch.backends.cudnn.deterministic
-    torch.backends.cudnn.deterministic = True
-
-    # TODO: Make this efficient as well.
-    batch_size = A.shape[batch_dim]
-    index = (
-        A.unsqueeze(-1)
-            .expand(*A.shape, layer.embedding_dim)
-            .reshape(batch_size, -1, layer.embedding_dim)
-    )
-    grad_sample = torch.zeros(
-        batch_size, *layer.weight.shape, device=layer.weight.device, dtype=layer.weight.dtype
-    )
-    grad_sample.scatter_add_(1, index, B.reshape(batch_size, -1, layer.embedding_dim))
-    torch.backends.cudnn.deterministic = saved
-
-    norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
+    vocab_size = layer.weight.size(0)
+    A = F.one_hot(A, num_classes=vocab_size).to(B.dtype)
+    norm_sample = _fast_norm_sample(A, B)
     _create_or_extend_norm_sample(layer.weight, norm_sample)
 
 
 def _custom_compute_conv1d_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ):
-    a = torch.bmm(A, A.permute(0, 2, 1))
-    b = torch.bmm(B, B.permute(0, 2, 1))
-    norm_sample = torch.sqrt((a * b).sum(dim=(1, 2)))
+    norm_sample = _fast_norm_sample(A, B)
     _create_or_extend_norm_sample(layer.weight, norm_sample)
     if layer.bias is not None:
         norm_sample = B.sum(dim=1).norm(2, dim=1)
