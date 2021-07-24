@@ -1,4 +1,3 @@
-import collections
 import logging
 import math
 import types
@@ -146,7 +145,8 @@ class PerLayerPrivacyEngine(object):
 
     def attach(self, optimizer):
         autograd_grad_sample.add_hooks(
-            self.module, batch_first=self.batch_first, loss_reduction=self.loss_reduction
+            self.module, batch_first=self.batch_first, loss_reduction=self.loss_reduction,
+            max_grad_norm=self.max_grad_norm,
         )
 
         # Override zero grad.
@@ -180,10 +180,7 @@ class PerLayerPrivacyEngine(object):
     def step(self):
         self.steps += 1
 
-        norm_sample, coef_sample = self._accumulate_summed_grad()
-        self.max_clip = coef_sample.max().item()
-        self.min_clip = coef_sample.min().item()
-        self.med_clip = coef_sample.median().item()
+        self._accumulate_summed_grad()
 
         # Add noise and scale by inverse batch size.
         signals, noises = [], []
@@ -244,6 +241,8 @@ class PerLayerPrivacyEngine(object):
             # This is more memory-friendly than `tensor.zero_()`.
             if hasattr(param, "grad"):
                 del param.grad
+            if hasattr(param, "reservoir_grad"):
+                del param.reservoir_grad
 
     def virtual_step(self):
         self._accumulate_summed_grad()
@@ -253,49 +252,16 @@ class PerLayerPrivacyEngine(object):
                 del param.grad_sample
             if hasattr(param, "grad"):
                 del param.grad
+            if hasattr(param, "reservoir_grad"):
+                del param.reservoir_grad
 
     @torch.no_grad()
     def _accumulate_summed_grad(self):
         """Accumulate clipped per-sample gradients."""
-        norm_sample = []
-        for name, param in self.named_params:
-            batch_size = param.grad_sample.size(0)
-            norm = param.grad_sample.reshape(batch_size, -1).norm(2, dim=1)
-            norm_sample.append(norm)
-
-        # The stack operation here is prone to error, thus clarify where the error is.
-        try:
-            norm_sample = torch.stack(norm_sample, dim=0).norm(2, dim=0)
-        except RuntimeError as runtime_error:
-            args = runtime_error.args
-
-            # Get the major shape.
-            shapes = collections.defaultdict(int)
-            for tensor in norm_sample:
-                shapes[tensor.size()] += 1
-
-            major_shape = None
-            major_count = 0
-            for shape, count in shapes.items():
-                if count > major_count:
-                    major_shape = shape
-            del shape, count
-
-            # Check which tensors don't have the major shape!
-            extra_msg = f" \n*** Major shape: {major_shape}"
-            for (name, param), tensor in zip(list(self.named_params), norm_sample):
-                if tensor.size() != major_shape:
-                    extra_msg += f", {name} wrong shape: {tensor.size()}"
-            extra_msg += " ***"
-            runtime_error.args = (args[0] + extra_msg, *args[1:])
-            raise runtime_error
-
-        coef_sample = torch.clamp_max(self.max_grad_norm / (norm_sample + 1e-6), 1.)
         for name, param in self.named_params:
             if not hasattr(param, 'summed_grad'):
                 param.summed_grad = 0.
-            param.summed_grad += torch.einsum("i,i...->...", coef_sample, param.grad_sample)
-        return norm_sample, coef_sample
+            param.summed_grad += param.reservoir_grad
 
     def get_privacy_spent(self, steps=None) -> Dict:
         if steps is None:

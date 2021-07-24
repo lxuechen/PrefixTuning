@@ -42,10 +42,8 @@ def _create_or_extend_grad_sample(
     if hasattr(param, "requires_grad") and not param.requires_grad:
         return
 
-    # This now has a similar functionality as `_create_or_accumulate_grad_sample` and if useful if a specific Linear
-    # layer is reused.
     if hasattr(param, "grad_sample"):
-        param.grad_sample += grad_sample.detach()  # Accumulate per-example gradients when parameter is reused.
+        raise ValueError("Per-layer clipping breaks when there's parameter sharing.")
     else:
         param.grad_sample = grad_sample.detach()
 
@@ -83,6 +81,19 @@ def _create_or_accumulate_grad_sample(
         param.grad_sample[: grad_sample.shape[0]] = grad_sample
 
 
+@torch.no_grad()
+def _clip_by_layer(layer, params, grad_samples):
+    """Clip gradients on the layer level.
+
+    Assumes `layer` has attribute `max_grad_norm`. By default, this is created in autograd_grad_sample.
+    """
+    norms = [grad_sample.flatten(start_dim=1).norm(2, dim=1) for grad_sample in grad_samples]
+    norm = torch.stack(norms, dim=0).norm(2, dim=0)
+    coef = torch.clamp_max(layer.max_grad_norm / (norm + 1e-6), 1)
+    for param, grad_sample in zip(params, grad_samples):
+        param.reservoir_grad = torch.einsum("i...,i->...", grad_sample, coef)
+
+
 def _compute_linear_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ) -> None:
@@ -94,14 +105,13 @@ def _compute_linear_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    gs = torch.einsum("n...i,n...j->nij", B, A)
-    _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
+    params = [layer.weight]
+    grad_samples = [torch.einsum("n...i,n...j->nij", B, A)]
     if layer.bias is not None:
-        _create_or_extend_grad_sample(
-            layer.bias,
-            torch.einsum("n...k->nk", B),
-            batch_dim,
-        )
+        params.append(layer.bias)
+        grad_samples.append(torch.einsum("n...k->nk", B))
+
+    _clip_by_layer(layer, params=params, grad_samples=grad_samples)
 
 
 def _compute_accumulate_linear_grad_sample(
@@ -167,37 +177,18 @@ def _compute_norm_grad_sample(
     """
     layer_type = get_layer_type(layer)
     if layer_type == "LayerNorm":
-        _create_or_extend_grad_sample(
-            layer.weight,
+        params = [layer.weight, layer.bias]
+        grad_samples = [
             sum_over_all_but_batch_and_last_n(
                 F.layer_norm(A, layer.normalized_shape, eps=layer.eps) * B,
                 layer.weight.dim(),
             ),
-            batch_dim,
-        )
-        _create_or_extend_grad_sample(
-            layer.bias,
-            sum_over_all_but_batch_and_last_n(B, layer.bias.dim()),
-            batch_dim,
-        )
-    elif layer_type == "GroupNorm":
-        gs = F.group_norm(A, layer.num_groups, eps=layer.eps) * B
-        _create_or_extend_grad_sample(
-            layer.weight, torch.einsum("ni...->ni", gs), batch_dim
-        )
-        if layer.bias is not None:
-            _create_or_extend_grad_sample(
-                layer.bias, torch.einsum("ni...->ni", B), batch_dim
-            )
-    elif layer_type in {"InstanceNorm1d", "InstanceNorm2d", "InstanceNorm3d"}:
-        gs = F.instance_norm(A, eps=layer.eps) * B
-        _create_or_extend_grad_sample(
-            layer.weight, torch.einsum("ni...->ni", gs), batch_dim
-        )
-        if layer.bias is not None:
-            _create_or_extend_grad_sample(
-                layer.bias, torch.einsum("ni...->ni", B), batch_dim
-            )
+            sum_over_all_but_batch_and_last_n(B, layer.bias.dim())
+        ]
+    else:
+        raise NotImplementedError
+
+    _clip_by_layer(layer, params=params, grad_samples=grad_samples)
 
 
 def _compute_conv_grad_sample(
@@ -296,24 +287,22 @@ def _compute_embedding_grad_sample(
     grad_sample.scatter_add_(1, index, B.reshape(batch_size, -1, layer.embedding_dim))
     torch.backends.cudnn.deterministic = saved
 
-    _create_or_extend_grad_sample(layer.weight, grad_sample, batch_dim, notes="embedding")
+    _clip_by_layer(layer, params=[layer.weight], grad_samples=[grad_sample])
 
 
 def _custom_compute_conv1d_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ):
-    gs = torch.einsum("n...i,n...j->nji", B, A)
-    _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
+    params = [layer.weight]
+    grad_samples = [torch.einsum("n...i,n...j->nji", B, A)]
     if layer.bias is not None:
-        _create_or_extend_grad_sample(
-            layer.bias,
-            torch.einsum("n...k->nk", B),
-            batch_dim,
-        )
+        params.append(layer.bias)
+        grad_samples.append(torch.einsum("n...k->nk", B))
+
+    _clip_by_layer(layer, params=params, grad_samples=grad_samples)
 
 
 _supported_layers_grad_samplers = {
-    "CounterEmbedding": _compute_embedding_grad_sample,  # Purely for debugging.
     "Embedding": _compute_embedding_grad_sample,
     "Linear": _compute_linear_grad_sample,
     "LSTMLinear": _compute_accumulate_linear_grad_sample,
@@ -329,4 +318,6 @@ _supported_layers_grad_samplers = {
 
     # Open-AI GPT-2.
     "Conv1D": _custom_compute_conv1d_grad_sample,
+    # Purely for debugging.
+    "CounterEmbedding": _compute_embedding_grad_sample,
 }  # Supported layer class types

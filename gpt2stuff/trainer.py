@@ -1125,7 +1125,7 @@ class Trainer:
 
                     autograd_grad_sample.set_hooks_mode(mode="norm")
                     first_loss = loss.mean(dim=0)
-                    first_loss.backward(retain_graph=True)
+                    first_loss.backward(retain_graph=True)  # Must retain graph; otherwise dropout could be different.
 
                     autograd_grad_sample.set_hooks_mode(mode="grad")
                     coef_sample = privacy_engine.get_coef_sample()

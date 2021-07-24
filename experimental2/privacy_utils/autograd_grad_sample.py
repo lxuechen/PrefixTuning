@@ -13,11 +13,12 @@ Notes:
     currently supported by opacus.
 """
 
+import math
 from typing import Tuple
 
+from opacus.layers.dp_lstm import LSTMLinear
 import torch
 import torch.nn as nn
-from opacus.layers.dp_lstm import LSTMLinear
 
 from experimental2.privacy_utils.supported_layers_grad_samplers import _supported_layers_grad_samplers
 from experimental2.privacy_utils.utils.module_inspection import get_layer_type, requires_grad
@@ -26,7 +27,13 @@ from experimental2.privacy_utils.utils.module_inspection import get_layer_type, 
 _hooks_disabled: bool = False
 
 
-def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool = True):
+def add_hooks(
+    model: nn.Module,
+    max_grad_norm: float,
+    loss_reduction: str = "mean",
+    batch_first: bool = True,
+    clip_strategy="layer_uniform",
+):
     r"""
     Adds hooks to model to save activations and backprop values.
     The hooks will
@@ -36,6 +43,7 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
 
     Args:
         model: Model to which hooks are added.
+        max_grad_norm: Clipping norm.
         loss_reduction: Indicates if the loss reduction (for aggregating the
             gradients) is a sum or a mean operation. Can take values ``sum`` or
             ``mean``.
@@ -44,6 +52,8 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
             ``[batch_size, ..., ...]``. Set to True if batch appears in first
             dimension else set to False (``batch_first=False`` implies that the
             batch is always in the second dimension).
+        clip_strategy: Per-example gradient clipping strategy.
+            "layer_uniform" uses the same clipping norm for different layers.
     """
     if hasattr(model, "autograd_grad_sample_hooks"):
         raise ValueError("Trying to add hooks twice to the same model")
@@ -52,6 +62,7 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
     _hooks_disabled = False
 
     handles = []
+    trainable_layers = []
     for layer in model.modules():
         if get_layer_type(layer) in _supported_layers_grad_samplers.keys():
             # Check if the layer has trainable parameters.
@@ -63,6 +74,7 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
 
             if is_trainable:
                 handles.append(layer.register_forward_hook(_capture_activations))
+                trainable_layers.append(layer)
 
                 def this_backward(this_layer, grad_input, grad_output):
                     return _capture_backprops(
@@ -72,6 +84,13 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
                 # TODO: Embedding has no register_full_backward_hook.
                 # Starting with 1.8.0, use `register_full_backward_hook`.
                 handles.append(layer.register_backward_hook(this_backward))
+
+    if clip_strategy == "layer_uniform":
+        num_layers = len(trainable_layers)
+        for layer in trainable_layers:
+            layer.max_grad_norm = max_grad_norm / math.sqrt(num_layers)
+    else:
+        raise ValueError(f"Unknown `clip_strategy`: {clip_strategy}")
 
     model.__dict__.setdefault("autograd_grad_sample_hooks", []).extend(handles)
 
