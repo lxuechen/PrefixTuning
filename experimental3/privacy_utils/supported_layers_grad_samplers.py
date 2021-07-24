@@ -29,7 +29,6 @@ def _create_or_extend_norm_sample(param: torch.Tensor, norm_sample: torch.Tensor
         param.norm_sample = norm_sample
 
 
-@torch.jit.script
 def _fast_norm_sample(A, B):
     return torch.sqrt(
         (torch.bmm(A, A.permute(0, 2, 1)) * torch.bmm(B, B.permute(0, 2, 1))).sum(dim=(1, 2))
