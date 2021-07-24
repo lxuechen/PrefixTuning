@@ -359,6 +359,7 @@ class TrainingArguments(transformers.TrainingArguments):
     ema_model_start_from: int = field(default=1000)
     efficient: str = field(default="no")  # Whether to turn on memory-efficient per-sample clipping.
     efficient2: str = field(default="no")  # Whether to use per-layer clipping.
+    efficient3: str = field(default="no")  # Memory-efficient and optimzied.
     debug: str = field(default="no")
     lr_decay: str = field(default="yes")
     eval_epochs: int = field(default=10)
@@ -367,6 +368,7 @@ class TrainingArguments(transformers.TrainingArguments):
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))
         self.efficient = (self.efficient.lower() in ('y', 'yes'))
         self.efficient2 = (self.efficient2.lower() in ('y', 'yes'))
+        self.efficient3 = (self.efficient3.lower() in ('y', 'yes'))
         self.debug = (self.debug.lower() in ('y', 'yes'))
         self.lr_decay = (self.lr_decay.lower() in ('y', 'yes'))
 

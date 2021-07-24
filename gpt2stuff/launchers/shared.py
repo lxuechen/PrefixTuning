@@ -50,6 +50,7 @@ def _get_command(
     ema_model_averaging="no",
     efficient="no",
     efficient2="no",
+    efficient3="no",
     debug="no",
     evaluation_strategy="epoch",
 
@@ -172,6 +173,7 @@ def _get_command(
         --ema_model_start_from {ema_model_start_from} \
         --efficient {efficient} \
         --efficient2 {efficient2} \
+        --efficient3 {efficient3} \
         --debug {debug} \
         --target_delta {target_delta} \
         --target_epsilon {target_epsilon} \
