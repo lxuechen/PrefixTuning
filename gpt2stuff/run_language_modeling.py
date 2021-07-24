@@ -343,6 +343,9 @@ def main():
         elif training_args.efficient2:
             from experimental2.privacy_utils.privacy_engine import PerLayerPrivacyEngine
             cls = PerLayerPrivacyEngine
+        elif training_args.efficient3:
+            from experimental3.privacy_utils.privacy_engine import EfficientPrivacyEngine
+            cls = EfficientPrivacyEngine
         else:
             import privacy_utils
             cls = privacy_utils.privacy_engine.PrivacyEngine
