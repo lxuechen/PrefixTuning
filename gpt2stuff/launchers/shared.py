@@ -51,6 +51,7 @@ def _get_command(
     efficient="no",
     efficient2="no",
     efficient3="no",
+    efficient4="no",
     debug="no",
     evaluation_strategy="epoch",
 
@@ -174,6 +175,7 @@ def _get_command(
         --efficient {efficient} \
         --efficient2 {efficient2} \
         --efficient3 {efficient3} \
+        --efficient4 {efficient4} \
         --debug {debug} \
         --target_delta {target_delta} \
         --target_epsilon {target_epsilon} \

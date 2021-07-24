@@ -346,6 +346,9 @@ def main():
         elif training_args.efficient3:
             from experimental3.privacy_utils.privacy_engine import EfficientPrivacyEngine
             cls = EfficientPrivacyEngine
+        elif training_args.efficient4:
+            from experimental4.privacy_utils.privacy_engine import EfficientPrivacyEngine
+            cls = EfficientPrivacyEngine
         else:
             import privacy_utils
             cls = privacy_utils.privacy_engine.PrivacyEngine
