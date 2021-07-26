@@ -35,6 +35,7 @@ def main(
 
         max_grad_norm = 0.1
         noise_multiplier = -1
+        ref_path = "/nlp/scr/lxuechen/data/prefix-tuning/data/dart/clean_references_test.txt"
 
         for seed in seeds:
             for model_name_or_path in ("gpt2",):
@@ -87,7 +88,7 @@ def main(
                                         command = (
                                             f"python -m gpt2stuff.eval.eval_generations "
                                             f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
-                                            f"--scratch_dir {scratch_dir}"
+                                            f"--scratch_dir {scratch_dir} --ref_path {ref_path}"
                                         )
                                         command = wrapper.cpu_job_wrapper(
                                             command, train_dir=train_dir, conda_env="lxuechen-prefix-tuning",
