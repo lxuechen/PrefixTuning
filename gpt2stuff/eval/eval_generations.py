@@ -87,10 +87,12 @@ def eval(
     # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
     e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
     # @formatter:on
+    skip_coco=False,
+    skip_mteval=False,
     **kwargs,
 ):
     """Evaluate a file of generate sentences against references."""
-    os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} ; cd -')
+    os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} ; cd -')
 
 
 def eval_trajectory(
@@ -102,7 +104,10 @@ def eval_trajectory(
     global_steps: Optional[Sequence[int]] = None,
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/",
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
+    skip_coco=False,
+    skip_mteval=False,
     # @formatter:on
+    **kwargs,
 ):
     """Evaluate various scores and plot trajectory.
 
@@ -143,7 +148,7 @@ def eval_trajectory(
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
         out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
         logging.warning(f'eval for {gen_path}')
-        os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --out_path {out_path}; cd -')
+        os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} --out_path {out_path}; cd -')
 
         score = utils.jload(out_path)
         scores.append(score)
