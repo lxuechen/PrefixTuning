@@ -33,7 +33,7 @@ def _make_triples():
         references_no_space = []
 
         for example in file:
-            if len(example['annotations']) == 0:  # Ignore empty.
+            if len(example['annotations']) == 0:  # Only prompt but with no annotation!
                 continue
 
             this_prompt = ''
