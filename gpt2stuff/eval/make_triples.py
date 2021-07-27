@@ -33,6 +33,9 @@ def _make_triples():
         references_no_space = []
 
         for example in file:
+            if len(example['annotations']) == 0:  # Ignore empty.
+                continue
+
             this_prompt = ''
             for i, tripleset in enumerate(example['tripleset']):
                 subj, rela, obj = tripleset
