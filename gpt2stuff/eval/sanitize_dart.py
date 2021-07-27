@@ -1,6 +1,7 @@
 # Dart test set is stupid as there are some prompts without references.
 # This file cleans the generation files with full prompts to only include subset with references.
 
+import logging
 import re
 
 import fire
@@ -13,12 +14,13 @@ def sanitize_dir(
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
             "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/generations_model/eval/",
 ):
+    logging.warning(f'sanitizing dir={gen_dir}')
+
     files = []
     for file in utils.listfiles(gen_dir):
         search = re.search(".*global_step_(.*).txt", file)
         if search:
             files.append(file)
-    print(f'sanitizing {len(files)} files')
 
     for file in files:
         sanitize_file(
@@ -33,6 +35,8 @@ def sanitize_file(
              "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/generations_model/eval/global_step_00005900.txt",
     out_path=None,
 ):
+    logging.warning(f'Sanitizing file={gen_path}')
+
     data = utils.jload(data_path)
     with open(gen_path, 'r') as f:
         generations = f.readlines()
