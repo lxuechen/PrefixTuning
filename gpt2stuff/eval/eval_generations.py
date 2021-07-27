@@ -87,6 +87,7 @@ def eval(
     # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
     e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
     # @formatter:on
+    **kwargs,
 ):
     """Evaluate a file of generate sentences against references."""
     os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} ; cd -')
