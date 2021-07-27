@@ -1,3 +1,4 @@
+import json
 import os
 
 import fire
@@ -29,6 +30,7 @@ def _make_triples():
 
         prompts = []
         references = []
+        references_no_space = []
 
         for example in file:
             this_prompt = ''
@@ -42,10 +44,15 @@ def _make_triples():
             prompts.append(this_prompt)
 
             this_references = []
+            this_references_no_space = []
             for sent in example['annotations']:
-                this_references.append(sent['text'] + '\n')
+                text = sent['text'].strip()
+                this_references.append(text + '\n')
+                this_references_no_space.append(text)
             this_references.append('\n')
+
             references.extend(this_references)
+            references_no_space.append(this_references_no_space)
 
         print(f'split {split}, num prompts {len(prompts)}')
 
@@ -56,6 +63,10 @@ def _make_triples():
         references_path = os.path.join(base_dir, f'clean_references_{split}.txt')
         with open(references_path, 'w') as f:
             f.writelines(references)
+
+        json_references_path = os.path.join(base_dir, f'json_clean_references_{split}.json')
+        with open(json_references_path, 'w') as f:
+            json.dump(references_no_space, f)
 
 
 def main(task="make_triples"):
