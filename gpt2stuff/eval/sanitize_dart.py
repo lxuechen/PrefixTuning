@@ -12,7 +12,7 @@ from lxuechen_utils import utils
 def sanitize_dir(
     data_path="/nlp/scr/lxuechen/data/prefix-tuning/data/dart/dart-v1.1.1-full-test.json",
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
-            "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/generations_model/eval/",
+            "/model_name_gpt2_nonprivate_no_tuning_mode_fulltune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000002/0/generations_model/eval/",
 ):
     logging.warning(f'sanitizing dir={gen_dir}')
 
