@@ -35,7 +35,7 @@ def main(
 
         max_grad_norm = 0.1
         noise_multiplier = -1
-        ref_path = "/nlp/scr/lxuechen/data/prefix-tuning/data/dart/clean_references_test.txt"
+        ref_path = "/nlp/scr/lxuechen/data/prefix-tuning/data/dart/json_clean_references_test.json"
 
         for seed in seeds:
             for model_name_or_path in ("gpt2",):
