@@ -1,8 +1,6 @@
-import torch
-
+import flaxmodels as fm
 import jax
 import jax.numpy as jnp
-import flaxmodels as fm
 
 key = jax.random.PRNGKey(0)
 
