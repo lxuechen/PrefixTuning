@@ -15,6 +15,13 @@ def main(
     out_dir=None,
 ):
     max_batch_sizes = dict()
+    results = dict(
+        max_batch_sizes=max_batch_sizes,
+        batch_sizes=batch_sizes,
+        seq_len=seq_len,
+        model_name_or_path=model_name_or_path,
+        num_updates=num_updates,
+    )
     for mode in modes:
         for batch_size in batch_sizes:
             if mode == "jax":
@@ -34,7 +41,7 @@ def main(
     if out_dir is not None:
         seq_len_str = utils.int2str(seq_len)
         out_path = os.path.join(out_dir, f'batch_size_exps_seq_len_{seq_len_str}.json')
-        utils.jdump(max_batch_sizes, out_path)
+        utils.jdump(results, out_path)
 
 
 if __name__ == "__main__":
