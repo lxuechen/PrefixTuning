@@ -153,7 +153,7 @@ def _main(
 
                 f"{seed}",
                 f"generations_score",
-                f"/results.json"
+                f"results.json"
             )
             if not os.path.exists(record_path):
                 logging.warning(f'Lost record_path {record_path}')
