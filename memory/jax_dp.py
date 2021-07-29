@@ -12,6 +12,7 @@ from jax.tree_util import tree_flatten, tree_multimap, tree_unflatten
 import numpy as np
 import tqdm
 
+from lxuechen_utils import utils
 from . import jax_ops
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -99,6 +100,8 @@ def main(
 
     no_jit=False,
     no_vmap=False,
+
+    out_path=None,
 ):
     rng = jax.random.PRNGKey(seed)
     batch = make_data(seq_len, batch_size)
@@ -144,6 +147,19 @@ def main(
         )
     time_elapse = time.perf_counter() - now
     print(f'{num_updates} updates spent {time_elapse:.4f} seconds')
+
+    if out_path is not None:
+        utils.jdump(
+            {
+                "time_elapse": time_elapse,
+                "num_updates": num_updates,
+                "num_warmups": num_warmups,
+                "model_name_or_path": model_name_or_path,
+                "seq_len": seq_len,
+                "batch_size": batch_size,
+            },
+            out_path
+        )
 
 
 if __name__ == "__main__":

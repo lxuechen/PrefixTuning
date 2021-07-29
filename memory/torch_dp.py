@@ -5,6 +5,8 @@ import torch
 import tqdm
 import transformers
 
+from lxuechen_utils import utils
+
 
 def make_data(seq_len=10, batch_size=16, device=None):
     return (torch.randint(low=0, high=100, size=(batch_size, seq_len), device=device),)
@@ -54,7 +56,10 @@ def main(
     l2_norm_clip=0.1,
     noise_multiplier=1.0,
 
+    out_path=None,
 ):
+    torch.manual_seed(seed)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch = make_data(seq_len, batch_size, device)
     model = transformers.GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path=model_name_or_path).to(device)
@@ -101,6 +106,19 @@ def main(
         train_step(model, optimizer, criterion, batch, mode)
     time_elapse = time.perf_counter() - now
     print(f'{num_updates} updates took {time_elapse:.4f} seconds')
+
+    if out_path is not None:
+        utils.jdump(
+            {
+                "time_elapse": time_elapse,
+                "num_updates": num_updates,
+                "num_warmups": num_warmups,
+                "model_name_or_path": model_name_or_path,
+                "seq_len": seq_len,
+                "batch_size": batch_size,
+            },
+            out_path
+        )
 
 
 if __name__ == "__main__":
