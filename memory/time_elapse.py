@@ -7,7 +7,7 @@ def main(
     num_updates=100,
 
     seq_lens=(100, 100, 100),
-    batch_sizes=(10, 10, 10),
+    batch_sizes=(5, 5, 5),
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
     modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
 
