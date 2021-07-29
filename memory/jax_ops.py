@@ -20,5 +20,5 @@ def cross_entropy(logits, labels):
 
     one_hot_labels = jax.nn.one_hot(labels, num_classes=num_classes)
     mult = one_hot_labels * logits
-    print(mult.shape)
-    return -jnp.mean(jnp.sum(mult, axis=-1))
+    # Inner sum over vocab; outer sum over sequence length.
+    return -jnp.sum(jnp.sum(mult, axis=-1))
