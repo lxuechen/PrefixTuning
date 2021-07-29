@@ -24,8 +24,13 @@ def main(
         results[model_name_or_path] = max_batch_sizes
 
         for mode in modes:
+            # This stupid thing does not fix on memory.
+            if model_name_or_path == "gpt2-large" and mode == "jax":
+                continue
+
             for batch_size in batch_sizes:
-                print(f"mode: {mode}, batch_size={batch_size}")
+
+                print(f"model_name_or_path: {model_name_or_path}, mode: {mode}, batch_size={batch_size}")
 
                 if mode == "jax":
                     out = os.system(
