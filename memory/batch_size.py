@@ -25,7 +25,7 @@ def main(
 
         for mode in modes:
             # This stupid thing does not fix on memory.
-            if model_name_or_path == "gpt2-large" and mode == "jax":
+            if model_name_or_path == "gpt2-large" and mode in ("jax", "vanilla"):
                 continue
 
             for batch_size in batch_sizes:

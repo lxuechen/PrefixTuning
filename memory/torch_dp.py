@@ -126,6 +126,7 @@ def main(
 
 
 if __name__ == "__main__":
+    # python -m memory.torch_dp --mode "vanilla" --batch_size 3 --model_name_or_path "gpt2-large"
     # python -m memory.torch_dp --mode "ghost"
     # python -m memory.torch_dp --mode "ghost" --model_name_or_path "gpt2-large"
     fire.Fire(main)
