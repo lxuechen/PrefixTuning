@@ -130,4 +130,6 @@ def main(
 
 
 if __name__ == "__main__":
+    # python -m memory.jax_dp     --no_jit True --no_vmap True
+    # python -m memory.jax_dp     --no_jit False --no_vmap False
     fire.Fire(main)
