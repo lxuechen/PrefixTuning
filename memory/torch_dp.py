@@ -57,7 +57,7 @@ def main(
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch = make_data(seq_len, batch_size, device)
-    model = transformers.GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path=model_name_or_path)
+    model = transformers.GPT2LMHeadModel.from_pretrained(pretrained_model_name_or_path=model_name_or_path).to(device)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
