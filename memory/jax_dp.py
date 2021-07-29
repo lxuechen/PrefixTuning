@@ -7,7 +7,7 @@ from flaxmodels.gpt2 import ops
 import jax
 from jax.experimental import optimizers
 import jax.numpy as jnp
-from jax.tree_util import tree_flatten, tree_unflatten
+from jax.tree_util import tree_flatten, tree_multimap, tree_unflatten
 import numpy as np
 
 
@@ -26,6 +26,26 @@ def private_grad(model, loss, params, batch, rng, l2_norm_clip, noise_multiplier
     clipped_grads = jax.vmap(functools.partial(clipped_grad, model, loss), (None, None, 0))(
         params, l2_norm_clip, batch
     )
+    clipped_grads_flat, grads_treedef = tree_flatten(clipped_grads)
+    aggregated_clipped_grads = [g.sum(0) for g in clipped_grads_flat]
+    rngs = jax.random.split(rng, len(aggregated_clipped_grads))
+    noised_aggregated_clipped_grads = [
+        g + l2_norm_clip * noise_multiplier * jax.random.normal(r, g.shape)
+        for r, g in zip(rngs, aggregated_clipped_grads)
+    ]
+    normalized_noised_aggregated_clipped_grads = [
+        g / batch_size for g in noised_aggregated_clipped_grads
+    ]
+    return tree_unflatten(grads_treedef, normalized_noised_aggregated_clipped_grads)
+
+
+def private_grad_no_vmap(model, loss, params, batch, rng, l2_norm_clip, noise_multiplier,
+                         batch_size):
+    """Return differentially private gradients for params, evaluated on batch."""
+    clipped_grads = tree_multimap(
+        lambda *xs: jnp.stack(xs),
+        *(clipped_grad(model, loss, params, l2_norm_clip, eg) for eg in zip(*batch)))
+
     clipped_grads_flat, grads_treedef = tree_flatten(clipped_grads)
     aggregated_clipped_grads = [g.sum(0) for g in clipped_grads_flat]
     rngs = jax.random.split(rng, len(aggregated_clipped_grads))
@@ -69,6 +89,7 @@ def main(
     grad_fn=private_grad,
 
     no_jit=False,
+    no_vmap=False,
 ):
     rng = jax.random.PRNGKey(seed)
     data = make_data(seq_len, batch_size)
@@ -76,6 +97,8 @@ def main(
     model = fm.gpt2.GPT2LMHeadModel(pretrained=model_name_or_path)
     params = model.init(rng, input_ids=data)
     opt_init, opt_update, get_params = optimizers.adam(learning_rate)
+    grad_fn = private_grad_no_vmap if no_vmap else private_grad
+
 
     def private_update(rng, i, opt_state, batch):
         params = get_params(opt_state)
