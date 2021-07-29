@@ -8,6 +8,7 @@ from jax.experimental import optimizers
 import jax.numpy as jnp
 from jax.tree_util import tree_flatten, tree_multimap, tree_unflatten
 import numpy as np
+import tqdm
 
 from . import jax_ops
 
@@ -120,7 +121,7 @@ def main(
     if not no_jit:
         train_fn = jax.jit(train_fn)
 
-    for _ in range(num_updates):
+    for _ in tqdm.tqdm(range(num_updates)):
         opt_state = train_fn(
             rng,
             next(itercount),
