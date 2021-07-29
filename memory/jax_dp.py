@@ -60,7 +60,7 @@ def private_grad_no_vmap(model, loss, params, batch, rng, l2_norm_clip, noise_mu
 
 
 def make_data(seq_len=10, batch_size=16):
-    return np.random.randint(low=0, high=100, size=(batch_size, seq_len))
+    return (np.random.randint(low=0, high=100, size=(batch_size, seq_len)),)
 
 
 def next_token_loss(model, params, batch):
@@ -92,13 +92,12 @@ def main(
     no_vmap=False,
 ):
     rng = jax.random.PRNGKey(seed)
-    data = make_data(seq_len, batch_size)
+    batch = make_data(seq_len, batch_size)
 
     model = fm.gpt2.GPT2LMHeadModel(pretrained=model_name_or_path)
-    params = model.init(rng, input_ids=data)
+    params = model.init(rng, input_ids=batch[0])
     opt_init, opt_update, get_params = optimizers.adam(learning_rate)
     grad_fn = private_grad_no_vmap if no_vmap else private_grad
-
 
     def private_update(rng, i, opt_state, batch):
         params = get_params(opt_state)
@@ -123,7 +122,7 @@ def main(
             rng,
             next(itercount),
             opt_state,
-            data,
+            batch,
         )
 
 
