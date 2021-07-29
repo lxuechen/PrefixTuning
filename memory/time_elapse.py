@@ -9,7 +9,7 @@ def main(
     num_updates=100,
 
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
-    modes=("vanilla", "layer_by_layer", "ghost", "jax"),
+    modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
     out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse",
 ):
     os.makedirs(out_dir, exist_ok=True)

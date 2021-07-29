@@ -11,7 +11,7 @@ def main(
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
     num_updates=3,  # You don't need to many updates, since this focuses on memory scaling.
 
-    modes=("vanilla", "layer_by_layer", "ghost", "jax"),
+    modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
     out_dir=None,
 ):
     results = dict(
