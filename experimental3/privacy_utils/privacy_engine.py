@@ -13,7 +13,7 @@ from experimental3.privacy_utils.accounting import gdp_accounting, rdp_accountin
 DEFAULT_ALPHAS = tuple(1 + x / 10.0 for x in range(1, 100)) + tuple(range(12, 64))
 
 
-class EfficientPrivacyEngine(object):
+class EfficientPrivacyEngine3(object):
     """Differentially-private SGD engine.
 
     >>> model = nn.Linear(10, 10)
@@ -68,7 +68,7 @@ class EfficientPrivacyEngine(object):
         named_params: Optional[Sequence] = None,
         **_,
     ):
-        super(EfficientPrivacyEngine, self).__init__()
+        super(EfficientPrivacyEngine3, self).__init__()
         if accounting_mode not in ('rdp', 'gdp', 'all', 'rdp_cks'):
             raise ValueError(f"Unknown accounting mode: {accounting_mode}")
 
@@ -315,6 +315,9 @@ class EfficientPrivacyEngine(object):
             f"  accounting_mode={self.accounting_mode}, \n"
             f")"
         )
+
+    def set_hooks_mode(self, mode="norm"):
+        autograd_grad_sample.set_hooks_mode(mode)
 
 
 def get_sigma_from_rdp(

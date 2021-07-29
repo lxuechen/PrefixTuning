@@ -344,23 +344,22 @@ def main():
         trainer.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(trainer.optimizer, lambda _: 1.)
 
     if privacy_args.nonprivate == "no":
-        # TODO: Why does the per_example_max_grad_norm not affect things by much???
         actual_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
-        if training_args.efficient:
-            from experimental.privacy_utils.privacy_engine import EfficientPrivacyEngine
-            cls = EfficientPrivacyEngine
-        elif training_args.efficient2:
-            from experimental2.privacy_utils.privacy_engine import PerLayerPrivacyEngine
-            cls = PerLayerPrivacyEngine
-        elif training_args.efficient3:
-            from experimental3.privacy_utils.privacy_engine import EfficientPrivacyEngine
-            cls = EfficientPrivacyEngine
-        elif training_args.efficient4:
-            from experimental4.privacy_utils.privacy_engine import EfficientPrivacyEngine
-            cls = EfficientPrivacyEngine
-        else:
+        if training_args.private_engine_mode == "vanilla":
             import privacy_utils
             cls = privacy_utils.privacy_engine.PrivacyEngine
+        elif training_args.private_engine_mode == "per_layer":
+            from experimental2.privacy_utils.privacy_engine import EfficientPrivacyEngine2
+            cls = EfficientPrivacyEngine2
+        elif training_args.private_engine_mode == "layer_by_layer":
+            from experimental.privacy_utils.privacy_engine import EfficientPrivacyEngine
+            cls = EfficientPrivacyEngine
+        elif training_args.private_engine_mode == "ghost":
+            from experimental3.privacy_utils.privacy_engine import EfficientPrivacyEngine3
+            cls = EfficientPrivacyEngine3
+        else:
+            raise ValueError(f"Unknown private_engine_mode: {training_args.private_engine_mode}")
+
         privacy_engine = cls(
             module=model,
 

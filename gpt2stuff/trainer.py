@@ -1117,22 +1117,20 @@ class Trainer:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
-            from experimental.privacy_utils import autograd_grad_sample
 
             if self.is_private:
-                if self.args.efficient:
-                    privacy_engine = self.optimizer.privacy_engine
-
-                    autograd_grad_sample.set_hooks_mode(mode="norm")
+                privacy_engine = self.optimizer.privacy_engine
+                if self.args.private_engine_mode in ("layer_by_layer", "ghost"):
+                    privacy_engine.set_hooks_mode(mode="norm")
                     first_loss = loss.mean(dim=0)
                     first_loss.backward(retain_graph=True)  # Must retain graph; otherwise dropout could be different.
 
-                    autograd_grad_sample.set_hooks_mode(mode="grad")
+                    privacy_engine.set_hooks_mode(mode="grad")
                     coef_sample = privacy_engine.get_coef_sample()
                     # Sum here, since division is taken in `step`.
                     second_loss = (coef_sample * loss).sum(dim=0)  # This is usual backprop, so take sum.
                     second_loss.backward()
-                else:
+                else:  # vanilla, per_layer.
                     first_loss = loss.mean(dim=0)  # Don't divide by accumulation steps here.
                     first_loss.backward()
 

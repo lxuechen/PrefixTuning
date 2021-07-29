@@ -51,10 +51,7 @@ def _get_command(
     train_dir=None,
     ema_model_start_from=1000,
     ema_model_averaging="no",
-    efficient="no",
-    efficient2="no",
-    efficient3="no",
-    efficient4="no",
+    private_engine_mode="vanilla",
     debug="no",
     evaluation_strategy="epoch",
 
@@ -178,10 +175,7 @@ def _get_command(
         --max_eval_examples {max_eval_examples} \
         --ema_model_averaging {ema_model_averaging} \
         --ema_model_start_from {ema_model_start_from} \
-        --efficient {efficient} \
-        --efficient2 {efficient2} \
-        --efficient3 {efficient3} \
-        --efficient4 {efficient4} \
+        --private_engine_mode {private_engine_mode} \
         --debug {debug} \
         --target_delta {target_delta} \
         --target_epsilon {target_epsilon} \

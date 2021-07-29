@@ -13,11 +13,11 @@ from experimental2.privacy_utils.accounting import gdp_accounting, rdp_accountin
 DEFAULT_ALPHAS = tuple(1 + x / 10.0 for x in range(1, 100)) + tuple(range(12, 64))
 
 
-class PerLayerPrivacyEngine(object):
+class EfficientPrivacyEngine2(object):
     """Differentially-private SGD engine.
 
     >>> model = nn.Linear(10, 10)
-    >>> pe = PerLayerPrivacyEngine(module=model)
+    >>> pe = EfficientPrivacyEngine2(module=model)
 
     Args:
         module: The PyTorch module for which per-sample gradient is required.
@@ -68,7 +68,7 @@ class PerLayerPrivacyEngine(object):
         named_params: Optional[Sequence] = None,
         **_,
     ):
-        super(PerLayerPrivacyEngine, self).__init__()
+        super(EfficientPrivacyEngine2, self).__init__()
         if accounting_mode not in ('rdp', 'gdp', 'all', 'rdp_cks'):
             raise ValueError(f"Unknown accounting mode: {accounting_mode}")
 

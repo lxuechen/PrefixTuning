@@ -316,6 +316,9 @@ class EfficientPrivacyEngine(object):
             f")"
         )
 
+    def set_hooks_mode(self, mode="norm"):
+        autograd_grad_sample.set_hooks_mode(mode)
+
 
 def get_sigma_from_rdp(
     target_epsilon: float,
