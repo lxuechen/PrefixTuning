@@ -24,6 +24,8 @@ def main(
     )
     for mode in modes:
         for batch_size in batch_sizes:
+            print(f"mode: {mode}, batch_size={batch_size}")
+
             if mode == "jax":
                 out = os.system(
                     f"python -m memory.jax_dp --batch_size {batch_size} --seq_len {seq_len} "
@@ -37,6 +39,7 @@ def main(
             if out == 0:  # Success
                 max_batch_sizes[mode] = batch_size
                 print(f'mode: {mode}, batch_size: {batch_size}')
+                break
 
     if out_dir is not None:
         seq_len_str = utils.int2str(seq_len)
