@@ -6,7 +6,7 @@ from lxuechen_utils import utils
 
 
 def main(
-    batch_sizes=tuple(range(50, 0, -2)),
+    batch_sizes=tuple(range(90, 0, -2)),
     seq_len=100,
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
     num_updates=3,  # You don't need to many updates, since this focuses on memory scaling.
