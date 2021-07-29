@@ -1,5 +1,6 @@
 import functools
 import itertools
+import time
 
 import fire
 import flaxmodels as fm
@@ -81,6 +82,7 @@ def next_token_loss(model, params, batch):
 def main(
     seq_len=100,
     batch_size=5,
+    num_warmups=2,
     num_updates=100,
     seed=42,
 
@@ -121,13 +123,24 @@ def main(
     if not no_jit:
         train_fn = jax.jit(train_fn)
 
-    for _ in tqdm.tqdm(range(num_updates)):
+    for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
         opt_state = train_fn(
             rng,
             next(itercount),
             opt_state,
             batch,
         )
+
+    now = time.perf_counter()
+    for _ in tqdm.tqdm(range(num_updates), desc='training'):
+        opt_state = train_fn(
+            rng,
+            next(itercount),
+            opt_state,
+            batch,
+        )
+    time_elapse = time.perf_counter() - now
+    print(f'{num_updates} updates spent {time_elapse:.4f} seconds')
 
 
 if __name__ == "__main__":
