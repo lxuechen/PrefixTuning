@@ -12,7 +12,7 @@ def main(
     num_updates=100,
 
     modes=("vanilla", "layer_by_layer", "ghost", "jax"),
-    out_path=None,
+    out_dir=None,
 ):
     max_batch_sizes = dict()
     for mode in modes:
@@ -29,15 +29,14 @@ def main(
                 )
             if out == 0:  # Success
                 max_batch_sizes[mode] = batch_size
-                print(f'mode: {mode}, successful at batch_size: {batch_size}')
+                print(f'mode: {mode}, batch_size: {batch_size}')
 
-    if out_path is not None:
-        utils.jdump(
-            max_batch_sizes,
-            out_path
-        )
+    if out_dir is not None:
+        seq_len_str = utils.int2str(seq_len)
+        out_path = os.path.join(out_dir, f'batch_size_exps_seq_len_{seq_len_str}.json')
+        utils.jdump(max_batch_sizes, out_path)
 
 
 if __name__ == "__main__":
-    # python -m memory.batch_size
+    # python -m memory.batch_size --out_dir "/nlp/scr/lxuechen/prefixtune/memory"
     fire.Fire(main)
