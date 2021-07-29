@@ -5,7 +5,7 @@ import fire
 
 def main(
     seq_len=100,
-    batch_size=10,
+    batch_size=5,
     num_updates=100,
 
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
