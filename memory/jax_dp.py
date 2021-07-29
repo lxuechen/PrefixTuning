@@ -64,12 +64,14 @@ def make_data(seq_len=10, batch_size=16):
 
 
 def next_token_loss(model, params, batch):
-    outputs = model.apply(params, input_ids=batch)
+    input_ids = batch[0]
+    outputs = model.apply(params, input_ids=input_ids)
     lm_logits = outputs["logits"]
 
     shift_logits = lm_logits[..., :-1, :]
-    shift_labels = batch[..., 1:]
+    shift_labels = input_ids[..., 1:]
     # flatten the tokens
+    # TODO: This loss is wrong for dp.
     loss = ops.cross_entropy(jnp.reshape(shift_logits, (-1, shift_logits.shape[-1])), jnp.reshape(shift_labels, (-1)))
     return loss
 
