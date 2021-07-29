@@ -55,9 +55,8 @@ def main(
             )
 
         xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
-        plt.xticks(x, xtick_labels)
-        plt.ylabel('max batch size')
-        plt.xlabel('model')
+        plt.xticks(x, xtick_labels, fontsize=14)
+        plt.ylabel('max batch size', fontsize=14)
         # plt.legend()  # Don't use legend for the left plot.
         plt.tight_layout()
         plt.savefig(img_path)
@@ -91,10 +90,9 @@ def main(
             )
 
         xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
-        plt.xticks(x, xtick_labels)
-        plt.ylabel('gradient updates per minute')
-        plt.xlabel('model')
-        plt.legend()
+        plt.xticks(x, xtick_labels, fontsize=14)
+        plt.ylabel('steps per minute', fontsize=14)
+        plt.legend(fontsize=14)
         plt.tight_layout()
         plt.savefig(img_path)
         plt.close()
