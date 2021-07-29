@@ -42,6 +42,8 @@ def _create_or_extend_grad_sample(
     if hasattr(param, "requires_grad") and not param.requires_grad:
         return
 
+    assert grad_sample.shape[1:] == param.shape
+
     # This now has a similar functionality as `_create_or_accumulate_grad_sample` and if useful if a specific Linear
     # layer is reused.
     if hasattr(param, "grad_sample"):
@@ -94,12 +96,12 @@ def _compute_linear_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    gs = torch.einsum("n...i,n...j->nij", B, A)
+    gs = torch.bmm(B.permute(0, 2, 1), A)
     _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
     if layer.bias is not None:
         _create_or_extend_grad_sample(
             layer.bias,
-            torch.einsum("n...k->nk", B),
+            B.sum(dim=1),
             batch_dim,
         )
 
@@ -302,18 +304,17 @@ def _compute_embedding_grad_sample(
 def _custom_compute_conv1d_grad_sample(
     layer: nn.Linear, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ):
-    gs = torch.einsum("n...i,n...j->nji", B, A)
+    gs = torch.bmm(A.permute(0, 2, 1), B)
     _create_or_extend_grad_sample(layer.weight, gs, batch_dim)
     if layer.bias is not None:
         _create_or_extend_grad_sample(
             layer.bias,
-            torch.einsum("n...k->nk", B),
+            B.sum(dim=1),
             batch_dim,
         )
 
 
 _supported_layers_grad_samplers = {
-    "CounterEmbedding": _compute_embedding_grad_sample,  # Purely for debugging.
     "Embedding": _compute_embedding_grad_sample,
     "Linear": _compute_linear_grad_sample,
     "LSTMLinear": _compute_accumulate_linear_grad_sample,
