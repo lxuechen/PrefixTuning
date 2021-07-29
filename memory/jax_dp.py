@@ -1,5 +1,6 @@
 import functools
 import itertools
+import os
 import time
 
 import fire
@@ -12,6 +13,8 @@ import numpy as np
 import tqdm
 
 from . import jax_ops
+
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 
 def clipped_grad(model, loss, params, l2_norm_clip, single_example_batch):
