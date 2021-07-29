@@ -1,3 +1,5 @@
+import time
+
 import fire
 import torch
 import tqdm
@@ -6,6 +8,36 @@ import transformers
 
 def make_data(seq_len=10, batch_size=16, device=None):
     return (torch.randint(low=0, high=100, size=(batch_size, seq_len), device=device),)
+
+
+def train_step(model, optimizer, criterion, batch, mode):
+    input_ids, = batch
+    outputs = model(input_ids=input_ids, return_dict=True)
+    lm_logits = outputs[0]
+    shift_logits = lm_logits[..., :-1, :].permute(0, 2, 1)  # (batch_size, vocab_size, seq_len).
+    shift_labels = input_ids[..., 1:]
+
+    loss = criterion(shift_logits, shift_labels)
+    loss = loss.sum(dim=1)
+
+    if mode in ("vanilla", "per_layer", "nonprivate"):
+        first_loss = loss.mean(dim=0)
+        first_loss.backward()
+    else:
+        privacy_engine = optimizer.privacy_engine
+
+        privacy_engine.set_hooks_mode(mode="norm")
+        first_loss = loss.mean(dim=0)
+        first_loss.backward(retain_graph=True)  # Must retain graph; otherwise dropout could be different.
+
+        privacy_engine.set_hooks_mode(mode="grad")
+        coef_sample = privacy_engine.get_coef_sample()
+        # Sum here, since division is taken in `step`.
+        second_loss = (coef_sample * loss).sum(dim=0)  # This is usual backprop, so take sum.
+        second_loss.backward()
+
+    optimizer.step()
+    model.zero_grad()
 
 
 def main(
@@ -62,32 +94,15 @@ def main(
     model.zero_grad()
 
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
-        input_ids, = batch
-        outputs = model(input_ids=input_ids, return_dict=True)
-        lm_logits = outputs[0]
-        shift_logits = lm_logits[..., :-1, :].permute(0, 2, 1)  # (batch_size, vocab_size, seq_len).
-        shift_labels = input_ids[..., 1:]
+        train_step(model, optimizer, criterion, batch, mode)
 
-        loss = criterion(shift_logits, shift_labels)
-        loss = loss.sum(dim=1)
-
-        if mode in ("vanilla", "per_layer", "nonprivate"):
-            first_loss = loss.mean(dim=0)
-            first_loss.backward()
-        else:
-            privacy_engine.set_hooks_mode(mode="norm")
-            first_loss = loss.mean(dim=0)
-            first_loss.backward(retain_graph=True)  # Must retain graph; otherwise dropout could be different.
-
-            privacy_engine.set_hooks_mode(mode="grad")
-            coef_sample = privacy_engine.get_coef_sample()
-            # Sum here, since division is taken in `step`.
-            second_loss = (coef_sample * loss).sum(dim=0)  # This is usual backprop, so take sum.
-            second_loss.backward()
-
-        optimizer.step()
-        model.zero_grad()
+    now = time.perf_counter()
+    for _ in tqdm.tqdm(range(num_updates), desc="update"):
+        train_step(model, optimizer, criterion, batch, mode)
+    time_elapse = time.perf_counter() - now
+    print(f'{num_updates} updates took {time_elapse:.4f} seconds')
 
 
 if __name__ == "__main__":
+    # python -m memory.torch_dp --mode "ghost"
     fire.Fire(main)
