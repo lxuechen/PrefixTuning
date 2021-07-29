@@ -86,12 +86,12 @@ def next_token_loss(model, params, batch):
 def main(
     seq_len=100,
     batch_size=5,
-    num_warmups=2,
+    num_warmups=3,
     num_updates=100,
+    model_name_or_path="gpt2",
     seed=42,
 
     learning_rate=1e-4,
-    model_name_or_path="gpt2",
     l2_norm_clip=0.1,
     noise_multiplier=1.0,
 
