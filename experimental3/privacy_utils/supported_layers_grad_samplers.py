@@ -25,8 +25,11 @@ from experimental3.privacy_utils.utils.tensor_utils import sum_over_all_but_batc
 def _create_or_extend_norm_sample(param: torch.Tensor, norm_sample: torch.Tensor) -> None:
     if not hasattr(param, "requires_grad") or not param.requires_grad:
         return
+
     if autograd_grad_sample.get_hooks_mode() == "norm":
         param.norm_sample = norm_sample
+    else:  # mode == "grad"; should not get here.
+        raise ValueError
 
 
 def _fast_norm_sample(A, B):
