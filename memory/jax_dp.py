@@ -3,12 +3,13 @@ import itertools
 
 import fire
 import flaxmodels as fm
-from flaxmodels.gpt2 import ops
 import jax
 from jax.experimental import optimizers
 import jax.numpy as jnp
 from jax.tree_util import tree_flatten, tree_multimap, tree_unflatten
 import numpy as np
+
+from . import jax_ops
 
 
 def clipped_grad(model, loss, params, l2_norm_clip, single_example_batch):
@@ -70,9 +71,9 @@ def next_token_loss(model, params, batch):
 
     shift_logits = lm_logits[..., :-1, :]
     shift_labels = input_ids[..., 1:]
-    # flatten the tokens
-    # TODO: This loss is wrong for dp.
-    loss = ops.cross_entropy(jnp.reshape(shift_logits, (-1, shift_logits.shape[-1])), jnp.reshape(shift_labels, (-1)))
+    loss = jax_ops.cross_entropy(
+        jnp.reshape(shift_logits, (-1, shift_logits.shape[-1])), jnp.reshape(shift_labels, (-1))
+    )
     return loss
 
 
