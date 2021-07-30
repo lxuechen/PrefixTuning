@@ -66,6 +66,7 @@ class PrivacyEngine(object):
         accounting_mode="rdp_cks",
         alphas: Sequence[float] = DEFAULT_ALPHAS,
         verbose: bool = False,
+        record_snr: bool = True,
         named_params: Optional[Sequence] = None,
         **_,
     ):
@@ -121,6 +122,7 @@ class PrivacyEngine(object):
         self.accounting_mode = accounting_mode
         self.batch_first = batch_first
         self.verbose = verbose
+        self.record_snr = record_snr
 
         # Internals.
         self.steps = 0  # Tracks privacy spending.
@@ -198,7 +200,8 @@ class PrivacyEngine(object):
                     f"1) there is parameter which requires gradient, but was not used in the computational graph, or "
                     f"2) the backward hook registry failed to find the corresponding module to register."
                 )
-            signals.append(param.grad.reshape(-1).norm(2))
+            if self.record_snr:
+                signals.append(param.grad.reshape(-1).norm(2))
 
             if self.noise_multiplier > 0 and self.max_grad_norm > 0:
                 noise = torch.normal(
@@ -209,7 +212,8 @@ class PrivacyEngine(object):
                     dtype=param.dtype,
                 )
                 param.grad += noise
-                noises.append(noise.reshape(-1).norm(2))
+                if self.record_snr:
+                    noises.append(noise.reshape(-1).norm(2))
                 del noise
             if self.loss_reduction == "mean":
                 param.grad /= self.batch_size
@@ -218,7 +222,7 @@ class PrivacyEngine(object):
         # Only for low rank models.
         # blocks.create_gradient(module=self.module)
 
-        if noises:
+        if self.record_snr and noises:
             self.signal, self.noise = tuple(torch.stack(lst).norm(2).item() for lst in (signals, noises))
             self.noise_limit = math.sqrt(self.num_params) * self.noise_multiplier * self.max_grad_norm
             self.snr = self.signal / self.noise
