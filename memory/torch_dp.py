@@ -6,6 +6,7 @@ import tqdm
 import transformers
 
 from lxuechen_utils import utils
+from torch.profiler import profile, record_function, ProfilerActivity
 
 
 def make_data(seq_len=10, batch_size=16, device=None):
@@ -62,6 +63,7 @@ def main(
     noise_multiplier=1.0,
 
     out_path=None,
+    enable_profile=False,
 ):
     print(f'num_warmups={num_warmups}, num_updates={num_updates}')
     torch.manual_seed(seed)
@@ -112,12 +114,24 @@ def main(
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
         train_step(model, optimizer, criterion, batch, mode)  # step, gradient_accumulation_steps don't matter here.
 
+    if enable_profile:
+        prof = profile(activities=[ProfilerActivity.CPU], record_shapes=True)
+        prof.__enter__()
+
+        record = record_function("training")
+        record.__enter__()
+
     print(f'Start training gradient_accumulation_steps: {gradient_accumulation_steps}')
     now = time.perf_counter()
     for step in tqdm.tqdm(range(1, num_updates + 1), desc="update"):
         train_step(model, optimizer, criterion, batch, mode, step, gradient_accumulation_steps)
     time_elapse = time.perf_counter() - now
     print(f'{num_updates} updates took {time_elapse:.4f} seconds')
+
+    if enable_profile:
+        prof.__exit__(None, None, None)
+        record.__exit__(None, None, None)
+        print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=30))
 
     if out_path is not None:
         utils.jdump(
