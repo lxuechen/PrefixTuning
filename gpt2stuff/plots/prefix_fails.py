@@ -28,10 +28,14 @@ def main(
     seeds=(0, 1),
     metric="BLEU",
     noise_multipliers=(0.05, 0.1, 0.5, 1),  # Not including 0.01, since it's too small.
-    alpha=0.4,
+    alpha=0.5,
 ):
     # Each noise multiplier has a color; we repeat this for both prefix and full tune.
-    colors = sns.color_palette()[:len(noise_multipliers)]
+    all_colors = sns.color_palette("Paired")[:2 * len(noise_multipliers)]
+    tuning_mode_to_colors = {
+        "prefixtune": [all_colors[2 * i] for i in range(len(noise_multipliers))],
+        "fulltune": [all_colors[2 * i + 1] for i in range(len(noise_multipliers))],
+    }
 
     # Collect plots.
     bleus = []
@@ -40,6 +44,8 @@ def main(
     nll_fbs = []
 
     for tuning_mode in ("prefixtune", "fulltune"):
+        colors = tuning_mode_to_colors[tuning_mode]
+
         for color, noise_multiplier in utils.zip_(colors, noise_multipliers):
 
             all_bleu_x = []
