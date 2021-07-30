@@ -82,11 +82,11 @@ def _compute_norm_grad_sample(
         grad_sample = sum_over_all_but_batch_and_last_n(
             F.layer_norm(A, layer.normalized_shape, eps=layer.eps) * B, layer.weight.dim(),
         )
-        norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
+        norm_sample = grad_sample.norm(2, dim=1)
         _create_or_extend_norm_sample(layer.weight, norm_sample)
 
         grad_sample = sum_over_all_but_batch_and_last_n(B, layer.bias.dim())
-        norm_sample = grad_sample.flatten(start_dim=1).norm(2, dim=1)
+        norm_sample = grad_sample.norm(2, dim=1)
         _create_or_extend_norm_sample(layer.bias, norm_sample)
 
 

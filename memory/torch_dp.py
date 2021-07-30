@@ -104,6 +104,7 @@ def main(
             noise_multiplier=noise_multiplier,
             loss_reduction="mean",
             batch_first=True,
+            record_snr=False,
         )
         privacy_engine.attach(optimizer)
 
