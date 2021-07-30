@@ -17,7 +17,7 @@ class EfficientPrivacyEngine3(object):
     """Differentially-private SGD engine.
 
     >>> model = nn.Linear(10, 10)
-    >>> pe = PrivacyEngine(module=model)
+    >>> pe = EfficientPrivacyEngine3(module=model)
 
     Args:
         module: The PyTorch module for which per-sample gradient is required.
@@ -65,6 +65,7 @@ class EfficientPrivacyEngine3(object):
         accounting_mode="rdp_cks",
         alphas: Sequence[float] = DEFAULT_ALPHAS,
         verbose: bool = False,
+        record_snr: bool = True,
         named_params: Optional[Sequence] = None,
         **_,
     ):
@@ -120,6 +121,7 @@ class EfficientPrivacyEngine3(object):
         self.accounting_mode = accounting_mode
         self.batch_first = batch_first
         self.verbose = verbose
+        self.record_snr = record_snr
 
         # Internals.
         self.steps = 0  # Tracks privacy spending.
@@ -193,7 +195,8 @@ class EfficientPrivacyEngine3(object):
             # When there's no gradient accumulation, .summed_grad is not created.
             if hasattr(param, 'summed_grad'):
                 param.grad += param.summed_grad
-            signals.append(param.grad.reshape(-1).norm(2))
+            if self.record_snr:
+                signals.append(param.grad.reshape(-1).norm(2))
 
             if self.noise_multiplier > 0 and self.max_grad_norm > 0:
                 noise = torch.normal(
@@ -204,12 +207,13 @@ class EfficientPrivacyEngine3(object):
                     dtype=param.dtype,
                 )
                 param.grad += noise
-                noises.append(noise.reshape(-1).norm(2))
+                if self.record_snr:
+                    noises.append(noise.reshape(-1).norm(2))
                 del noise
             if self.loss_reduction == "mean":
                 param.grad /= self.batch_size
 
-        if noises:
+        if self.record_snr and noises:
             self.signal, self.noise = tuple(torch.stack(lst).norm(2).item() for lst in (signals, noises))
             self.noise_limit = math.sqrt(self.num_params) * self.noise_multiplier * self.max_grad_norm
             self.snr = self.signal / self.noise
