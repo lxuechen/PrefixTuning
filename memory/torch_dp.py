@@ -62,6 +62,7 @@ def main(
 
     out_path=None,
 ):
+    print(f'num_warmups={num_warmups}, num_updates={num_updates}')
     torch.manual_seed(seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

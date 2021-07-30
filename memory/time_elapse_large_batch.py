@@ -46,11 +46,10 @@ def main(
 
             if mode == "jax":
                 os.system(
-                    f"python -m memory.jax_dp "
+                    f"python -m memory.jax_dp_grad_accumulation "
                     f"--batch_size {micro_batch_size} "
                     f"--gradient_accumulation_steps {gradient_accumulation_steps} "
                     f"--seq_len {seq_len} "
-                    f"--num_updates {num_updates} "
                     f"--model_name_or_path {model_name_or_path} "
                     f"--out_path {out_path} "
                     f"--num_updates {actual_num_updates}"
@@ -62,9 +61,8 @@ def main(
                     f"--batch_size {micro_batch_size} "
                     f"--gradient_accumulation_steps {gradient_accumulation_steps} "
                     f"--seq_len {seq_len} "
-                    f"--num_updates {num_updates} "
                     f"--model_name_or_path {model_name_or_path} "
-                    f"--out_path {out_path}"
+                    f"--out_path {out_path} "
                     f"--num_updates {actual_num_updates}"
                 )
 
