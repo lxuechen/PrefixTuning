@@ -12,6 +12,7 @@ from lxuechen_utils import utils
 
 def main(
     seeds=(0, 1,),
+    alpha=.4,
 ):
     for tag, lr in utils.zip_(("high lr", "mid lr", "mid low lr", "low lr"), (1e-3, 5e-4, 1e-5, 5e-6)):
         bleu_plots = []
@@ -67,14 +68,14 @@ def main(
                     {'x': x, 'y': nll_mean, 'label': f"batch size={train_batch_size}"}
                 )
                 nll_fbs.append(
-                    {'x': x, 'y1': nll_mean - nll_std, 'y2': nll_mean + nll_std, 'alpha': .4}
+                    {'x': x, 'y1': nll_mean - nll_std, 'y2': nll_mean + nll_std, 'alpha': alpha}
                 )
 
                 bleu_plots.append(
                     {'x': x, 'y': bleu_mean, 'label': f"batch size={train_batch_size}"}
                 )
                 bleu_fbs.append(
-                    {'x': x, 'y1': bleu_mean - bleu_std, 'y2': bleu_mean + bleu_std, 'alpha': .4}
+                    {'x': x, 'y1': bleu_mean - bleu_std, 'y2': bleu_mean + bleu_std, 'alpha': alpha}
                 )
 
         for img_path in (
