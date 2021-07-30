@@ -11,6 +11,17 @@ from lxuechen_utils import utils
 sns.set_theme(style="darkgrid")
 
 
+def autolabel(rects):
+    """
+    Attach a text label above each bar displaying its height
+    """
+    for rect in rects:
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width() / 2., 1.05 * height,
+                 '%d' % int(height),
+                 ha='center', va='bottom')
+
+
 def mode2label(mode):
     return {
         "nonprivate": "non-private",
@@ -50,9 +61,13 @@ def main(
 
         for i, (mode, this_grouped) in enumerate(grouped.items()):
             label = mode2label(mode)
-            plt.bar(
-                x + (-2 + i) * width, this_grouped, width, label=label,
-            )
+
+            xlocs = x + (-2 + i) * width
+            ylocs = this_grouped
+            plt.bar(xlocs, ylocs, width, label=label)
+
+            for this_x, this_y in zip(xlocs, ylocs):
+                plt.text(this_x - width / 4, this_y + 0.5, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
         xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
         plt.xticks(x, xtick_labels, fontsize=14)
@@ -85,9 +100,13 @@ def main(
 
         for i, (mode, this_grouped) in enumerate(grouped.items()):
             label = mode2label(mode)
-            plt.bar(
-                x + (-2 + i) * width, this_grouped, width, label=label,
-            )
+
+            xlocs = x + (-2 + i) * width
+            ylocs = this_grouped
+            plt.bar(xlocs, ylocs, width, label=label)
+
+            for this_x, this_y in zip(xlocs, ylocs):
+                plt.text(this_x - width / 3, this_y + 2, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
         xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
         plt.xticks(x, xtick_labels, fontsize=14)
