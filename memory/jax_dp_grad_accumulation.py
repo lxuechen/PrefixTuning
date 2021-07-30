@@ -154,11 +154,14 @@ def main(
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
         opt_state, cumulative_grad = train_fn(
             rng,
-            next(itercount),
+            0,  # Don't do any update here.
             opt_state,
             batch,
             cumulative_grad
         )
+
+    cumulative_grad = zero_grad(params)
+    next(itercount)  # Start with count=1 in the for loop to ensure correct accumulation.
 
     now = time.perf_counter()
     for _ in tqdm.tqdm(range(num_updates), desc='training'):
