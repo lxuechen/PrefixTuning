@@ -13,6 +13,7 @@ def make_data(seq_len=10, batch_size=16, device=None):
 
 
 def train_step(model, optimizer, criterion, batch, mode, step=1, gradient_accumulation_steps=1):
+    model.train()
     input_ids, = batch
     outputs = model(input_ids=input_ids, return_dict=True)
     lm_logits = outputs[0]
@@ -107,9 +108,6 @@ def main(
             record_snr=False,
         )
         privacy_engine.attach(optimizer)
-
-    model.train()
-    model.zero_grad()
 
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
         train_step(model, optimizer, criterion, batch, mode)  # step, gradient_accumulation_steps don't matter here.
