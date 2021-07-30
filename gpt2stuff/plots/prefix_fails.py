@@ -3,6 +3,8 @@
 Loop over noise sigma. Plot with the best learning rate.
 
 Figure in section 4.1
+
+python -m gpt2stuff.plots.prefix_fails
 """
 
 import os
@@ -23,9 +25,10 @@ def tuning_mode_to_label(tm):
 
 def main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0717",
-    seed=(0, 1),
+    seeds=(0, 1),
     metric="BLEU",
     noise_multipliers=(0.05, 0.1, 0.5, 1),  # Not including 0.01, since it's too small.
+    alpha=0.4,
 ):
     # Each noise multiplier has a color; we repeat this for both prefix and full tune.
     colors = sns.color_palette()[:len(noise_multipliers)]
@@ -33,77 +36,107 @@ def main(
     # Collect plots.
     bleus = []
     nlls = []
+    bleu_fbs = []
+    nll_fbs = []
 
     for tuning_mode in ("prefixtune", "fulltune"):
         for color, noise_multiplier in utils.zip_(colors, noise_multipliers):
-            best_bleu = -sys.maxsize
-            bleu_x = bleu_y = None
 
-            best_nll = sys.maxsize
-            nll_x = nll_y = None
+            all_bleu_x = []
+            all_bleu_y = []
+            all_nll_x = []
+            all_nll_y = []
 
-            for lr in (1e-3, 5e-4, 1e-4,):
-                lr_str = utils.float2str(lr)
-                noise_multiplier_str = utils.float2str(noise_multiplier)
-                train_dir = os.path.join(
-                    base_dir,
-                    f'model_name_distilgpt2_nonprivate_no_tuning_mode_'
-                    f'{tuning_mode}_per_example_max_grad_norm_0_10000000_noise_multiplier_'
-                    f'{noise_multiplier_str}_learning_rate_'
-                    f'{lr_str}_train_batch_size_00001024_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_-0000001',
-                    f'{seed}'
-                )
+            for seed in seeds:
 
-                log_history_path = os.path.join(train_dir, 'log_history.json')
-                log_history = utils.jload(log_history_path)
+                best_bleu = -sys.maxsize
+                bleu_x = bleu_y = None
 
-                score_path = os.path.join(train_dir, 'generations_score', 'results.json')
-                score = utils.jload(score_path)
+                best_nll = sys.maxsize
+                nll_x = nll_y = None
 
-                x = [round(hi["epoch"]) for hi in log_history]
-                this_nll = [score_i["eval"]["model"]["tok_logprobs"] for score_i in log_history]
-                this_bleu = [si[metric] for si in score['score']]
+                for lr in (1e-3, 5e-4, 1e-4,):
+                    lr_str = utils.float2str(lr)
+                    noise_multiplier_str = utils.float2str(noise_multiplier)
+                    train_dir = os.path.join(
+                        base_dir,
+                        f'model_name_distilgpt2_nonprivate_no_tuning_mode_'
+                        f'{tuning_mode}_per_example_max_grad_norm_0_10000000_noise_multiplier_'
+                        f'{noise_multiplier_str}_learning_rate_'
+                        f'{lr_str}_train_batch_size_00001024_'
+                        f'mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_-0000001',
+                        f'{seed}'
+                    )
 
-                if len(x) == 8:
-                    x.extend([45, 50])
-                if len(x) == 9:
-                    x.extend([50])
+                    log_history_path = os.path.join(train_dir, 'log_history.json')
+                    log_history = utils.jload(log_history_path)
 
-                while len(this_bleu) < 10:
-                    this_bleu.append(this_bleu[-1])
-                while len(this_nll) < 10:
-                    this_nll.append(this_nll[-1])
+                    score_path = os.path.join(train_dir, 'generations_score', 'results.json')
+                    score = utils.jload(score_path)
 
-                if len(x) != 10:
-                    print('x fail')
-                    print(train_dir)
-                    continue
-                if len(this_nll) != 10 or len(this_bleu) != 10:
-                    print('y fail')
-                    print(train_dir)
-                    if len(this_nll) < 10:
-                        print(this_nll)
-                    if len(this_bleu) < 10:
-                        print(this_bleu)
-                    continue
+                    x = [round(hi["epoch"]) for hi in log_history]
+                    this_nll = [score_i["eval"]["model"]["tok_logprobs"] for score_i in log_history]
+                    this_bleu = [si[metric] for si in score['score']]
 
-                if this_nll[-1] < best_nll:
-                    best_nll = this_nll[-1]
-                    nll_x = x
-                    nll_y = this_nll
+                    if len(x) == 8:
+                        x.extend([45, 50])
+                    if len(x) == 9:
+                        x.extend([50])
 
-                if this_bleu[-1] > best_bleu:
-                    best_bleu = this_bleu[-1]
-                    bleu_x = x
-                    bleu_y = this_bleu
+                    while len(this_bleu) < 10:
+                        this_bleu.append(this_bleu[-1])
+                    while len(this_nll) < 10:
+                        this_nll.append(this_nll[-1])
+
+                    if len(x) != 10:
+                        print('x fail')
+                        print(train_dir)
+                        continue
+                    if len(this_nll) != 10 or len(this_bleu) != 10:
+                        print('y fail')
+                        print(train_dir)
+                        if len(this_nll) < 10:
+                            print(this_nll)
+                        if len(this_bleu) < 10:
+                            print(this_bleu)
+                        continue
+
+                    if this_nll[-1] < best_nll:
+                        best_nll = this_nll[-1]
+                        nll_x = x
+                        nll_y = this_nll
+
+                    if this_bleu[-1] > best_bleu:
+                        best_bleu = this_bleu[-1]
+                        bleu_x = x
+                        bleu_y = this_bleu
+
+                all_nll_x.append(nll_x)
+                all_nll_y.append(nll_y)
+                all_bleu_x.append(bleu_x)
+                all_bleu_y.append(bleu_y)
+
+            bleu_x, _ = utils.average_over_seed(all_bleu_x)
+            bleu_y, bleu_y_std = utils.average_over_seed(all_bleu_y)
+
+            nll_x, _ = utils.average_over_seed(all_nll_x)
+            nll_y, nll_y_std = utils.average_over_seed(all_nll_y)
 
             label = f'{tuning_mode_to_label(tuning_mode)} $\sigma={noise_multiplier}$'
             linestyle = 'dotted' if tuning_mode == "prefixtune" else '-'
+
             bleus.append(
                 {'x': bleu_x, 'y': bleu_y, 'label': label, 'linestyle': linestyle, 'color': color}
             )
+            bleu_fbs.append(
+                {'x': bleu_x, 'y1': bleu_y - bleu_y_std, 'y2': bleu_y + bleu_y_std, 'alpha': alpha, 'color': color}
+            )
+
             nlls.append(
                 {'x': nll_x, 'y': nll_y, 'label': label, 'linestyle': linestyle, 'color': color}
+            )
+            nll_fbs.append(
+                {'x': nll_x, 'y1': nll_y - nll_y_std, 'y2': nll_y + nll_y_std, 'alpha': alpha, 'color': color}
             )
 
     for img_path in (
@@ -113,6 +146,7 @@ def main(
         utils.plot(
             img_path=img_path,
             plots=bleus,
+            fill_betweens=bleu_fbs,
             options={'xlabel': 'epoch', "ylabel": f'BLEU'},
         )
 
@@ -123,10 +157,10 @@ def main(
         utils.plot(
             img_path=img_path,
             plots=nlls,
+            fill_betweens=nll_fbs,
             options={'xlabel': 'epoch', "ylabel": 'per-token NLL'},
         )
 
 
 if __name__ == "__main__":
-    # python -m gpt2stuff.plots.prefix_fails
     fire.Fire(main)

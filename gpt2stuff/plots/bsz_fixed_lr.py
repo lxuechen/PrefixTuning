@@ -113,7 +113,7 @@ def main(
                 plots=bleu_plots,
                 fill_betweens=bleu_fbs,
                 options={'xlabel': {'xlabel': 'epoch', 'fontsize': 20},
-                         'ylabel': {'ylabel': 'BLEU', 'fontsize': 20},}
+                         'ylabel': {'ylabel': 'BLEU', 'fontsize': 20}, }
             )
 
 
