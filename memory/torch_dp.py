@@ -12,7 +12,7 @@ def make_data(seq_len=10, batch_size=16, device=None):
     return (torch.randint(low=0, high=100, size=(batch_size, seq_len), device=device),)
 
 
-def train_step(model, optimizer, criterion, batch, mode):
+def train_step(model, optimizer, criterion, batch, mode, step=1, gradient_accumulation_steps=1):
     input_ids, = batch
     outputs = model(input_ids=input_ids, return_dict=True)
     lm_logits = outputs[0]
@@ -38,14 +38,19 @@ def train_step(model, optimizer, criterion, batch, mode):
         second_loss = (coef_sample * loss).sum(dim=0)  # This is usual backprop, so take sum.
         second_loss.backward()
 
-    optimizer.step()
-    model.zero_grad()
+    if step % gradient_accumulation_steps == 0:
+        optimizer.step()
+        model.zero_grad()
+    else:
+        if hasattr(optimizer, 'virtual_step'):
+            optimizer.virtual_step()
 
 
 def main(
     mode="ghost",
     seq_len=100,
     batch_size=5,
+    gradient_accumulation_steps=1,
     num_warmups=3,
     model_name_or_path="gpt2",
     num_updates=100,
@@ -86,11 +91,13 @@ def main(
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
+        # Estimating the cost -- these parameters don't matter at all.
+        actual_batch_size = gradient_accumulation_steps * batch_size
         privacy_engine = cls(
             module=model,
-            batch_size=batch_size,
+            batch_size=actual_batch_size,
             sample_size=100000,
-            gradient_accumulation_steps=1,
+            gradient_accumulation_steps=gradient_accumulation_steps,
             epochs=5,
             max_grad_norm=l2_norm_clip,
             noise_multiplier=noise_multiplier,
@@ -103,11 +110,12 @@ def main(
     model.zero_grad()
 
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
-        train_step(model, optimizer, criterion, batch, mode)
+        train_step(model, optimizer, criterion, batch, mode)  # step, gradient_accumulation_steps don't matter here.
 
+    print(f'Start training gradient_accumulation_steps: {gradient_accumulation_steps}')
     now = time.perf_counter()
-    for _ in tqdm.tqdm(range(num_updates), desc="update"):
-        train_step(model, optimizer, criterion, batch, mode)
+    for step in tqdm.tqdm(range(1, num_updates + 1), desc="update"):
+        train_step(model, optimizer, criterion, batch, mode, step, gradient_accumulation_steps)
     time_elapse = time.perf_counter() - now
     print(f'{num_updates} updates took {time_elapse:.4f} seconds')
 
