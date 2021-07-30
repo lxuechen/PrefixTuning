@@ -11,14 +11,14 @@ from lxuechen_utils import utils
 
 
 def main(
-    num_updates=100,
+    num_updates=10,
 
     seq_lens=(100, 100, 100),
     batch_sizes=(512, 512, 512),  # This is different from previous file.
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
     modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
 
-    out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse",
+    out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse_large_batch",
     config_dir="/nlp/scr/lxuechen/prefixtune/memory/batch_size_exps_seq_len_00000100.json",
 ):
     config = utils.jload(config_dir)
@@ -33,14 +33,13 @@ def main(
 
     for seq_len, batch_size, model_name_or_path in zip(seq_lens, batch_sizes, model_name_or_paths):
         for mode in modes:
-            if model_name_or_path == "gpt2-large" and mode == "jax":
+            micro_batch_size = config2bsz[(model_name_or_path, mode)]
+            if micro_batch_size == 0:
                 continue
 
             print(f"model_name_or_path: {model_name_or_path}, mode: {mode}")
-
-            micro_batch_size = config2bsz[(model_name_or_path, mode)]
             gradient_accumulation_steps = math.ceil(batch_size / micro_batch_size)
-
+            actual_num_updates = num_updates * gradient_accumulation_steps
             out_path = os.path.join(
                 out_dir, f"model_name_or_path_{model_name_or_path}_mode_{mode}.json"
             )
@@ -53,7 +52,8 @@ def main(
                     f"--seq_len {seq_len} "
                     f"--num_updates {num_updates} "
                     f"--model_name_or_path {model_name_or_path} "
-                    f"--out_path {out_path}"
+                    f"--out_path {out_path} "
+                    f"--num_updates {actual_num_updates}"
                 )
             else:
                 os.system(
@@ -65,6 +65,7 @@ def main(
                     f"--num_updates {num_updates} "
                     f"--model_name_or_path {model_name_or_path} "
                     f"--out_path {out_path}"
+                    f"--num_updates {actual_num_updates}"
                 )
 
 
