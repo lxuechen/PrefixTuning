@@ -1,6 +1,8 @@
 """Identify why prefix-tuning fails.
 
-Loop over noise. Plot with the best learning rate.
+Loop over noise sigma. Plot with the best learning rate.
+
+Figure in section 4.1
 """
 
 import os
@@ -21,7 +23,7 @@ def tuning_mode_to_label(tm):
 
 def main(
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0717",
-    seed=0,
+    seed=(0, 1),
     metric="BLEU",
     noise_multipliers=(0.05, 0.1, 0.5, 1),  # Not including 0.01, since it's too small.
 ):
