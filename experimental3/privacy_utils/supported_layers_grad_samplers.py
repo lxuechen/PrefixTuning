@@ -32,9 +32,10 @@ def _create_or_extend_norm_sample(param: torch.Tensor, norm_sample: torch.Tensor
         raise ValueError
 
 
+@torch.jit.script
 def _fast_norm_sample(A, B):
     return torch.sqrt(
-        (torch.bmm(A, A.permute(0, 2, 1)) * torch.bmm(B, B.permute(0, 2, 1))).sum(dim=(1, 2))
+        (torch.bmm(A, A.transpose(-1, -2)) * torch.bmm(B, B.transpose(-1, -2))).sum(dim=(1, 2))
     )
 
 
@@ -90,6 +91,13 @@ def _compute_norm_grad_sample(
         _create_or_extend_norm_sample(layer.bias, norm_sample)
 
 
+@torch.jit.script
+def _embedding_norm_sample(A, B):
+    AAt = A[:, :, None] != A[:, None, :]
+    norm_sample = torch.sqrt((torch.bmm(B, B.transpose(-1, -2)).masked_fill(AAt, 0)).sum(dim=(1, 2)))
+    return norm_sample
+
+
 def _compute_embedding_grad_sample(
     layer: nn.Embedding, A: torch.Tensor, B: torch.Tensor, batch_dim: int = 0
 ) -> None:
@@ -103,8 +111,7 @@ def _compute_embedding_grad_sample(
         batch_dim: Batch dimension position
     """
     vocab_size = layer.weight.size(0)
-    A = F.one_hot(A, num_classes=vocab_size).to(B.dtype)
-    norm_sample = _fast_norm_sample(A, B)
+    norm_sample = _embedding_norm_sample(A, B)
     _create_or_extend_norm_sample(layer.weight, norm_sample)
 
 
