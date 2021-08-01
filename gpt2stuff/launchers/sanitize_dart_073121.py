@@ -133,7 +133,7 @@ def main(
                                     os.path.join(train_dir, "generations_model/eval"),
                                 )
                                 log_paths = (
-                                    os.path.join(train_dir, 'log_sanitize.out'),
+                                    os.path.join(train_dir, 'log_gem_sanitize.out'),
                                 )
 
                                 for gen_dir, log_path in utils.zip_(gen_dirs, log_paths):
