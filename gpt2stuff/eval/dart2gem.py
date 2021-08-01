@@ -71,11 +71,11 @@ def convert_gen(
         utils.jdump(gen_dict, new_gen_path)
 
 
-def main(task="convert_ref"):
+def main(task="convert_ref", **kwargs):
     if task == "convert_ref":
-        convert_ref()
+        convert_ref(**kwargs)
     elif task == "convert_gen":
-        convert_gen()
+        convert_gen(**kwargs)
 
 
 if __name__ == "__main__":
