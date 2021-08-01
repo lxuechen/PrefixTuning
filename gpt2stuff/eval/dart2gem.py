@@ -113,7 +113,7 @@ def eval_dir(
         logging.warning(f'eval for {gen_path}')
         os.system(
             f'cd {gem_dir}; ./run_metrics.py -r {ref_path} {gen_path} '
-            f'--metric-list bleu meteor rouge nist bertscore bleurt '
+            f'--metric-list bleu rouge nist bertscore bleurt '
             f'-o {out_path} ; cd -'
         )
 
