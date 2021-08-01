@@ -144,6 +144,8 @@ def main(task="convert_ref", **kwargs):
         convert_ref(**kwargs)
     elif task == "convert_gen":
         convert_gen(**kwargs)
+    elif task == "eval_dir":
+        eval_dir(**kwargs)
 
 
 if __name__ == "__main__":

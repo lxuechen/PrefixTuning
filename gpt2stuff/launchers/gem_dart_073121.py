@@ -86,6 +86,7 @@ def main(
                                     for gen_dir, log_path, img_dir in utils.zip_(gen_dirs, log_paths, img_dirs):
                                         command = (
                                             f"python -m gpt2stuff.eval.dart2gem "
+                                            f"--task 'eval_dir' "
                                             f"--gen_dir {gen_dir} "
                                             f"--img_dir {img_dir} "
                                         )
@@ -143,6 +144,7 @@ def main(
                                 for gen_dir, log_path, img_dir in utils.zip_(gen_dirs, log_paths, img_dirs):
                                     command = (
                                         f"python -m gpt2stuff.eval.dart2gem "
+                                        f"--task 'eval_dir' "
                                         f"--gen_dir {gen_dir} "
                                         f"--img_dir {img_dir} "
                                     )
