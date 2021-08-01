@@ -3,7 +3,10 @@
 python -m gpt2stuff.eval.dart2gem
 """
 
+import logging
 import os
+import shutil
+from typing import Optional, Sequence
 
 import fire
 
@@ -69,6 +72,71 @@ def convert_gen(
             counter += 1
         assert counter == len(generations)
         utils.jdump(gen_dict, new_gen_path)
+
+
+def eval_dir(
+    ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/dart/gem-dart-v1.1.1-full-test.json",
+    gem_dir="/sailhome/lxuechen/playground/GEM-metrics",
+    scratch_dir="/nlp/scr/lxuechen/scratch/tmp",  # Mess around here.
+
+    global_steps: Optional[Sequence[int]] = None,
+    gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
+            "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/gem_generations_model/eval/",
+    img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
+):
+    if not os.path.exists(gen_dir):
+        logging.warning(f"`gen_dir` doesn't exists")
+        return
+
+    if global_steps is None:
+        import re
+        global_steps = []
+        for file in utils.listfiles(gen_dir):
+            search = re.search(".*global_step_(.*).txt", file)
+            if search:
+                global_step = int(search.group(1))
+                global_steps.append(global_step)
+        global_steps.sort()
+
+    for global_step in global_steps:
+        gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
+        assert os.path.exists(gen_path), f"Failed to find path {gen_path}"
+        del gen_path
+
+    logging.warning(f"eval_trajectory for gen_dir {gen_dir}")
+
+    os.makedirs(scratch_dir, exist_ok=True)
+    scores = []
+    for global_step in global_steps:
+        gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
+        out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
+        logging.warning(f'eval for {gen_path}')
+        os.system(
+            f'cd {gem_dir}; ./run_metrics.py -r {ref_path} {gen_path} '
+            f'--metric-list bleu meteor rouge nist bertscore bleurt '
+            f'-o {out_path} ; cd -'
+        )
+
+        score = utils.jload(out_path)
+        scores.append(score)
+        del score
+    shutil.rmtree(scratch_dir)
+
+    metrics = scores[0].keys()
+    for metric in metrics:
+        x = global_steps
+        y = [score[metric] for score in scores]
+        img_path = os.path.join(img_dir, f"{metric}.png")
+        utils.plot(
+            plots=({'x': x, 'y': y, 'label': metric},),
+            options={"xlabel": "steps", "ylabel": "metric"},
+            img_path=img_path,
+        )
+        del img_path
+
+    results_path = os.path.join(img_dir, 'results.json')
+    results = {"global_step": global_steps, "score": scores}
+    utils.jdump(results, results_path)
 
 
 def main(task="convert_ref", **kwargs):
