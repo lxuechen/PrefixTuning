@@ -36,9 +36,11 @@ def convert_gen(
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/dart/dart-v1.1.1-full-test.json",
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
             "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/generations_model/eval/",
-    out_dir=None,
 ):
-    """Convert the generations to be the out file format needed GEM-metrics."""
+    """Convert the generations to be the out file format needed GEM-metrics.
+
+    Outputs to `gen_dir/../../gem_generations_model/eval`
+    """
     data = utils.jload(ref_path)
 
     parpardir = os.path.abspath(os.path.join(gen_dir, os.pardir, os.pardir))
