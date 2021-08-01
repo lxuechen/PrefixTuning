@@ -74,13 +74,13 @@ def main(
                                     # @formatter:on
 
                                     gen_dirs = (
-                                        os.path.join(train_dir, "generations_model/eval"),
+                                        os.path.join(train_dir, "gem_generations_model/eval"),
                                     )
                                     log_paths = (
                                         os.path.join(train_dir, 'log_gem_score.out'),
                                     )
                                     img_dirs = (
-                                        os.path.join(train_dir, 'generations_score'),
+                                        os.path.join(train_dir, 'generations_gem_score'),
                                     )
 
                                     for gen_dir, log_path, img_dir in utils.zip_(gen_dirs, log_paths, img_dirs):
@@ -131,13 +131,13 @@ def main(
                                 # @formatter:on
 
                                 gen_dirs = (
-                                    os.path.join(train_dir, "generations_model/eval"),
+                                    os.path.join(train_dir, "gem_generations_model/eval"),
                                 )
                                 log_paths = (
                                     os.path.join(train_dir, 'log_gem_score.out'),
                                 )
                                 img_dirs = (
-                                    os.path.join(train_dir, 'generations_score'),
+                                    os.path.join(train_dir, 'generations_gem_score'),
                                 )
 
                                 for gen_dir, log_path, img_dir in utils.zip_(gen_dirs, log_paths, img_dirs):
