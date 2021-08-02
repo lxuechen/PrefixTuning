@@ -86,7 +86,7 @@ def eval_dir(
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     unwanted_keys=("predictions_file", "N", "references_file"),
     max_files=sys.maxsize,
-    metric_list=('bleu', 'rouge', "nist", "bertscore", "meteor", "bleurt"),
+    metric_list=('bleu', 'rouge', "nist", "meteor", "bertscore", "bleurt"),
 ):
     assert isinstance(metric_list, (list, tuple))
 
@@ -164,15 +164,14 @@ def eval_dir(
 
 def main(
     task="convert_ref",
-    metric_list=('bleu', 'rouge', "nist", "bertscore", "bleurt"),
-    **kwargs
+    **kwargs,
 ):
     if task == "convert_ref":
         convert_ref(**kwargs)
     elif task == "convert_gen":
         convert_gen(**kwargs)
     elif task == "eval_dir":
-        eval_dir(metric_list=metric_list, **kwargs)
+        eval_dir(**kwargs)
 
 
 if __name__ == "__main__":
