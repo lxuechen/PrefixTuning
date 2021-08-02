@@ -83,6 +83,7 @@ def eval_dir(
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
             "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/gem_generations_model/eval/",
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
+    unwanted_keys=("predictions_file", "N", "references_file"),
 ):
     if not os.path.exists(gen_dir):
         logging.warning(f"`gen_dir` doesn't exists")
@@ -129,9 +130,16 @@ def eval_dir(
     # shutil.rmtree(scratch_dir)
 
     metrics = scores[0].keys()
+    for unwanted_key in unwanted_keys:
+        metrics.pop(unwanted_key)
+
     for metric in metrics:
         x = global_steps
         y = [score[metric] for score in scores]
+        if metric in ("rouge1", "rouge2", "rougeL", "rougeLsum"):
+            y = [y_i["fmeasure"] for y_i in y]
+        elif metric == "bertscore":
+            y = [y_i["f1"] for y_i in y]
         img_path = os.path.join(img_dir, f"{metric}.png")
         utils.plot(
             plots=({'x': x, 'y': y, 'label': metric},),
