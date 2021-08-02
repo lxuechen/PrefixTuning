@@ -6,6 +6,7 @@ python -m gpt2stuff.eval.dart2gem
 import logging
 import os
 from typing import Optional, Sequence
+import uuid
 
 import fire
 
@@ -105,8 +106,7 @@ def eval_dir(
     logging.warning(f"eval_trajectory for gen_dir {gen_dir}")
 
     if scratch_dir is None:
-        import uuid
-        # Ensure there's no corruption across folders.
+        # Ensure there's no corruption across different jobs.
         scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp-{str(uuid.uuid4())}"
 
     os.makedirs(scratch_dir, exist_ok=True)

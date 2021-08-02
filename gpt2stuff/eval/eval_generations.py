@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from typing import Optional, Sequence
+import uuid
 
 import fire
 import transformers
@@ -93,14 +94,16 @@ def eval(
     **kwargs,
 ):
     """Evaluate a file of generate sentences against references."""
-    os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} --python {python} ; cd -')
+    os.system(
+        f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} '
+        f'--python {python} ; cd -')
 
 
 def eval_trajectory(
     # @formatter:off
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
     e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
-    scratch_dir="/nlp/scr/lxuechen/scratch/tmp",  # Mess around here.
+    scratch_dir=None,  # Mess around here.
 
     global_steps: Optional[Sequence[int]] = None,
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0619/model_name_distilgpt2_nonprivate_yes_tuning_mode_prefixtune_learning_rate_0_00005000_train_batch_size_00000005_mid_dim_00000512_preseqlen_00000010/0/generations/eval/",
@@ -144,13 +147,19 @@ def eval_trajectory(
 
     logging.warning(f"eval_trajectory for gen_dir {gen_dir}")
 
+    if scratch_dir is None:
+        # Ensure there's no corruption across different jobs.
+        scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp-{str(uuid.uuid4())}"
+
     os.makedirs(scratch_dir, exist_ok=True)
     scores = []
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
         out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
         logging.warning(f'eval for {gen_path}')
-        os.system(f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} --out_path {out_path} --python {python} ; cd -')
+        os.system(
+            f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval '
+            f'{skip_mteval} --out_path {out_path} --python {python} ; cd -')
 
         score = utils.jload(out_path)
         scores.append(score)
