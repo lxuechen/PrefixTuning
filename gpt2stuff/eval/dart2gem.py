@@ -139,7 +139,8 @@ def eval_dir(
 
     metrics = list(scores[0].keys())
     for unwanted_key in unwanted_keys:
-        metrics.pop(unwanted_key)
+        if unwanted_key in metrics:
+            metrics.remove(unwanted_key)
 
     for metric in metrics:
         x = global_steps
