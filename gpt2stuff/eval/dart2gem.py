@@ -120,7 +120,7 @@ def eval_dir(
         score = utils.jload(out_path)
         scores.append(score)
         del score
-    shutil.rmtree(scratch_dir)
+    # shutil.rmtree(scratch_dir)
 
     metrics = scores[0].keys()
     for metric in metrics:
