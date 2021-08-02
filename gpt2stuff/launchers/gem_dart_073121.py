@@ -46,7 +46,7 @@ def main(
                 for train_batch_size in (512,):
                     for epochs in (50,):
                         for lr in (5e-4,):
-                            for target_epsilon in (3, 5, 8, 2):
+                            for target_epsilon in (2, 5, 8, 3):
                                 for tuning_mode in ("fulltune", "scratchtune", "prefixtune", "lineartune"):
                                     epochs_str = utils.int2str(epochs)
                                     lr_str = utils.float2str(lr)
