@@ -86,7 +86,7 @@ def eval_dir(
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     unwanted_keys=("predictions_file", "N", "references_file"),
     max_files=sys.maxsize,
-    metric_list=('bleu', 'rouge', "nist", "bertscore", "bleurt"),
+    metric_list=('bleu', 'rouge', "nist", "bertscore", "meteor", "bleurt"),
 ):
     assert isinstance(metric_list, (list, tuple))
 
