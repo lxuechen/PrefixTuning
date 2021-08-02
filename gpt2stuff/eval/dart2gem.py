@@ -133,7 +133,7 @@ def eval_dir(
     # import shutil
     # shutil.rmtree(scratch_dir)
 
-    metrics = scores[0].keys()
+    metrics = list(scores[0].keys())
     for unwanted_key in unwanted_keys:
         metrics.pop(unwanted_key)
 
