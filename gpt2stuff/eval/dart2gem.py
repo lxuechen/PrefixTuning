@@ -76,7 +76,7 @@ def convert_gen(
 def eval_dir(
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/dart/gem-dart-v1.1.1-full-test.json",
     gem_dir="/sailhome/lxuechen/playground/GEM-metrics",
-    scratch_dir="/nlp/scr/lxuechen/scratch/tmp",  # Mess around here.
+    scratch_dir=None,  # Mess around here.
 
     global_steps: Optional[Sequence[int]] = None,
     gen_dir="/nlp/scr/lxuechen/prefixtune/date_0720"
@@ -103,6 +103,11 @@ def eval_dir(
         del gen_path
 
     logging.warning(f"eval_trajectory for gen_dir {gen_dir}")
+
+    if scratch_dir is None:
+        import uuid
+        # Ensure there's no corruption across folders.
+        scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp-{str(uuid.uuid4())}"
 
     os.makedirs(scratch_dir, exist_ok=True)
     scores = []
