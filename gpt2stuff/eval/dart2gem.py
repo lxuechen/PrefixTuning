@@ -5,7 +5,6 @@ python -m gpt2stuff.eval.dart2gem
 
 import logging
 import os
-import shutil
 from typing import Optional, Sequence
 
 import fire
@@ -120,6 +119,8 @@ def eval_dir(
         score = utils.jload(out_path)
         scores.append(score)
         del score
+    # This code seems to be correct, but don't know why it causes an error...
+    # import shutil
     # shutil.rmtree(scratch_dir)
 
     metrics = scores[0].keys()
