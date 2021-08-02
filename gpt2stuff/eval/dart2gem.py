@@ -5,6 +5,7 @@ python -m gpt2stuff.eval.dart2gem
 
 import logging
 import os
+import sys
 from typing import Optional, Sequence
 import uuid
 
@@ -84,6 +85,7 @@ def eval_dir(
             "/model_name_gpt2_nonprivate_no_tuning_mode_scratchtune_per_example_max_grad_norm_0_10000000_noise_multiplier_-1_00000000_learning_rate_0_00050000_train_batch_size_00000512_mid_dim_00000512_preseqlen_00000010_epochs_00000050_target_epsilon_00000008/0/gem_generations_model/eval/",
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     unwanted_keys=("predictions_file", "N", "references_file"),
+    max_files=sys.maxsize,
 ):
     if not os.path.exists(gen_dir):
         logging.warning(f"`gen_dir` doesn't exists")
@@ -98,6 +100,8 @@ def eval_dir(
                 global_step = int(search.group(1))
                 global_steps.append(global_step)
         global_steps.sort()
+    global_steps = global_steps[:max_files]
+    logging.warning(f"evaluating {len(global_steps)} files")
 
     for global_step in global_steps:
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
