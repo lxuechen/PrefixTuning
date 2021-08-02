@@ -86,7 +86,10 @@ def eval_dir(
     img_dir="/nlp/scr/lxuechen/plots/distilgpt2-e2e-nonprivate",
     unwanted_keys=("predictions_file", "N", "references_file"),
     max_files=sys.maxsize,
+    metric_list=('bleu', 'rouge', "nist", "bertscore", "bleurt"),
 ):
+    assert isinstance(metric_list, (list, tuple))
+
     if not os.path.exists(gen_dir):
         logging.warning(f"`gen_dir` doesn't exists")
         return
@@ -120,9 +123,10 @@ def eval_dir(
         gen_path = os.path.join(gen_dir, f"global_step_{global_step:08d}.txt")
         out_path = os.path.join(scratch_dir, f'global_step_{global_step:08d}.json')
         logging.warning(f'eval for {gen_path}')
+        all_metrics = ' '.join(metric_list)
         os.system(
             f'cd {gem_dir}; ./run_metrics.py -r {ref_path} {gen_path} '
-            f'--metric-list bleu rouge nist bertscore bleurt '
+            f'--metric-list {all_metrics} '
             f'-o {out_path} ; cd -'
         )
 
@@ -157,13 +161,17 @@ def eval_dir(
     utils.jdump(results, results_path)
 
 
-def main(task="convert_ref", **kwargs):
+def main(
+    task="convert_ref",
+    metric_list=('bleu', 'rouge', "nist", "bertscore", "bleurt"),
+    **kwargs
+):
     if task == "convert_ref":
         convert_ref(**kwargs)
     elif task == "convert_gen":
         convert_gen(**kwargs)
     elif task == "eval_dir":
-        eval_dir(**kwargs)
+        eval_dir(metric_list=metric_list, **kwargs)
 
 
 if __name__ == "__main__":
