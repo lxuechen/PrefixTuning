@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-conda create -n lxuechen-prefix-tuning python=3.8
+conda create -n lxuechen-prefix-tuning python=3.8 -y
 pip install -r lxuechen_utils_requirements.txt
 pip install -r ./gpt2stuff/requirements.txt
 
