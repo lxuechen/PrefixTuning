@@ -13,6 +13,7 @@ notes:
 
     Scales up to 8192
     Disable lr decay
+    This needs to be ran 1) under $HOME/software/PrefixTuning, and 2) with conda env `lxuechen-prefix-tuning`.
 run:
     to generate running scripts:
         python -m gpt2stuff.launchers.prefix_vs_full_080321 --mode "submit"
@@ -129,7 +130,7 @@ def main(
                                     # Faster!
                                     hold_job=True,
                                     priority="low",
-                                    conda_env="lxuechen-prefix-tuning-pg"
+                                    conda_env="lxuechen-prefix-tuning"
                                 )
 
         script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'prefix_vs_full_080321.sh')
