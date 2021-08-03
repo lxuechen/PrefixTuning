@@ -2,6 +2,7 @@
 
 conda create -n lxuechen-prefix-tuning python=3.8 -y
 sleep 3
+conda init bash
 conda activate lxuechen-prefix-tuning
 exit
 
