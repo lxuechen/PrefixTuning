@@ -2,7 +2,7 @@
 
 conda create -n lxuechen-prefix-tuning python=3.8 -y
 sleep 3
-source ~/anaconda3/etc/profile.d/conda.sh
+source /opt/conda/etc/profile.d/conda.sh
 conda activate lxuechen-prefix-tuning
 exit
 
