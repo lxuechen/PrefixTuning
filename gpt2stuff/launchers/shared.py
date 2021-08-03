@@ -42,6 +42,7 @@ def _get_command(
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
+    tokenizer_name="distilgpt2",
     gpu=None,  # Randomly grab.
     conda_env="lxuechen-prefix-tuning",
     priority="standard",
@@ -132,7 +133,7 @@ def _get_command(
         --task_mode {task_mode} \
         --model_type {model_type} \
         --model_name_or_path {model_name_or_path} \
-        --tokenizer_name {model_name_or_path} \
+        --tokenizer_name {tokenizer_name} \
         --per_device_train_batch_size {per_device_train_batch_size} \
         --per_device_eval_batch_size {per_device_eval_batch_size} \
         --save_steps {save_steps} \
