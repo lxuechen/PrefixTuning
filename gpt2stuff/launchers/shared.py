@@ -42,7 +42,7 @@ def _get_command(
     mode="submit",
     model_type="gpt2",
     model_name_or_path="distilgpt2",  # 80+million
-    tokenizer_name="distilgpt2",
+    tokenizer_name="gpt2",
     gpu=None,  # Randomly grab.
     conda_env="lxuechen-prefix-tuning",
     priority="standard",
