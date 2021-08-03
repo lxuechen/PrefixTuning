@@ -1,8 +1,9 @@
 opacus==0.13.0
 scipy
 numpy
+nltk
+
 # Change these in the future; 111 is for 3090 and A100 GPUs.
 torch==1.9.0+cu111
 torchvision==0.10.0+cu111
 torchaudio==0.9.0
-
