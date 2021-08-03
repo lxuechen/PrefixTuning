@@ -4,7 +4,6 @@ conda create -n lxuechen-prefix-tuning python=3.8 -y
 sleep 3
 source /opt/conda/etc/profile.d/conda.sh
 conda activate lxuechen-prefix-tuning
-exit
 
 pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
 pip install -r lxuechen_utils_requirements.txt
