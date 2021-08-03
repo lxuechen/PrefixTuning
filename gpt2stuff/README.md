@@ -37,6 +37,27 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --epochs 5
 ```
 
+### Evaluating with custom checkpoint
+```bash
+python -m gpt2stuff.launchers.prefix_vs_full_062021 \
+  --mode "local" \
+  --tuning_mode "fulltune" \
+  --max_seq_len 100 \
+  --nonprivate "no"\
+  --per_device_train_batch_size 20 \
+  --gradient_accumulation_steps 5 \
+  --eval_steps 200 \
+  --objective_mode 0 \
+  --max_generations 40 \
+  --learning_rate 5e-4 \
+  --per_example_max_grad_norm 0.1 \
+  --target_epsilon 5 \
+  --target_delta 1e-5 \
+  --epochs 50 \
+  --private_engine_mode "ghost" \
+  --model_name_or_path "/home/lxuechen_stanford_edu/dump/date_080221/distilgpt2-10-320"
+```
+
 ## Running evaluation
 
 ```bash
