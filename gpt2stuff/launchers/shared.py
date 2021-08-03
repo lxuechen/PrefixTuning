@@ -67,6 +67,7 @@ def _get_command(
     if mode == Mode.submit and date is None:
         raise ValueError(f"`date` cannot be None when submitting.")
 
+    # Less than 1 / (2 * dataset size).
     if target_delta < 0:
         if task_mode == "data2text":
             target_delta = 1e-5
