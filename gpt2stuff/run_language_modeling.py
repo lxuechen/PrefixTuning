@@ -242,6 +242,8 @@ def main():
     gpt2 = GPT2LMHeadModel.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
     )
+    print('base gpt2 model:')
+    print(gpt2)
 
     # 0 means the regular token level objective, which is sum / output_len
     # 1 means the sentence level objective, which is sum

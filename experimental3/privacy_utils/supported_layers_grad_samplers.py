@@ -110,7 +110,6 @@ def _compute_embedding_grad_sample(
         B: Backpropagations
         batch_dim: Batch dimension position
     """
-    vocab_size = layer.weight.size(0)
     norm_sample = _embedding_norm_sample(A, B)
     _create_or_extend_norm_sample(layer.weight, norm_sample)
 
