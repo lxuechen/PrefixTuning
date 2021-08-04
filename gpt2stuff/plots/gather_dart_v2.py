@@ -87,15 +87,15 @@ def json2tex(
                     )
                     best_score = best_numbers[metric][target_epsilon]
                     if score == best_score:
-                        tex += " & \\textbf{{ {:.4f} }}".format(score)
+                        tex += " & \\textbf{{ {:.3f} }}".format(score)
                     else:
-                        tex += f" & {score:.4f}"
+                        tex += f" & {score:.3f}"
 
                 if nonprivate_record is not None:
                     nonprivate_score = _extract_nonprivate_score(
                         record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
                     )
-                    tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+                    tex += f" & {nonprivate_score:.3f}"  # Non-private no results yet.
                 else:
                     tex += f" & "
                 tex += "\\\\ \n"
@@ -114,9 +114,9 @@ def json2tex(
                     )
                     best_score = best_numbers[metric][target_epsilon]
                     if score == best_score:
-                        tex += " & \\textbf{{ {:.4f} }}".format(score)
+                        tex += " & \\textbf{{ {:.3f} }}".format(score)
                     else:
-                        tex += f" & {score:.4f}"
+                        tex += f" & {score:.3f}"
                 tex += "\\\\ \n"
 
             tex += " & non-private "
@@ -125,7 +125,7 @@ def json2tex(
                     nonprivate_score = _extract_nonprivate_score(
                         record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
                     )
-                    tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+                    tex += f" & {nonprivate_score:.3f}"  # Non-private no results yet.
                 else:
                     tex += f" & "
             tex += "\\\\ \n"
