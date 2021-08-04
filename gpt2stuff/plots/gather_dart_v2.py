@@ -104,7 +104,7 @@ def json2tex(
         # Version 2
         for tuning_mode in tuning_modes:
             tex = "\midrule \n"
-            tex += "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
+            tex += "\multirow{4}[1]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
 
             for target_epsilon in target_epsilons:
                 tex += f" & $\epsilon={target_epsilon}$ "
