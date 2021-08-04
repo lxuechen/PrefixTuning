@@ -30,6 +30,26 @@ tuning_mode2name = {
 }
 
 
+def _unwrap_raw_score(raw_score, metric):
+    if metric in ("rouge1", "rouge2", "rougeL", "rougeLsum"):
+        return raw_score["fmeasure"]
+    elif metric in ("bertscore",):
+        return raw_score["f1"]
+    else:
+        return raw_score
+
+
+def _extract_private_score(record, metric, target_epsilon, tuning_mode):
+    """Unwrap dictionary if necessary."""
+    raw_score = record[target_epsilon][tuning_mode][metric]
+    return _unwrap_raw_score(raw_score, metric)
+
+
+def _extract_nonprivate_score(record, metric, tuning_mode):
+    raw_score = record[tuning_mode][metric]
+    return _unwrap_raw_score(raw_score, metric)
+
+
 def json2tex(
     record,
     tuning_modes,
@@ -44,7 +64,9 @@ def json2tex(
         for target_epsilon in target_epsilons:
             best_score = -sys.maxsize
             for tuning_mode in tuning_modes:
-                score = record[target_epsilon][tuning_mode][metric]
+                score = _extract_private_score(
+                    record=record, target_epsilon=target_epsilon, tuning_mode=tuning_mode, metric=metric
+                )
                 if score > best_score:
                     best_score = score
             best_numbers_for_this_metric[target_epsilon] = best_score
@@ -55,7 +77,9 @@ def json2tex(
         for metric in metrics:
             tex += f" & {metric2name[metric]}"
             for target_epsilon in target_epsilons:
-                score = record[target_epsilon][tuning_mode][metric]
+                score = _extract_private_score(
+                    record=record, target_epsilon=target_epsilon, tuning_mode=tuning_mode, metric=metric
+                )
                 best_score = best_numbers[metric][target_epsilon]
                 if score == best_score:
                     tex += " & \\textbf{{ {:.4f} }}".format(score)
@@ -63,7 +87,9 @@ def json2tex(
                     tex += f" & {score:.4f}"
 
             if nonprivate_record is not None:
-                nonprivate_score = nonprivate_record[tuning_mode][metric]
+                nonprivate_score = _extract_nonprivate_score(
+                    record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
+                )
                 tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
             else:
                 tex += f" & "
@@ -140,7 +166,6 @@ def _main(
                             # this_bleu = max(bleu_scores)
 
                             if this_bleu > best_bleu:
-                                print(this_bleu)
                                 best_bleu = this_bleu
                                 best_scores = {**this_score, **this_gem_score}
 
