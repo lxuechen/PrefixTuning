@@ -73,10 +73,8 @@ def add_hooks(model: nn.Module, loss_reduction: str = "mean", batch_first: bool 
                         this_layer, grad_input, grad_output, loss_reduction, batch_first
                     )
 
-                if torch.__version__ >= "1.8.0":
-                    handles.append(layer.register_full_backward_hook(this_backward))
-                else:
-                    handles.append(layer.register_backward_hook(this_backward))
+                # Do not use `full_backward_hook`!!! `param.grad` becomes zero.
+                handles.append(layer.register_backward_hook(this_backward))
 
     model.__dict__.setdefault("autograd_grad_sample_hooks", []).extend(handles)
 
