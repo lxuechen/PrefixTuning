@@ -56,7 +56,10 @@ def json2tex(
     target_epsilons=(2, 5, 8),
     metrics=('METEOR', "rouge1", "rouge2", "rougeL", 'bleu', 'bertscore', 'bleurt'),
     nonprivate_record=None,
+
+    v2=True,
 ):
+    # Record best numbers.
     best_numbers = dict()
     for metric in metrics:
         best_numbers_for_this_metric = dict()
@@ -72,29 +75,62 @@ def json2tex(
             best_numbers_for_this_metric[target_epsilon] = best_score
             del best_score
 
-    for tuning_mode in tuning_modes:
-        tex = "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
-        for metric in metrics:
-            tex += f" & {metric2name[metric]}"
-            for target_epsilon in target_epsilons:
-                score = _extract_private_score(
-                    record=record, target_epsilon=target_epsilon, tuning_mode=tuning_mode, metric=metric
-                )
-                best_score = best_numbers[metric][target_epsilon]
-                if score == best_score:
-                    tex += " & \\textbf{{ {:.4f} }}".format(score)
-                else:
-                    tex += f" & {score:.4f}"
+    if not v2:
+        # Write to table format.
+        for tuning_mode in tuning_modes:
+            tex = "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
+            for metric in metrics:
+                tex += f" & {metric2name[metric]}"
+                for target_epsilon in target_epsilons:
+                    score = _extract_private_score(
+                        record=record, target_epsilon=target_epsilon, tuning_mode=tuning_mode, metric=metric
+                    )
+                    best_score = best_numbers[metric][target_epsilon]
+                    if score == best_score:
+                        tex += " & \\textbf{{ {:.4f} }}".format(score)
+                    else:
+                        tex += f" & {score:.4f}"
 
-            if nonprivate_record is not None:
-                nonprivate_score = _extract_nonprivate_score(
-                    record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
-                )
-                tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
-            else:
-                tex += f" & "
+                if nonprivate_record is not None:
+                    nonprivate_score = _extract_nonprivate_score(
+                        record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
+                    )
+                    tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+                else:
+                    tex += f" & "
+                tex += "\\\\ \n"
+            print(tex)
+    else:
+        # Version 2
+        for tuning_mode in tuning_modes:
+            tex = "\midrule \n"
+            tex += "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
+
+            for target_epsilon in target_epsilons:
+                tex += f" & $\epsilon={target_epsilon}$ "
+                for metric in metrics:
+                    score = _extract_private_score(
+                        record=record, target_epsilon=target_epsilon, tuning_mode=tuning_mode, metric=metric
+                    )
+                    best_score = best_numbers[metric][target_epsilon]
+                    if score == best_score:
+                        tex += " & \\textbf{{ {:.4f} }}".format(score)
+                    else:
+                        tex += f" & {score:.4f}"
+                tex += "\\\\ \n"
+
+            tex += " & non-private "
+            for metric in metrics:
+                if nonprivate_record is not None:
+                    nonprivate_score = _extract_nonprivate_score(
+                        record=nonprivate_record, tuning_mode=tuning_mode, metric=metric
+                    )
+                    tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+                else:
+                    tex += f" & "
             tex += "\\\\ \n"
-        print(tex)
+
+            print(tex)
 
 
 # TODO: Multiple seeds.
