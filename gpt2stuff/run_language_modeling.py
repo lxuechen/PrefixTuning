@@ -239,6 +239,7 @@ def main():
     # Don't tie the weights, but still copy the input embedding initialization.
     config.tie_word_embeddings = False
     config.copy_word_embeddings = True
+    config.output_hidden_states = False
     gpt2 = GPT2LMHeadModel.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir,
     )
