@@ -183,7 +183,7 @@ def _get_command(
         --target_epsilon {target_epsilon} \
         --overwrite_output_dir \
         --lr_decay {lr_decay}'
-    # @formatter:off
+    # @formatter:on
 
     if mode == Mode.submit:
         command = wrapper.mynlprun_wrapper(
