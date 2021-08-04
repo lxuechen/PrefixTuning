@@ -411,7 +411,9 @@ def main():
             f"per_device_train_batch_size: {training_args.per_device_train_batch_size}, "
             f"gradient_accumulation_steps: {training_args.gradient_accumulation_steps}"
         )
-        trainer.train(model_path=model_path)
+        # trainer.train(model_path=model_path)
+        # lxuechen: Especially so for the restored checkpoints. Don't resume...
+        trainer.train(model_path=None)
         trainer.save_model()
 
     # Evaluation
