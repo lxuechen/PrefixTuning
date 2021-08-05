@@ -70,7 +70,7 @@ def main(
     target_epsilon=8,
     epochs=5,
     learning_rate=5e-5,
-    date="080321",
+    date="080421",
 ):
     commands = "#!/bin/bash\n"
     gpu_id = 0
