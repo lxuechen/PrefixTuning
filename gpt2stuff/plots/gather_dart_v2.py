@@ -78,7 +78,8 @@ def json2tex(
     if not v2:
         # Write to table format.
         for tuning_mode in tuning_modes:
-            tex = "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
+            tex = "\midrule \n"
+            tex += "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
             for metric in metrics:
                 tex += f" & {metric2name[metric]}"
                 for target_epsilon in target_epsilons:
@@ -239,6 +240,7 @@ def _main(
             nonprivate_record[tuning_mode] = {**this_score, **this_gem_score}
 
     print(json.dumps(results, indent=4))
+    print('---')
     json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons,
              nonprivate_record=nonprivate_record)
 

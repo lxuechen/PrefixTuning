@@ -1,4 +1,7 @@
-"""Generate the table of results in e2e."""
+"""Generate the table of results in e2e.
+
+python -m gpt2stuff.plots.gather_e2e
+"""
 
 import json
 import logging
@@ -24,6 +27,23 @@ tuning_mode2name = {
 }
 
 
+def _extract_private_score(record, metric, target_epsilon, tuning_mode):
+    raw_score = record[target_epsilon][tuning_mode][metric]
+    return _unwrap_raw_score(raw_score, metric)
+
+
+def _extract_nonprivate_score(record, metric, tuning_mode):
+    raw_score = record[tuning_mode][metric]
+    return _unwrap_raw_score(raw_score, metric)
+
+
+def _unwrap_raw_score(raw_score, metric):
+    if metric == "BLEU":
+        return raw_score * 100
+    else:
+        return raw_score
+
+
 def json2tex(
     record,
     tuning_modes,
@@ -38,27 +58,28 @@ def json2tex(
         for target_epsilon in target_epsilons:
             best_score = -sys.maxsize
             for tuning_mode in tuning_modes:
-                score = record[target_epsilon][tuning_mode][metric]
+                score = _extract_private_score(record, metric, target_epsilon, tuning_mode)
                 if score > best_score:
                     best_score = score
             best_numbers_for_this_metric[target_epsilon] = best_score
             del best_score
 
     for tuning_mode in tuning_modes:
-        tex = "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
+        tex = "\midrule \n"
+        tex += "\multirow{4}[2]{*}{" + f"{tuning_mode2name[tuning_mode]}" + "}" + "\n"
         for metric in metrics:
             tex += f" & {metric2name[metric]}"
             for target_epsilon in target_epsilons:
-                score = record[target_epsilon][tuning_mode][metric]
+                score = _extract_private_score(record, metric, target_epsilon, tuning_mode)
                 best_score = best_numbers[metric][target_epsilon]
                 if score == best_score:
-                    tex += " & \\textbf{{ {:.4f} }}".format(score)
+                    tex += " & \\textbf{{ {:.3f} }}".format(score)
                 else:
-                    tex += f" & {score:.4f}"
+                    tex += f" & {score:.3f}"
 
             if nonprivate_record is not None:
-                nonprivate_score = nonprivate_record[tuning_mode][metric]
-                tex += f" & {nonprivate_score:.4f}"  # Non-private no results yet.
+                nonprivate_score = _extract_nonprivate_score(nonprivate_record, metric, tuning_mode)
+                tex += f" & {nonprivate_score:.3f}"  # Non-private no results yet.
             else:
                 tex += f" & "
             tex += "\\\\ \n"
@@ -160,6 +181,7 @@ def _main(
             nonprivate_record[tuning_mode] = this_score
 
     print(json.dumps(results, indent=4))
+    print('---')
     json2tex(results, tuning_modes=tuning_modes, target_epsilons=target_epsilons,
              nonprivate_record=nonprivate_record)
 
@@ -277,5 +299,4 @@ def main(
 
 
 if __name__ == "__main__":
-    # python -m gpt2stuff.plots.gather
     fire.Fire(main)
