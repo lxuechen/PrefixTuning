@@ -712,6 +712,10 @@ class Trainer:
             self.tb_writer.add_text("args", self.args.to_json_string())
             self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
 
+        # Evaluate before training.
+        if self.args.evaluate_before_training:
+            self.evaluate(epoch=0)  # No need to report to hp search.
+
         # Train!
         if is_torch_tpu_available():
             total_train_batch_size = self.args.train_batch_size * xm.xrt_world_size()

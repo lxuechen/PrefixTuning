@@ -1,22 +1,20 @@
 import dataclasses
-import json
-import os
-import warnings
 from dataclasses import dataclass, field
 from enum import Enum
+import json
+import os
 from typing import Any, Dict, List, Optional, Tuple
+import warnings
 
 from .file_utils import cached_property, is_torch_available, is_torch_tpu_available, torch_required
 from .trainer_utils import EvaluationStrategy
 from .utils import logging
-
 
 if is_torch_available():
     import torch
 
 if is_torch_tpu_available():
     import torch_xla.core.xla_model as xm
-
 
 logger = logging.get_logger(__name__)
 
@@ -53,7 +51,8 @@ class TrainingArguments:
             Whether to run evaluation on the dev set or not.
         do_predict (:obj:`bool`, `optional`, defaults to :obj:`False`):
             Whether to run predictions on the test set or not.
-        evaluation_strategy(:obj:`str` or :class:`~transformers.trainer_utils.EvaluationStrategy`, `optional`, defaults to :obj:`"no"`):
+        evaluation_strategy(:obj:`str` or :class:`~transformers.trainer_utils.EvaluationStrategy`, `optional`,
+        defaults to :obj:`"no"`):
             The evaluation strategy to adopt during training. Possible values are:
 
                 * :obj:`"no"`: No evaluation is done during training.
@@ -123,7 +122,8 @@ class TrainingArguments:
             Number of update steps between two evaluations if :obj:`evaluation_strategy="steps"`. Will default to the
             same value as :obj:`logging_steps` if not set.
         dataloader_num_workers (:obj:`int`, `optional`, defaults to 0):
-            Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded in the main process.
+            Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded in
+            the main process.
         past_index (:obj:`int`, `optional`, defaults to -1):
             Some models like :doc:`TransformerXL <../model_doc/transformerxl>` or :doc`XLNet <../model_doc/xlnet>` can
             make use of the past hidden states for their predictions. If this argument is set to a positive int, the
@@ -171,6 +171,10 @@ class TrainingArguments:
         default="no",
         metadata={"help": "Run evaluation during training at each logging step."},
     )
+    evaluate_before_training: bool = field(
+        default="yes",
+        metadata={"help": "Run evaluation before training."},
+    )
     prediction_loss_only: bool = field(
         default=False,
         metadata={"help": "When performing evaluation and predictions, only returns the loss."},
@@ -187,14 +191,14 @@ class TrainingArguments:
         default=None,
         metadata={
             "help": "Deprecated, the use of `--per_device_train_batch_size` is preferred. "
-            "Batch size per GPU/TPU core/CPU for training."
+                    "Batch size per GPU/TPU core/CPU for training."
         },
     )
     per_gpu_eval_batch_size: Optional[int] = field(
         default=None,
         metadata={
             "help": "Deprecated, the use of `--per_device_eval_batch_size` is preferred."
-            "Batch size per GPU/TPU core/CPU for evaluation."
+                    "Batch size per GPU/TPU core/CPU for evaluation."
         },
     )
 
@@ -264,7 +268,8 @@ class TrainingArguments:
     dataloader_num_workers: int = field(
         default=0,
         metadata={
-            "help": "Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be loaded in the main process."
+            "help": "Number of subprocesses to use for data loading (PyTorch only). 0 means that the data will be "
+                    "loaded in the main process."
         },
     )
 
@@ -286,7 +291,7 @@ class TrainingArguments:
     label_names: Optional[List[str]] = field(
         default=None, metadata={"help": "The list of keys in your dictionary of inputs that correspond to the labels."}
     )
-    disable_tb :Optional[bool] = field(
+    disable_tb: Optional[bool] = field(
         default=True, metadata={"help": "Disable tensorboard."}
     )
 
@@ -298,12 +303,16 @@ class TrainingArguments:
                 EvaluationStrategy.STEPS if self.evaluate_during_training else EvaluationStrategy.NO
             )
             warnings.warn(
-                "The `evaluate_during_training` argument is deprecated in favor of `evaluation_strategy` (which has more options)",
+                "The `evaluate_during_training` argument is deprecated in favor of `evaluation_strategy` (which has "
+                "more options)",
                 FutureWarning,
             )
         else:
             self.evaluation_strategy = EvaluationStrategy(self.evaluation_strategy)
-
+        if self.evaluate_before_training.lower() in ("y", "yes"):
+            self.evaluate_before_training = True
+        else:
+            self.evaluate_before_training = False
         if self.eval_steps is None:
             self.eval_steps = self.logging_steps
 
