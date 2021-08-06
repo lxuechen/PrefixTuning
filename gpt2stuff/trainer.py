@@ -269,6 +269,14 @@ class Trainer:
            "argument."
         assert model_init is None
         self.model = model.to(args.device) if model is not None else None
+        self.num_params = sum(
+            param.numel() for param in self.model.parameters() if param.requires_grad
+        )
+        self.num_non_embedding_params = sum(
+            param.numel()
+            for module in self.model.modules() if not isinstance(module, (nn.Embedding, nn.Linear))
+            for param in module.parameters() if param.requires_grad
+        )
         self.avg_fn = utils.ema_update
         self.ema_model = copy.deepcopy(self.model) if args.ema_model_averaging else None
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
@@ -1054,7 +1062,14 @@ class Trainer:
                 experiment = comet_ml.config.get_global_experiment()
                 if experiment is not None:
                     experiment._log_metrics(logs, step=self.global_step, epoch=self.epoch, framework="transformers")
-        output = {**logs, **{"step": self.global_step}}
+        output = {
+            **logs,
+            **{
+                "step": self.global_step,
+                'num_params': self.num_params,
+                'num_non_embedding_params': self.num_non_embedding_params
+            }
+        }
         if self.is_world_process_zero():
             self.log_history.append(output)
         if iterator is not None:
