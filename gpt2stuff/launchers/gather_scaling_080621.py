@@ -36,7 +36,7 @@ def main(
                 scratch_dir = os.path.join(scratch_base, f"{str(uuid.uuid4())}")
                 command = (
                     f"python -m gpt2stuff.eval.eval_generations --ref_path {ref_path} --e2e_dir {e2e_dir} "
-                    f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
+                    f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} --python True "
                     f"--scratch_dir {scratch_dir} &"
                 )
                 command += '\n'
