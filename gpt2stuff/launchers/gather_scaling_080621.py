@@ -14,9 +14,11 @@ for n_layer in n_layers:
 
 
 def main(
-    scratch_base="/home/lxuechen_stanford_edu/scratch",
+    scratch_base="/home/lxuechen_stanford_edu/scratch/tmp",
 ):
     commands = ""
+
+    commands += f"mkdir -p {scratch_base}\n"
 
     for base_dir in (
         "/nlp/scr/lxuechen/prefixtune/date_080321",
@@ -30,11 +32,11 @@ def main(
                 img_dir = os.path.join(this_dir, 'generations_score')
                 log_path = os.path.join(this_dir, 'log.out')
 
-                scratch_dir = os.path.join(scratch_base, 'tmp', f"{str(uuid.uuid4())}")
+                scratch_dir = os.path.join(scratch_base, f"{str(uuid.uuid4())}")
                 command = (
                     f"python -m gpt2stuff.eval.eval_generations "
                     f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
-                    f"--scratch_dir {scratch_dir}"
+                    f"--scratch_dir {scratch_dir} &"
                 )
                 command += '\n'
                 commands += command
