@@ -51,15 +51,21 @@ def main(
                         record = utils.jload(record_path)
                         y = [i["eval"]["model"][metric] for i in record]
 
-                    linestyle = '--' if tag == "non-private" else '-.'
+                    linestyle = 'solid' if tuning_mode == "fulltune" else '-.'
                     label = tuning_mode_to_label[tuning_mode] + f' ({n_layer}) ({tag})'
+
+                    if metric == "tok_logprobs":
+                        yscale = 'log'
+                    else:
+                        yscale = 'linear'
                     plots.append({'x': x, 'y': y, 'label': label, 'linestyle': linestyle})
 
         for img_path in (
             os.path.join(img_dir, f'metric-{metric}.pdf'),
             os.path.join(img_dir, f'metric-{metric}.png'),
         ):
-            utils.plot(img_path=img_path, plots=plots)
+            utils.plot(img_path=img_path, plots=plots,
+                       options={'yscale': yscale})
 
 
 if __name__ == "__main__":
