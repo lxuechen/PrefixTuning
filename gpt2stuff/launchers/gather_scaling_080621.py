@@ -1,4 +1,4 @@
-# python -m gpt2stuff.launchers.gather_scaling_080621
+# python -m gpt2stuff.launchers.gather_scaling_080621; sc
 import os
 import uuid
 
@@ -19,6 +19,7 @@ def main(
     commands = ""
 
     commands += f"mkdir -p {scratch_base}\n"
+    ref_path = "/home/lxuechen_stanford_edu/data/prefix-tuning/data/e2e_data/clean_references_test.txt"
 
     for base_dir in (
         "/nlp/scr/lxuechen/prefixtune/date_080321",
@@ -34,7 +35,7 @@ def main(
 
                 scratch_dir = os.path.join(scratch_base, f"{str(uuid.uuid4())}")
                 command = (
-                    f"python -m gpt2stuff.eval.eval_generations "
+                    f"python -m gpt2stuff.eval.eval_generations --ref_path {ref_path} "
                     f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
                     f"--scratch_dir {scratch_dir} &"
                 )
