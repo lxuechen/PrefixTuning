@@ -10,8 +10,8 @@ import fire
 from lxuechen_utils import utils
 
 tuning_mode_to_label = {
-    'fulltune': "Full",
-    'scratchtune': 'Scratch'
+    'fulltune': "full",
+    'scratchtune': 'scratch'
 }
 
 
@@ -21,39 +21,45 @@ def main(
 
     img_dir="/Users/xuechenli/remote/PrefixTuning/gpt2stuff/plots/pretrain_scaling",
     tuning_modes=("fulltune", "scratchtune"),
-    metrics=("BLEU", "tok_logprobs"),
+    metrics=("BLEU", "tok_logprobs",),
     aspect_ratio=32,
     n_layers=range(2, 16, 2),
 ):
     os.makedirs(img_dir, exist_ok=True)
 
     # 080321 contains private.
-    base_dir = private_dir
     for metric in metrics:
         plots = []
-        for tuning_mode in tuning_modes:
-            y = []
-            x = []
-            for n_layer in n_layers:
-                d_model = aspect_ratio * n_layer
-                folder = os.path.join(base_dir, tuning_mode, f'distilgpt2-{n_layer}-{d_model}')
-                x.append(n_layer)
 
-                if metric == "BLEU":
-                    record_path = os.path.join(
-                        folder, 'generations_score', 'results.json'
-                    )
-                    record = utils.jload(record_path)
-                    score = record["score"][-1][metric]
-                    y.append(score)
-                elif metric == "tok_logprobs":
-                    record_path = os.path.join(folder, 'log_history.json')
-                    record = utils.jload(record_path)
-                    score = record[-1]["eval"]["model"][metric]
-                    y.append(score)
+        for tag, base_dir in zip(('private', 'non-private'), (private_dir, nonprivate_dir)):
+            for tuning_mode in tuning_modes:
+                y = []
+                x = []
+                for n_layer in n_layers:
+                    d_model = aspect_ratio * n_layer
+                    folder = os.path.join(base_dir, tuning_mode, f'distilgpt2-{n_layer}-{d_model}')
+                    x.append(n_layer)
 
-            label = tuning_mode_to_label[tuning_mode]
-            plots.append({'x': n_layers, 'y': y, 'label': label})
+                    if metric == "BLEU":
+                        record_path = os.path.join(folder, 'generations_score', 'results.json')
+                        record = utils.jload(record_path)
+                        score = record["score"][-1][metric]
+                        y.append(score)
+                    elif metric == "tok_logprobs":
+                        if tag != "non-private":
+                            record_path = os.path.join(folder, 'log_history.json')
+                            record = utils.jload(record_path)
+                            score = record[-1]["eval"]["model"][metric]
+                            y.append(score)
+                        else:
+                            record_path = os.path.join(folder, 'final_results.json')
+                            record = utils.jload(record_path)
+                            score = record["eval"]["model"][metric]
+                            y.append(score)
+
+                linestyle = '--' if tag == "non-private" else '-.'
+                label = tuning_mode_to_label[tuning_mode] + f' ({tag})'
+                plots.append({'x': n_layers, 'y': y, 'label': label, 'linestyle': linestyle})
 
         for img_path in (
             os.path.join(img_dir, f'metric-{metric}.pdf'),
