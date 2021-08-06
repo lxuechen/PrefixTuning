@@ -20,6 +20,7 @@ def main(
 
     commands += f"mkdir -p {scratch_base}\n"
     ref_path = "/home/lxuechen_stanford_edu/data/prefix-tuning/data/e2e_data/clean_references_test.txt"
+    e2e_dir = "/home/lxuechen_stanford_edu/software/e2e-metrics"
 
     for base_dir in (
         "/nlp/scr/lxuechen/prefixtune/date_080321",
@@ -31,11 +32,10 @@ def main(
 
                 gen_dir = os.path.join(this_dir, "generations_model", "eval")
                 img_dir = os.path.join(this_dir, 'generations_score')
-                log_path = os.path.join(this_dir, 'log.out')
 
                 scratch_dir = os.path.join(scratch_base, f"{str(uuid.uuid4())}")
                 command = (
-                    f"python -m gpt2stuff.eval.eval_generations --ref_path {ref_path} "
+                    f"python -m gpt2stuff.eval.eval_generations --ref_path {ref_path} --e2e_dir {e2e_dir} "
                     f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
                     f"--scratch_dir {scratch_dir} &"
                 )
