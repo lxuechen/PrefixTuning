@@ -368,6 +368,7 @@ class TrainingArguments(transformers.TrainingArguments):
     eval_epochs: int = field(default=10)
 
     def __post_init__(self):
+        super(TrainingArguments, self).__post_init__()
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))
         self.debug = (self.debug.lower() in ('y', 'yes'))
         self.lr_decay = (self.lr_decay.lower() in ('y', 'yes'))

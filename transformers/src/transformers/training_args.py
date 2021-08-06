@@ -171,7 +171,7 @@ class TrainingArguments:
         default="no",
         metadata={"help": "Run evaluation during training at each logging step."},
     )
-    evaluate_before_training: bool = field(
+    evaluate_before_training: str = field(
         default="yes",
         metadata={"help": "Run evaluation before training."},
     )

@@ -272,9 +272,10 @@ class Trainer:
         self.num_params = sum(
             param.numel() for param in self.model.parameters() if param.requires_grad
         )
+        from transformers.modeling_utils import Conv1D
         self.num_non_embedding_params = sum(
             param.numel()
-            for module in self.model.modules() if not isinstance(module, (nn.Embedding, nn.Linear))
+            for module in self.model.modules() if not isinstance(module, (nn.LayerNorm, Conv1D))
             for param in module.parameters() if param.requires_grad
         )
         self.avg_fn = utils.ema_update
