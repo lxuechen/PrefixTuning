@@ -1,0 +1,13 @@
+#!/bin/bash
+mkdir -p /nlp/scr/lxuechen/prefixtune/date_080321/fulltune/distilgpt2-16-512 
+CUDA_VISIBLE_DEVICES=7 python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local" --nonprivate no --tuning_mode fulltune --max_seq_len 100 --per_device_train_batch_size 32 --gradient_accumulation_steps 16 --learning_rate 0.0005 --per_example_max_grad_norm 0.1 --target_epsilon 8 --epochs 50 --private_engine_mode "ghost"   --model_name_or_path "/home/lxuechen_stanford_edu/dump/date_080221/distilgpt2-16-512" --train_dir /nlp/scr/lxuechen/prefixtune/date_080321/fulltune/distilgpt2-16-512 |& tee /nlp/scr/lxuechen/prefixtune/date_080321/fulltune/distilgpt2-16-512/log.out & 
+wait
+mkdir -p /nlp/scr/lxuechen/prefixtune/date_080321/scratchtune/distilgpt2-16-512 
+CUDA_VISIBLE_DEVICES=7 python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local" --nonprivate no --tuning_mode scratchtune --max_seq_len 100 --per_device_train_batch_size 32 --gradient_accumulation_steps 16 --learning_rate 0.0005 --per_example_max_grad_norm 0.1 --target_epsilon 8 --epochs 50 --private_engine_mode "ghost"   --model_name_or_path "/home/lxuechen_stanford_edu/dump/date_080221/distilgpt2-16-512" --train_dir /nlp/scr/lxuechen/prefixtune/date_080321/scratchtune/distilgpt2-16-512 |& tee /nlp/scr/lxuechen/prefixtune/date_080321/scratchtune/distilgpt2-16-512/log.out & 
+wait
+mkdir -p /nlp/scr/lxuechen/prefixtune/date_080421/fulltune/distilgpt2-16-512 
+CUDA_VISIBLE_DEVICES=7 python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local" --nonprivate yes --tuning_mode fulltune --max_seq_len 100 --per_device_train_batch_size 5 --gradient_accumulation_steps 1 --learning_rate 5e-05 --per_example_max_grad_norm 0.1 --target_epsilon 8 --epochs 5 --private_engine_mode "ghost"   --model_name_or_path "/home/lxuechen_stanford_edu/dump/date_080221/distilgpt2-16-512" --train_dir /nlp/scr/lxuechen/prefixtune/date_080421/fulltune/distilgpt2-16-512 |& tee /nlp/scr/lxuechen/prefixtune/date_080421/fulltune/distilgpt2-16-512/log.out & 
+wait
+mkdir -p /nlp/scr/lxuechen/prefixtune/date_080421/scratchtune/distilgpt2-16-512 
+CUDA_VISIBLE_DEVICES=7 python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local" --nonprivate yes --tuning_mode scratchtune --max_seq_len 100 --per_device_train_batch_size 5 --gradient_accumulation_steps 1 --learning_rate 5e-05 --per_example_max_grad_norm 0.1 --target_epsilon 8 --epochs 5 --private_engine_mode "ghost"   --model_name_or_path "/home/lxuechen_stanford_edu/dump/date_080221/distilgpt2-16-512" --train_dir /nlp/scr/lxuechen/prefixtune/date_080421/scratchtune/distilgpt2-16-512 |& tee /nlp/scr/lxuechen/prefixtune/date_080421/scratchtune/distilgpt2-16-512/log.out & 
+wait
