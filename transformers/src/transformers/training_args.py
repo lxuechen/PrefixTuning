@@ -4,7 +4,6 @@ from enum import Enum
 import json
 import os
 from typing import Any, Dict, List, Optional, Tuple
-import warnings
 
 from .file_utils import cached_property, is_torch_available, is_torch_tpu_available, torch_required
 from .trainer_utils import EvaluationStrategy
@@ -298,17 +297,7 @@ class TrainingArguments:
     def __post_init__(self):
         if self.disable_tqdm is None:
             self.disable_tqdm = logger.getEffectiveLevel() > logging.WARN
-        if self.evaluate_during_training is not None:
-            self.evaluation_strategy = (
-                EvaluationStrategy.STEPS if self.evaluate_during_training else EvaluationStrategy.NO
-            )
-            warnings.warn(
-                "The `evaluate_during_training` argument is deprecated in favor of `evaluation_strategy` (which has "
-                "more options)",
-                FutureWarning,
-            )
-        else:
-            self.evaluation_strategy = EvaluationStrategy(self.evaluation_strategy)
+        self.evaluation_strategy = EvaluationStrategy(self.evaluation_strategy)
         if self.evaluate_before_training.lower() in ("y", "yes"):
             self.evaluate_before_training = True
         else:
