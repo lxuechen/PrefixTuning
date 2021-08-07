@@ -11,7 +11,6 @@ purpose:
     Still with aspect ratio 32.
 notes:
     fulltune first, then scratchtune.
-    TODO: Missing n_layer=16
 run:
     python -m gpt2stuff.launchers.scaling_080721
 """
@@ -22,7 +21,7 @@ import fire
 
 # Get the paths to checkpoints.
 aspect_ratio = 32  # d_model / n_layer (distilgpt2=128)
-n_layers = (2, 4, 6, 8, 10, 12, 14,)
+n_layers = (2, 4, 6, 8, 10, 12, 14, 16)
 pretrained_folders = ()
 for n_layer in n_layers:
     d_model = int(n_layer * aspect_ratio)
@@ -63,7 +62,7 @@ def _get_command(
 
 
 def main(
-    num_gpus=7,
+    num_gpus=8,
 
     train_batch_size=512,
     per_device_batch_size=32,
