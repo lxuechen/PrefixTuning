@@ -8,6 +8,7 @@ date:
     080721
 purpose:
     New scaling experiments with more evaluation.
+    Still with aspect ratio 32.
 notes:
     fulltune first, then scratchtune.
     TODO: Missing n_layer=16
