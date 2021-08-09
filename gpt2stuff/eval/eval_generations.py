@@ -111,6 +111,7 @@ def eval_trajectory(
     skip_coco=False,
     skip_mteval=False,
     python=False,
+    ignore_global_steps=(0,),
     # @formatter:on
     **kwargs,
 ):
@@ -138,6 +139,9 @@ def eval_trajectory(
                 global_step = int(search.group(1))
                 global_steps.append(global_step)
         global_steps.sort()
+
+    for ignore_global_step in ignore_global_steps:
+        global_steps.remove(ignore_global_step)
 
     # Check the files exist.
     for global_step in global_steps:
