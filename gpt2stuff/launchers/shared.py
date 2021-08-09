@@ -55,6 +55,7 @@ def _get_command(
     private_engine_mode="vanilla",
     debug="no",
     evaluation_strategy="epoch",
+    evaluate_before_training="yes",
 
     # -1 is just a default value.
     target_epsilon=-1,
@@ -168,6 +169,7 @@ def _get_command(
         --max_steps {max_steps} \
         --max_eval_batches {max_eval_batches} \
         --evaluation_strategy {evaluation_strategy} \
+        --evaluate_before_training {evaluate_before_training} \
         --per_example_max_grad_norm {per_example_max_grad_norm} \
         --max_seq_len {max_seq_len} \
         --max_generations {max_generations} \
