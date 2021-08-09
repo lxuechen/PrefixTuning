@@ -6,7 +6,7 @@ import fire
 
 # Get the paths to checkpoints.
 aspect_ratio = 32  # d_model / n_layer (distilgpt2=128)
-n_layers = (2, 4, 6, 8, 10, 12, 14,)
+n_layers = (2, 4, 6, 8, 10, 12, 14, 16)
 base_names = ()
 for n_layer in n_layers:
     d_model = int(n_layer * aspect_ratio)
