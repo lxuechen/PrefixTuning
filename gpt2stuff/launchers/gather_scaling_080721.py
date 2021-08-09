@@ -36,7 +36,7 @@ def main(
                 command = (
                     f"python -m gpt2stuff.eval.eval_generations --ref_path {ref_path} --e2e_dir {e2e_dir} "
                     f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} --python True "
-                    f"--scratch_dir {scratch_dir} &"
+                    f"--scratch_dir {scratch_dir} --ignore_global_steps '[]' &"
                 )
                 command += '\n'
                 commands += command
