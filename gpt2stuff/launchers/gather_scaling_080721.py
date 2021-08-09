@@ -23,7 +23,7 @@ def main(
     e2e_dir = "/home/lxuechen_stanford_edu/software/e2e-metrics"
 
     for base_dir in (
-        "/nlp/scr/lxuechen/prefixtune/date_080721"
+        "/nlp/scr/lxuechen/prefixtune/date_080721",
     ):
         for tuning_mode in ("fulltune", "scratchtune"):
             for base_name in base_names:
