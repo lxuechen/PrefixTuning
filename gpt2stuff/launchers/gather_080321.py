@@ -26,7 +26,7 @@ from . import wrapper
 
 def main(
     base_dir=f"/nlp/scr/lxuechen/prefixtune/date_0803",
-    seeds=(0,),
+    seeds=(0, 1),
     mode=wrapper.Mode.local,
 ):
     if mode == wrapper.Mode.local:
