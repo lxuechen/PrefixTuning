@@ -31,7 +31,7 @@ def main(
 
                 train_dir = os.path.join(
                     base_dir,
-                    "model_name_distilgpt2_"
+                    f"model_name_{model_name_or_path}_"
                     "nonprivate_no_"
                     "tuning_mode_fulltune_"
                     "per_example_max_grad_norm_0_10000000_"

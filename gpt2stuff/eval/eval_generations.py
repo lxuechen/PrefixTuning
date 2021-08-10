@@ -141,7 +141,8 @@ def eval_trajectory(
         global_steps.sort()
 
     for ignore_global_step in ignore_global_steps:
-        global_steps.remove(ignore_global_step)
+        if ignore_global_step in global_steps:
+            global_steps.remove(ignore_global_step)
 
     # Check the files exist.
     for global_step in global_steps:
