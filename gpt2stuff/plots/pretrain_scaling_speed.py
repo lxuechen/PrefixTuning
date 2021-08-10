@@ -52,7 +52,7 @@ def main(
                         y = [i["eval"]["model"][metric] for i in record]
 
                     linestyle = 'solid' if tuning_mode == "fulltune" else '-.'
-                    label = tuning_mode_to_label[tuning_mode] + f' ($n_{{ \mathrm{{layer}} }}${n_layer}) ({tag})'
+                    label = tuning_mode_to_label[tuning_mode] + f' ($n_{{ \mathrm{{layer}} }}={n_layer}$) ({tag})'
 
                     if metric == "tok_logprobs":
                         yscale = 'log'
