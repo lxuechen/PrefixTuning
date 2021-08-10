@@ -107,6 +107,7 @@ def _main(
 
     tuning_modes=("fulltune", "scratchtune", "prefixtune", "lineartune"),
     target_epsilons=(2, 5, 8),
+    verbose=False
 ):
     results = dict()
     for target_epsilon in target_epsilons:
@@ -119,6 +120,9 @@ def _main(
 
             best_bleu = -sys.maxsize
             best_scores = None
+
+            best_setting = dict()
+
             for lr in (5e-4, 1e-4, 5e-3, 1e-3):
                 for epochs in (60, 50, 40, 20):
                     for seed in seeds:
@@ -143,13 +147,14 @@ def _main(
                             f"/results.json"
                         )
                         if not os.path.exists(record_path):
-                            logging.warning(f'Lost record_path {record_path}')
-                            logging.warning(
-                                f'lr={lr_str}, '
-                                f'epochs={epochs_str}, '
-                                f'target_epsilon={target_epsilon_str}, '
-                                f'tuning_mode={tuning_mode}'
-                            )
+                            if verbose:
+                                logging.warning(f'Lost record_path {record_path}')
+                                logging.warning(
+                                    f'lr={lr_str}, '
+                                    f'epochs={epochs_str}, '
+                                    f'target_epsilon={target_epsilon_str}, '
+                                    f'tuning_mode={tuning_mode}'
+                                )
                             continue
 
                         record = utils.jload(record_path)
@@ -165,6 +170,9 @@ def _main(
                         if this_bleu > best_bleu:
                             best_bleu = this_bleu
                             best_scores = this_score
+                            best_setting = dict(lr=lr, epochs=epochs)
+
+            print(f'best hp for epsilon={target_epsilon}, tuning_mode={tuning_mode} is {best_setting}')
             results_for_this_tuning_mode.update(best_scores)
 
     nonprivate_record = dict()
