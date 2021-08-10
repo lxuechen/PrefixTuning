@@ -1,6 +1,8 @@
 """Check batch size scaling with learning rate scaling.
 
 linear scaling rule. without learning rate decay!
+
+python -m gpt2stuff.plots.bsz_no_decay_extended
 """
 
 import os
@@ -11,7 +13,7 @@ from lxuechen_utils import utils
 
 
 def main(
-    seeds=(0, 1),
+    seeds=(0,),
     base_lr=1e-3,
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0803",
 ):
@@ -74,8 +76,8 @@ def main(
             )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_no_decay_nll.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_no_decay_nll.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz_ext', 'bsz_lr_joint_scaling_no_decay_nll.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz_ext', 'bsz_lr_joint_scaling_no_decay_nll.pdf'),
     ):
         utils.plot(
             img_path=img_path,
@@ -85,8 +87,8 @@ def main(
         )
 
     for img_path in (
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_no_decay_bleu.png'),
-        os.path.join('.', 'gpt2stuff', 'plots', 'bsz', 'bsz_lr_joint_scaling_no_decay_bleu.pdf'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz_ext', 'bsz_lr_joint_scaling_no_decay_bleu.png'),
+        os.path.join('.', 'gpt2stuff', 'plots', 'bsz_ext', 'bsz_lr_joint_scaling_no_decay_bleu.pdf'),
     ):
         utils.plot(
             img_path=img_path,
@@ -97,5 +99,4 @@ def main(
 
 
 if __name__ == "__main__":
-    # python -m gpt2stuff.plots.bsz_no_decay_extended
     fire.Fire(main)
