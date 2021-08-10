@@ -88,9 +88,20 @@ def json2tex(
 
 # TODO: EMA vs non-EMA.
 # TODO: Multiple seeds.
+
+# TODO: Switch to GPT2!!!
 def _main(
+    # dirs with distilgpt2.
     base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0626",
-    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702",
+    # nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0702",
+    train_batch_size=400,
+    model_name_or_path="distilgpt2",
+
+    # gpt2.
+    # base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0721",
+    nonprivate_base_dir="/Users/xuechenli/Desktop/dump/prefixtune/date_0721",
+    # train_batch_size=512,
+    # model_name_or_path="gpt2",
 
     seeds=(0,),
 
@@ -109,19 +120,20 @@ def _main(
             best_bleu = -sys.maxsize
             best_scores = None
             for lr in (5e-4, 1e-4, 5e-3, 1e-3):
-                for epochs in (60, 40, 20):
+                for epochs in (60, 50, 40, 20):
                     for seed in seeds:
                         epochs_str = utils.int2str(epochs)
                         lr_str = utils.float2str(lr)
                         target_epsilon_str = utils.int2str(target_epsilon)
+                        train_batch_size_str = utils.int2str(train_batch_size)
 
                         record_path = os.path.join(
                             base_dir,
-                            f"model_name_distilgpt2_nonprivate_no_tuning_mode_{tuning_mode}_"
+                            f"model_name_{model_name_or_path}_nonprivate_no_tuning_mode_{tuning_mode}_"
                             f"per_example_max_grad_norm_0_10000000_"
                             f"noise_multiplier_-1_00000000_"
                             f"learning_rate_{lr_str}_"
-                            f"train_batch_size_00000400_"
+                            f"train_batch_size_{train_batch_size_str}_"
                             f"mid_dim_00000512_"
                             f"preseqlen_00000010_"
                             f"epochs_{epochs_str}_"
@@ -160,14 +172,14 @@ def _main(
         for tuning_mode in tuning_modes:
             record_path = os.path.join(
                 nonprivate_base_dir,
-                "model_name_distilgpt2_"
+                f"model_name_gpt2_"
                 "nonprivate_yes_"
                 f"tuning_mode_{tuning_mode}_"
                 "learning_rate_0_00005000_"
                 "train_batch_size_00000005_"
                 "mid_dim_00000512_"
                 "preseqlen_00000010_"
-                "epochs_00000005_"
+                "epochs_00000010_"
                 "target_epsilon_-0000001"
                 f"/{seed}"
                 f"/generations_score"
