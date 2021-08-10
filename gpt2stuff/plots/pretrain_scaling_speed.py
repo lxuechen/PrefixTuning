@@ -16,14 +16,14 @@ tuning_mode_to_label = {
 
 
 def main(
-    private_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/date_080321",
+    private_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/date_080721",
     nonprivate_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/date_080421",
 
     img_dir="/Users/xuechenli/remote/PrefixTuning/gpt2stuff/plots/pretrain_scaling_speed",
     tuning_modes=("fulltune", "scratchtune"),
     metrics=("BLEU", "tok_logprobs",),
     aspect_ratio=32,
-    n_layers=range(2, 16, 2),
+    n_layers=range(2, 18, 2),
 ):
     os.makedirs(img_dir, exist_ok=True)
 
@@ -52,7 +52,7 @@ def main(
                         y = [i["eval"]["model"][metric] for i in record]
 
                     linestyle = 'solid' if tuning_mode == "fulltune" else '-.'
-                    label = tuning_mode_to_label[tuning_mode] + f' ({n_layer}) ({tag})'
+                    label = tuning_mode_to_label[tuning_mode] + f' ($n_{{ \mathrm{{layer}} }}${n_layer}) ({tag})'
 
                     if metric == "tok_logprobs":
                         yscale = 'log'
@@ -60,12 +60,13 @@ def main(
                         yscale = 'linear'
                     plots.append({'x': x, 'y': y, 'label': label, 'linestyle': linestyle})
 
+        ylabel = "BLEU" if metric == "BLEU" else "per-token NLL"
         for img_path in (
             os.path.join(img_dir, f'metric-{metric}.pdf'),
             os.path.join(img_dir, f'metric-{metric}.png'),
         ):
             utils.plot(img_path=img_path, plots=plots,
-                       options={'yscale': yscale})
+                       options={'yscale': yscale, 'xlabel': 'epoch', 'ylabel': ylabel})
 
 
 if __name__ == "__main__":
