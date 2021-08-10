@@ -11,7 +11,7 @@ purpose:
 notes:
     prefixtune
     non-private
-    gpt2
+    gpt2-small, and gpt2-medium
 
     Fine-tune for more epochs! Not yet SOTA...
 run:
@@ -75,11 +75,11 @@ def main(
         nonprivate = "yes"
 
         for seed in seeds:
-            for model_name_or_path in ("gpt2",):
-                for train_batch_size in (5,):
-                    for epochs in (10,):
-                        for lr in (5e-5,):
-                            for tuning_mode in ("fulltune", "scratchtune", "prefixtune", "lineartune",):
+            for model_name_or_path in ("gpt2", "gpt2-medium"):
+                for tuning_mode in ("prefixtune", "fulltune", "scratchtune", "lineartune",):
+                    for train_batch_size in (5,):
+                        for epochs in (10,):
+                            for lr in (5e-5,):
                                 per_device_train_batch_size = train_batch_size
                                 commands += _get_command(
                                     date="0721",
