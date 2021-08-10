@@ -63,11 +63,13 @@ def main(
                 label = tuning_mode_to_label[tuning_mode] + f' ({tag})'
                 plots.append({'x': n_layers, 'y': y, 'label': label, 'linestyle': linestyle})
 
+        ylabel = "BLEU" if metric == "BLEU" else "per-token NLL"
         for img_path in (
             os.path.join(img_dir, f'metric-{metric}.pdf'),
             os.path.join(img_dir, f'metric-{metric}.png'),
         ):
-            utils.plot(img_path=img_path, plots=plots)
+            utils.plot(img_path=img_path, plots=plots,
+                       options={'xlabel': f'$n_{{ \mathrm{{layer}} }}$', 'ylabel': ylabel})
 
 
 if __name__ == "__main__":
