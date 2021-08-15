@@ -430,6 +430,18 @@ def main():
         logger.info("***** Eval results *****")
         logger.info(output)
 
+        import uuid
+        scratch_dir = f"/nlp/scr/lxuechen/scratch/tmp/{str(uuid.uuid4())}"
+        gen_dir = os.path.join(training_args.output_dir, "generations_model/eval")
+        img_dir = os.path.join(training_args.output_dir, 'generations_score')
+        os.system(
+            'source /u/nlp/anaconda/main/anaconda3/etc/profile.d/conda.sh; '
+            'conda activate lxuechen-prefix-tuning; '
+            'python -m gpt2stuff.eval.eval_generations '
+            f"--task eval_trajectory --gen_dir {gen_dir} --img_dir {img_dir} "
+            f"--scratch_dir {scratch_dir}"
+        )
+
 
 def _mp_fn(index):
     # For xla_spawn (TPUs)
