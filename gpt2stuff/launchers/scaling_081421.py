@@ -27,7 +27,7 @@ import fire
 
 # Get the paths to checkpoints.
 aspect_ratio = 32  # d_model / n_layer (distilgpt2=128)
-n_layers = range(2, 6, 2)  # TODO:
+n_layers = tuple(range(2, 32, 2))
 pretrained_folders = ()
 for n_layer in n_layers:
     d_model = int(n_layer * aspect_ratio)
@@ -88,11 +88,8 @@ def main(
     job_id = 0
 
     for seed in seeds:
-        # TODO:
-        # for tuning_mode in ("fulltune", 'scratchtune'):
-        for tuning_mode in ("fulltune",):
+        for tuning_mode in ("fulltune", 'scratchtune'):
             for pretrained_folder in pretrained_folders:
-
                 empty_gpus = []
                 while len(empty_gpus) == 0:
                     empty_gpus = GPUtil.getFirstAvailable(
@@ -101,7 +98,7 @@ def main(
                         maxMemory=0.001,
                         attempts=1,
                         interval=900,
-                        verbose=False
+                        verbose=False,
                     )
                 gpu_id = empty_gpus[0]
 
