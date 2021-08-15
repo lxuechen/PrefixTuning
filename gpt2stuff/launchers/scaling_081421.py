@@ -14,11 +14,14 @@ purpose:
 notes:
     fulltune first, then scratchtune.
 run:
-    python -m gpt2stuff.launchers.scaling_081421 ; sc1
+    sc1
+    python -m gpt2stuff.launchers.scaling_081421
 """
 
 import os
+import subprocess
 
+import GPUtil
 import fire
 
 # Get the paths to checkpoints.
@@ -79,14 +82,26 @@ def main(
     date="081421",
     seeds=(1, 2),
 ):
-    commands = "#!/bin/bash\n"
-    gpu_id = 0
     gradient_accumulation_steps = train_batch_size // per_device_batch_size
 
-    # Private finetune.
+    job_id = 0
+
     for seed in seeds:
         for tuning_mode in ("fulltune", 'scratchtune'):
             for pretrained_folder in pretrained_folders:
+
+                empty_gpus = []
+                while len(empty_gpus) == 0:
+                    empty_gpus = GPUtil.getFirstAvailable(
+                        order='first',
+                        maxLoad=0.5,
+                        maxMemory=0.5,
+                        attempts=1,
+                        interval=900,
+                        verbose=False
+                    )
+                gpu_id = empty_gpus[0]
+
                 base_name = os.path.basename(pretrained_folder)
                 train_dir = f"/nlp/scr/lxuechen/prefixtune/date_{date}/{tuning_mode}/{base_name}/{seed}"
                 command = _get_command(
@@ -102,15 +117,15 @@ def main(
                     eval_epochs=eval_epochs,
                     seed=seed,
                 )
-                commands += command
-                gpu_id += 1
-                if gpu_id % num_gpus == 0:
-                    gpu_id = 0
-                    commands += 'wait\n'
+                # This stupid thing waits!!!
+                # os.system(command)
+                subprocess.Popen(
+                    [command],
+                    shell=True, stdin=None, stdout=None, stderr=None, close_fds=True
+                )
+                print(f'scheduling job: {job_id} on gpu: {gpu_id}')
 
-    script_path = os.path.join('.', 'gpt2stuff', 'scripts', f'scaling_081421.sh')
-    with open(script_path, 'w') as f:
-        f.write(commands)
+                job_id += 1
 
 
 if __name__ == "__main__":
