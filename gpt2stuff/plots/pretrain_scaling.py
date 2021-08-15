@@ -14,6 +14,15 @@ tuning_mode_to_label = {
     'scratchtune': 'scratch'
 }
 
+# untied models.
+model_card_to_num_params = {
+    'openai-gpt': 147621888,
+    'distilgpt2': 120509952,
+    'gpt2': 163037184,
+    'gpt2-medium': 406286336,
+    'gpt2-large': 838359040
+}
+
 
 def main(
     private_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/private",
@@ -76,8 +85,6 @@ def main(
         6598528, 13790208, 22164864, 32312320, 44822400, 60284928, 79289728, 102426624, 130285440, 163456000, 202528128,
         248091648, 300736384, 361052160, 429628800
     ]
-    print(n_layers)
-    print(num_params)
     for img_path in (
         os.path.join(img_dir, f'param-count.pdf'),
         os.path.join(img_dir, f'param-count.png'),
@@ -85,6 +92,12 @@ def main(
         num_params_in_millions = [np / 1e6 for np in num_params]
         utils.plot(
             img_path=img_path,
+            hlines=tuple(
+                {'y': model_card_to_num_params[model_card] / 1e6,
+                 'xmin': n_layers[0], 'xmax': n_layers[-1],
+                 'label': model_card, 'colors': f'C{i}'}
+                for i, model_card in enumerate(('gpt2', 'distilgpt2', 'gpt2-medium'), 1)
+            ),
             plots=({'x': n_layers, 'y': num_params_in_millions, 'marker': 'x'},),
             options={'xlabel': f'$n_{{ \mathrm{{layer}} }}$', 'ylabel': "number of parameters (millions)"}
         )
