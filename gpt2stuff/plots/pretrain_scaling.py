@@ -27,12 +27,17 @@ model_card_to_num_params = {
 def main(
     private_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/private",
     nonprivate_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/date_080421",
+    n_layers=tuple(range(2, 32, 2)),
 
     img_dir="/Users/xuechenli/remote/PrefixTuning/gpt2stuff/plots/pretrain_scaling",
     tuning_modes=("fulltune", "scratchtune"),
     metrics=("BLEU", "tok_logprobs",),
     aspect_ratio=32,
-    n_layers=tuple(range(2, 32, 2)),
+
+    # Small epsilon.
+    # It seems this doesn't matter so far as n_layer reaches 16.
+    # private_dir="/Users/xuechenli/Desktop/dump_a100/prefixtune/date_080921",
+    # n_layers=tuple(range(2, 18, 2)),
 ):
     os.makedirs(img_dir, exist_ok=True)
 
@@ -98,7 +103,7 @@ def main(
                  'label': model_card, 'colors': f'C{i}'}
                 for i, model_card in enumerate(('gpt2', 'distilgpt2', 'gpt2-medium'), 1)
             ),
-            plots=({'x': n_layers, 'y': num_params_in_millions, 'marker': 'x'},),
+            plots=({'x': n_layers, 'y': num_params_in_millions[:len(n_layers)], 'marker': 'x'},),
             options={'xlabel': f'$n_{{ \mathrm{{layer}} }}$', 'ylabel': "number of parameters (millions)"}
         )
 
