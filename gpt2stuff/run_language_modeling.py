@@ -271,7 +271,7 @@ def main():
     print('tokenizer.bos_token:', tokenizer.bos_token, tokenizer.bos_token_id)
 
     config.vocab_size = len(tokenizer)
-    # TODO: This creation needs to be at the end, since the tokenizer is expanded, hence embedding is expanded.
+    # This creation needs to be at the end, since the tokenizer is expanded, hence embedding is expanded.
     if model_args.tuning_mode == 'prefixtune':
         model = prefix_tuning_minimal.PrefixTuningMinimal(
             model_args=model_args, config=config, gpt2=gpt2,
@@ -281,18 +281,32 @@ def main():
     elif model_args.tuning_mode == "scratchtune":  # Training from scratch.
         model = gpt2
         model.init_weights()
-        logging.warning('Reinitialized weights!')
     elif model_args.tuning_mode == "lineartune":
         gpt2.transformer.requires_grad_(False)
         model = gpt2
-        logger.warning("Freezing base transformer weights!")
-    elif model_args.tuning_mode == "lasttune":
+    elif model_args.tuning_mode == "ft1":
         gpt2.requires_grad_(False)
+        n_layer = gpt2.config.n_layer
         for name, module in gpt2.named_modules():
-            if name in ("transformer.h.5", "lm_head", "transformer.ln_f"):
+            if name in (
+                f"transformer.h.{n_layer - 1}",
+                "lm_head",
+                "transformer.ln_f"
+            ):
                 module.requires_grad_(True)
         model = gpt2
-        logger.warning("Freezing base transformer except last block of weights.")
+    elif model_args.tuning_mode == "ft2":
+        gpt2.requires_grad_(False)
+        n_layer = gpt2.config.n_layer
+        for name, module in gpt2.named_modules():
+            if name in (
+                f"transformer.h.{n_layer - 1}",
+                f"transformer.h.{n_layer - 2}",
+                "lm_head",
+                "transformer.ln_f"
+            ):
+                module.requires_grad_(True)
+        model = gpt2
     else:
         raise ValueError(f"Unknown tuning mode: {model_args.tuning_mode}")
 
