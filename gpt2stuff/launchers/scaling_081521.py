@@ -13,6 +13,9 @@ purpose:
     Deeper models.
 notes:
     Fix the failed jobs!!!
+
+    Frequently check if your launcher is still running:
+        ps ax | grep gpt2stuff.launchers.scaling
 run:
     Local:
         sc1
