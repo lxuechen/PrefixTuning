@@ -20,6 +20,7 @@ run:
 
 import os
 import subprocess
+import time
 
 import GPUtil
 import fire
@@ -66,7 +67,7 @@ def _get_command(
                f'--model_name_or_path "{pretrained_folder}" ' \
                f'--max_generations_train {max_generations_train} ' \
                f'--seed {seed} ' \
-               f'--train_dir {train_dir} |& tee {train_dir}/log.out & '
+               f'--train_dir {train_dir} & '
     return command + '\n'
 
 
@@ -117,12 +118,16 @@ def main(
                     eval_epochs=eval_epochs,
                     seed=seed,
                 )
-                # This stupid thing waits!!!
-                # os.system(command)
+                # os.system(command)  # This stupid thing waits!!!
+
+                # This doesn't wait.
                 subprocess.Popen(
                     [command],
                     shell=True, stdin=None, stdout=None, stderr=None, close_fds=True
                 )
+
+                # Give the program some time to be located on the GPU, before scheduling the next.
+                time.sleep(360)
                 print(f'scheduling job: {job_id} on gpu: {gpu_id}')
 
                 job_id += 1
