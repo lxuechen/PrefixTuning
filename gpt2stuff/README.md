@@ -14,13 +14,15 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --gradient_accumulation_steps 5 \
   --eval_steps 200 \
   --objective_mode 0 \
-  --max_generations 40 \
+  --max_generations 10 \
+  --max_generations_train 10 \
   --learning_rate 5e-4 \
   --per_example_max_grad_norm 0.1 \
   --target_epsilon 5 \
   --target_delta 1e-5 \
   --epochs 50 \
-  --private_engine_mode "ghost"
+  --private_engine_mode "ghost" \
+  --evaluate_before_training "no"
 ```
 
 ### Non-private

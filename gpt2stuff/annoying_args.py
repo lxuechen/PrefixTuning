@@ -366,12 +366,17 @@ class TrainingArguments(transformers.TrainingArguments):
     debug: str = field(default="no")
     lr_decay: str = field(default="yes")
     eval_epochs: int = field(default=10)
+    evaluate_before_training: str = field(
+        default="yes",
+        metadata={"help": "Run evaluation before training."},
+    )
 
     def __post_init__(self):
         super(TrainingArguments, self).__post_init__()
         self.ema_model_averaging = (self.ema_model_averaging.lower() in ('y', 'yes'))
         self.debug = (self.debug.lower() in ('y', 'yes'))
         self.lr_decay = (self.lr_decay.lower() in ('y', 'yes'))
+        self.evaluate_before_training = (self.evaluate_before_training.lower() in ("y", "yes"))
         if self.private_engine_mode not in ("vanilla", "ghost", "layer_by_layer", "per_layer"):
             raise ValueError(f"Unknown private_engine_mode: {self.private_engine_mode}")
 

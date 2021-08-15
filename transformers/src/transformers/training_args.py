@@ -170,10 +170,6 @@ class TrainingArguments:
         default="no",
         metadata={"help": "Run evaluation during training at each logging step."},
     )
-    evaluate_before_training: str = field(
-        default="yes",
-        metadata={"help": "Run evaluation before training."},
-    )
     prediction_loss_only: bool = field(
         default=False,
         metadata={"help": "When performing evaluation and predictions, only returns the loss."},
@@ -298,10 +294,6 @@ class TrainingArguments:
         if self.disable_tqdm is None:
             self.disable_tqdm = logger.getEffectiveLevel() > logging.WARN
         self.evaluation_strategy = EvaluationStrategy(self.evaluation_strategy)
-        if self.evaluate_before_training.lower() in ("y", "yes"):
-            self.evaluate_before_training = True
-        else:
-            self.evaluate_before_training = False
         if self.eval_steps is None:
             self.eval_steps = self.logging_steps
 
