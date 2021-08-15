@@ -1,7 +1,9 @@
 ## For playing around locally on E2Es
 
 After refactor on July 2, 2021 (rename folder `gpt2` with `gpt2stuff`)
+
 ### Private
+
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --mode "local" \
@@ -22,6 +24,7 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
 ```
 
 ### Non-private
+
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --mode "local" \
@@ -38,6 +41,7 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
 ```
 
 ### Evaluating with custom checkpoint
+
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 \
   --mode "local" \
@@ -64,16 +68,8 @@ python -m gpt2stuff.launchers.prefix_vs_full_062021 \
 python -m gpt2stuff.evaluate_generations --task eval
 ```
 
-## Playing with decoding
-
-This script creates a command and calls `gpt2/decoding.py`.
-
-```bash
-python -m gpt2stuff.launchers.decoding_061821
-```
-
-
 ## Playing with DART
+
 ```bash
 python -m gpt2stuff.launchers.prefix_vs_full_062021 --mode "local"     \
   --tuning_mode "prefixtune"      \
