@@ -86,7 +86,7 @@ def eval(
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
 
     # Clone the e2e-metrics repo to this dir if you haven't already: https://github.com/lxuechen/e2e-metrics
-    e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
+    e2e_dir=None,
     # @formatter:on
     skip_coco=False,
     skip_mteval=False,
@@ -94,6 +94,9 @@ def eval(
     **kwargs,
 ):
     """Evaluate a file of generate sentences against references."""
+    if e2e_dir is None:
+        e2e_dir = os.path.join(os.path.expanduser('~'), "software/e2e-metrics")
+
     os.system(
         f'cd {e2e_dir}; ./measure_scores.py {ref_path} {gen_path} --skip_coco {skip_coco} --skip_mteval {skip_mteval} '
         f'--python {python} ; cd -')
@@ -102,7 +105,7 @@ def eval(
 def eval_trajectory(
     # @formatter:off
     ref_path="/nlp/scr/lxuechen/data/prefix-tuning/data/e2e_data/clean_references_test.txt",
-    e2e_dir="/sailhome/lxuechen/software/e2e-metrics",
+    e2e_dir=None,
     scratch_dir=None,  # Mess around here.
 
     global_steps: Optional[Sequence[int]] = None,
@@ -126,6 +129,9 @@ def eval_trajectory(
         gen_dir: Directory with all the generation files.
         img_dir: Directory to write all the results.
     """
+    if e2e_dir is None:
+        e2e_dir = os.path.join(os.path.expanduser('~'), "software/e2e-metrics")
+
     if not os.path.exists(gen_dir):
         logging.warning(f"`gen_dir` doesn't exists")
         return
