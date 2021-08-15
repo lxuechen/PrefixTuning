@@ -23,7 +23,7 @@ def main(
     tuning_modes=("fulltune", "scratchtune"),
     metrics=("BLEU", "tok_logprobs",),
     aspect_ratio=32,
-    n_layers=range(2, 32, 2),
+    n_layers=tuple(range(2, 32, 2)),
 ):
     os.makedirs(img_dir, exist_ok=True)
 
@@ -70,6 +70,24 @@ def main(
         ):
             utils.plot(img_path=img_path, plots=plots,
                        options={'xlabel': f'$n_{{ \mathrm{{layer}} }}$', 'ylabel': ylabel})
+
+    # Plot param count.
+    num_params = [
+        6598528, 13790208, 22164864, 32312320, 44822400, 60284928, 79289728, 102426624, 130285440, 163456000, 202528128,
+        248091648, 300736384, 361052160, 429628800
+    ]
+    print(n_layers)
+    print(num_params)
+    for img_path in (
+        os.path.join(img_dir, f'param-count.pdf'),
+        os.path.join(img_dir, f'param-count.png'),
+    ):
+        num_params_in_millions = [np / 1e6 for np in num_params]
+        utils.plot(
+            img_path=img_path,
+            plots=({'x': n_layers, 'y': num_params_in_millions, 'marker': 'x'},),
+            options={'xlabel': f'$n_{{ \mathrm{{layer}} }}$', 'ylabel': "number of parameters (millions)"}
+        )
 
 
 if __name__ == "__main__":

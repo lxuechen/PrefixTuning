@@ -27,12 +27,12 @@ import fire
 
 # Get the paths to checkpoints.
 aspect_ratio = 32  # d_model / n_layer (distilgpt2=128)
-n_layers = range(2, 32, 2)
+n_layers = range(2, 6, 2)  # TODO:
 pretrained_folders = ()
 for n_layer in n_layers:
     d_model = int(n_layer * aspect_ratio)
     pretrained_folders += (
-        f"/home/lxuechen_stanford_edu/dump/distilgpt2/date_080221/distilgpt2-{n_layer}-{d_model}",
+        f"/home/lxuechen_stanford_edu/lxuechen-buck/distilgpt2/date_080221/distilgpt2-{n_layer}-{d_model}",
     )
 
 
@@ -88,15 +88,17 @@ def main(
     job_id = 0
 
     for seed in seeds:
-        for tuning_mode in ("fulltune", 'scratchtune'):
+        # TODO:
+        # for tuning_mode in ("fulltune", 'scratchtune'):
+        for tuning_mode in ("fulltune",):
             for pretrained_folder in pretrained_folders:
 
                 empty_gpus = []
                 while len(empty_gpus) == 0:
                     empty_gpus = GPUtil.getFirstAvailable(
                         order='first',
-                        maxLoad=0.5,
-                        maxMemory=0.5,
+                        maxLoad=0.001,
+                        maxMemory=0.001,
                         attempts=1,
                         interval=900,
                         verbose=False
@@ -127,7 +129,7 @@ def main(
                 )
 
                 # Give the program some time to be located on the GPU, before scheduling the next.
-                time.sleep(360)
+                time.sleep(240)
                 print(f'scheduling job: {job_id} on gpu: {gpu_id}')
 
                 job_id += 1
