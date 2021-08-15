@@ -23,7 +23,7 @@ def main(
     tuning_modes=("fulltune", "scratchtune"),
     metrics=("BLEU", "tok_logprobs",),
     aspect_ratio=32,
-    n_layers=range(2, 24, 2),
+    n_layers=range(2, 32, 2),
 ):
     os.makedirs(img_dir, exist_ok=True)
 
