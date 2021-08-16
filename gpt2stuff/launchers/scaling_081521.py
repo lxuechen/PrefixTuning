@@ -107,6 +107,7 @@ def main(
                         order='first',
                         maxLoad=0.001,
                         maxMemory=0.001,
+                        limit=1,
                     )
                     time.sleep(1)
                 print(f'empty gpus: {empty_gpus}')
