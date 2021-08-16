@@ -102,14 +102,13 @@ def main(
 
                 empty_gpus = []
                 while len(empty_gpus) == 0:
-                    empty_gpus = GPUtil.getFirstAvailable(
+                    # Notes: getFirstAvailable is very bad since it throws RuntimeError when no GPU is found.
+                    empty_gpus = GPUtil.getAvailable(
                         order='first',
                         maxLoad=0.001,
                         maxMemory=0.001,
-                        attempts=1,
-                        interval=900,
-                        verbose=False,
                     )
+                    time.sleep(1)
                 print(f'empty gpus: {empty_gpus}')
                 gpu_id = empty_gpus[0]
 
