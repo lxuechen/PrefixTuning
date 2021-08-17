@@ -1,6 +1,8 @@
 """Plot the scaling behavior for private-finetuning.
 
 Essentially figure 1 in the paper.
+
+python -m gpt2stuff.plots.scaling
 """
 
 import os
@@ -225,5 +227,4 @@ def main(task="fig1", **kwargs):
 
 
 if __name__ == "__main__":
-    # python -m gpt2stuff.plots.scaling
     fire.Fire(main)
