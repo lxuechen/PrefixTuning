@@ -99,4 +99,5 @@ class PrefixTuningMinimal(GPT2PreTrainedModel):
     def generate(self, input_ids, num_beams, **kwargs):
         # TODO: This seems like a hack; check if multiply by beam size work in general.
         past_key_values = self.make_past_key_values(bsz=input_ids.size(0) * num_beams)
+        # Notes: in Attention class of GPT2, attention_mask should always be 0.
         return self.gpt2.generate(input_ids=input_ids, num_beams=num_beams, past_key_values=past_key_values, **kwargs)
