@@ -26,9 +26,9 @@ def mode2label(mode):
     return {
         "nonprivate": "non-private",
         "vanilla": "chain-rule-based (Opacus)",
-        "layer_by_layer": "accumulate by layer",
-        "ghost": "ghost",
-        "jax": "JAX (JIT + VMAP)",
+        "layer_by_layer": "Lee & Kifer, 2020",
+        "ghost": "ghost (ours)",
+        "jax": "JAX (+jit & vmap)",
     }[mode]
 
 
@@ -41,6 +41,9 @@ def main(
     width=0.14,
     img_dir="/Users/xuechenli/remote/PrefixTuning/memory/plots",
     disable_legend_on_first=True,
+
+    legend_fontsize=18,
+    label_fontsize=16,
 ):
     os.makedirs(img_dir, exist_ok=True)
 
@@ -70,11 +73,11 @@ def main(
             for this_x, this_y in zip(xlocs, ylocs):
                 plt.text(this_x - width / 4, this_y + 0.5, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
-        xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
-        plt.xticks(x, xtick_labels, fontsize=14)
-        plt.ylabel('max batch size', fontsize=14)
+        xtick_labels = ["GPT-2(-small)", "GPT-2-medium", "GPT-2-large"]
+        plt.xticks(x, xtick_labels, fontsize=label_fontsize)
+        plt.ylabel('maximum batch size (single TITAN RTX)', fontsize=label_fontsize)
         if not disable_legend_on_first:
-            plt.legend()  # Don't use legend for the left plot.
+            plt.legend(fontsize=legend_fontsize)  # Don't use legend for the left plot.
         plt.tight_layout()
         plt.savefig(img_path)
         plt.close()
@@ -110,10 +113,10 @@ def main(
             for this_x, this_y in zip(xlocs, ylocs):
                 plt.text(this_x - width / 3, this_y + 2, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
-        xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
-        plt.xticks(x, xtick_labels, fontsize=14)
-        plt.ylabel('steps per minute', fontsize=14)
-        plt.legend(fontsize=14)
+        xtick_labels = ["GPT-2-small", "GPT-2-medium", "GPT-2-large"]
+        plt.xticks(x, xtick_labels, fontsize=label_fontsize)
+        plt.ylabel('steps per minute', fontsize=label_fontsize)
+        plt.legend(fontsize=legend_fontsize)
         plt.tight_layout()
         plt.savefig(img_path)
         plt.close()
@@ -121,4 +124,5 @@ def main(
 
 if __name__ == "__main__":
     # python -m memory.plot
+    # python -m memory.plot --disable_legend_on_first False
     fire.Fire(main)
