@@ -40,6 +40,7 @@ def main(
 
     width=0.14,
     img_dir="/Users/xuechenli/remote/PrefixTuning/memory/plots",
+    disable_legend_on_first=True,
 ):
     os.makedirs(img_dir, exist_ok=True)
 
@@ -72,7 +73,8 @@ def main(
         xtick_labels = ["gpt2-small", "gpt2-medium", "gpt2-large"]
         plt.xticks(x, xtick_labels, fontsize=14)
         plt.ylabel('max batch size', fontsize=14)
-        # plt.legend()  # Don't use legend for the left plot.
+        if not disable_legend_on_first:
+            plt.legend()  # Don't use legend for the left plot.
         plt.tight_layout()
         plt.savefig(img_path)
         plt.close()
