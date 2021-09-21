@@ -11,6 +11,11 @@ home_dir = os.path.expanduser('~')
 cache_dir = os.path.join(home_dir, '.cache', 'gpt-models')
 os.makedirs(cache_dir, exist_ok=True)
 
+# This requires the latest version of transformers!
+model = transformers.GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
+print(model)
+exit()
+
 model_cards = (
     "openai-gpt", "distilgpt2", 'gpt2', "gpt2-medium", "gpt2-large",
 )

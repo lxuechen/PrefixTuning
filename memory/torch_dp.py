@@ -72,7 +72,7 @@ def main(
     batch = make_data(seq_len, batch_size, device)
     config = transformers.GPT2Config.from_pretrained(model_name_or_path)
     config.tie_word_embeddings = False
-    config.copy_word_embeddings = True
+    config.copy_word_embeddings = False
     model = transformers.GPT2LMHeadModel.from_pretrained(
         pretrained_model_name_or_path=model_name_or_path, config=config,
     ).to(device)
@@ -131,7 +131,7 @@ def main(
     if enable_profile:
         prof.__exit__(None, None, None)
         record.__exit__(None, None, None)
-        print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=30))
+        print(prof.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=50))
 
     if out_path is not None:
         utils.jdump(
