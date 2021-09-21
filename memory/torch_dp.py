@@ -2,15 +2,15 @@ import time
 
 import fire
 import torch
+from torch.profiler import profile, record_function, ProfilerActivity
 import tqdm
 import transformers
 
 from lxuechen_utils import utils
-from torch.profiler import profile, record_function, ProfilerActivity
 
 
 def make_data(seq_len=10, batch_size=16, device=None):
-    return (torch.randint(low=0, high=100, size=(batch_size, seq_len), device=device),)
+    return torch.randint(low=0, high=100, size=(batch_size, seq_len), device=device),
 
 
 def train_step(model, optimizer, criterion, batch, mode, step=1, gradient_accumulation_steps=1):
@@ -72,7 +72,7 @@ def main(
     batch = make_data(seq_len, batch_size, device)
     config = transformers.GPT2Config.from_pretrained(model_name_or_path)
     config.tie_word_embeddings = False
-    config.copy_word_embeddings = False
+    config.copy_word_embeddings = True
     model = transformers.GPT2LMHeadModel.from_pretrained(
         pretrained_model_name_or_path=model_name_or_path, config=config,
     ).to(device)
@@ -95,7 +95,7 @@ def main(
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        # Estimating the cost -- these parameters don't matter at all.
+        # For estimating the cost, these parameters don't matter at all.
         actual_batch_size = gradient_accumulation_steps * batch_size
         privacy_engine = cls(
             module=model,
