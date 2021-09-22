@@ -2,6 +2,9 @@
 Find the maximum micro batch size for each setting.
 
 python -m memory.time_elapse_find_batch_size
+
+JAX:
+python -m memory.jax_dp --batch_size 5 --seq_len 100 --num_updates 2 --model_name_or_path gpt2
 """
 import os
 
