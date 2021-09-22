@@ -185,6 +185,7 @@ def main(
                 "model_name_or_path": model_name_or_path,
                 "seq_len": seq_len,
                 "batch_size": batch_size,
+                "gradient_accumulation_steps": gradient_accumulation_steps,
             },
             out_path
         )
