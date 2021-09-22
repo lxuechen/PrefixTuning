@@ -35,8 +35,6 @@ def main(
     cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache",
     config_dir=f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json",
 ):
-    os.makedirs(out_dir, exist_ok=True)
-
     config2bsz = utils.jload(config_dir)
     print('Config:')
     print(config2bsz)
@@ -62,6 +60,7 @@ def main(
                     out_path = os.path.join(
                         out_dir, f"{pair[0]}-{pair[1]}", f"model_name_or_path_{model_name_or_path}_mode_{mode_}.json"
                     )
+                    os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
                     if mode_ == "jax":
                         command = f'''python -m memory.jax_dp_grad_accumulation \
