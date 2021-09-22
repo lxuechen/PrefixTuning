@@ -2,6 +2,7 @@
 
 python -m memory.time_elapse_large_batch
 """
+import math
 import os
 
 import fire
@@ -9,62 +10,75 @@ import fire
 from lxuechen_utils import utils
 
 
-def main(
+def lcm(l):
+    """Compute the gcd for a list of numbers.
 
+    Skip 0s.
+    """
+    acc = 1
+    for i in l:
+        if i == 0:
+            continue
+        acc = acc * i // math.gcd(acc, i)
+    return acc
+
+
+def main(
     seq_lens=(100,),
 
-    num_updates=5,
+    num_updates=3,
 
-    model_name_or_paths=("gpt2-large",),
-    modes=("layer_by_layer", "ghost",),
+    model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
+    modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
 
     out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse_large_batch",
-    config_dir="/nlp/scr/lxuechen/prefixtune/memory/batch_size_exps_seq_len_00000100.json",
-    cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache"
+    cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache",
+    config_dir=f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json",
 ):
-    config = utils.jload(config_dir)
-
-    # Get max batch sizes; only for seq_len = 100. Use this for computing gradient accumulation steps.
-
     os.makedirs(out_dir, exist_ok=True)
 
-    micro_batch_sizes = (4, 6)
-    batch_sizes = (micro_batch_sizes[0] * micro_batch_sizes[1],)
-    for seq_len, batch_size, model_name_or_path in zip(seq_lens, batch_sizes, model_name_or_paths):
-        for mode, micro_batch_size in zip(modes, micro_batch_sizes):
-            if micro_batch_size == 0:
-                continue
+    config2bsz = utils.jload(config_dir)
 
-            print(f"model_name_or_path: {model_name_or_path}, mode: {mode}")
-            gradient_accumulation_steps = batch_size // micro_batch_size
-            actual_num_updates = num_updates * gradient_accumulation_steps
-            out_path = os.path.join(
-                out_dir, f"model_name_or_path_{model_name_or_path}_mode_{mode}.json"
-            )
+    for seq_len in seq_lens:
+        for model_name_or_path in model_name_or_paths:
+            # Get the lcm of all methods, and use that as the actual batch size.
+            micro_batch_size_l = [
+                config2bsz[str((model_name_or_path, mode, seq_len))]
+                for mode in modes
+            ]
+            update_batch_size = lcm(micro_batch_size_l)
 
-            if mode == "jax":
-                os.system(
-                    f"python -m memory.jax_dp_grad_accumulation "
-                    f"--batch_size {micro_batch_size} "
-                    f"--gradient_accumulation_steps {gradient_accumulation_steps} "
-                    f"--seq_len {seq_len} "
-                    f"--model_name_or_path {model_name_or_path} "
-                    f"--out_path {out_path} "
-                    f"--num_updates {actual_num_updates}"
-                    f"--cache_dir {cache_dir}"
+            for mode, micro_batch_size in utils.zip_(modes, micro_batch_size_l):
+                if micro_batch_size == 0:
+                    continue
+
+                print(f"model_name_or_path: {model_name_or_path}, mode: {mode}")
+                gradient_accumulation_steps = update_batch_size // micro_batch_size
+                actual_num_updates = num_updates * gradient_accumulation_steps
+                out_path = os.path.join(
+                    out_dir, f"model_name_or_path_{model_name_or_path}_mode_{mode}.json"
                 )
-            else:
-                os.system(
-                    f"python -m memory.torch_dp "
-                    f"--mode {mode} "
-                    f"--batch_size {micro_batch_size} "
-                    f"--gradient_accumulation_steps {gradient_accumulation_steps} "
-                    f"--seq_len {seq_len} "
-                    f"--model_name_or_path {model_name_or_path} "
-                    f"--out_path {out_path} "
-                    f"--num_updates {actual_num_updates} "
-                    f"--cache_dir {cache_dir}"
-                )
+
+                if mode == "jax":
+                    command = f'''python -m memory.jax_dp_grad_accumulation \
+                        --batch_size {micro_batch_size} \
+                        --gradient_accumulation_steps {gradient_accumulation_steps} \
+                        --seq_len {seq_len} \
+                        --model_name_or_path {model_name_or_path} \
+                        --out_path {out_path} \
+                        --num_updates {actual_num_updates} \
+                        --cache_dir {cache_dir} '''
+                else:
+                    command = f'''python -m memory.torch_dp \
+                        --mode {mode} \
+                        --batch_size {micro_batch_size} \
+                        --gradient_accumulation_steps {gradient_accumulation_steps} \
+                        --seq_len {seq_len} \
+                        --model_name_or_path {model_name_or_path} \
+                        --out_path {out_path} \
+                        --num_updates {actual_num_updates} \
+                        --cache_dir {cache_dir} '''
+                os.system(command)
 
 
 if __name__ == '__main__':

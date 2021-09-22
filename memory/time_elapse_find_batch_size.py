@@ -59,12 +59,12 @@ def main(
     min_micro_batch_size=2,
     max_micro_batch_size=100,
     threshold=1,  # A loose threshold for binary search.
+    config_dir=f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json",
 ):
     config2bsz = dict()
     for seq_len in seq_lens:
         for model_name_or_path in model_name_or_paths:
             for mode in modes:
-
                 # Check first you can fit the minimum number of examples.
                 print(f"model_name_or_path: {model_name_or_path}, mode: {mode}")
 
@@ -104,7 +104,6 @@ def main(
                 # Take the left end as the maximum batch size.
                 config2bsz[str((model_name_or_path, mode, seq_len))] = min_micro_batch_size
 
-    config_dir = f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json"
     utils.jdump(config2bsz, config_dir)
 
 
