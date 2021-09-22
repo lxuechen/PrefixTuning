@@ -31,7 +31,7 @@ def _run_command(
             f"--seq_len {seq_len} "
             f"--model_name_or_path {model_name_or_path} "
             f"--out_path {out_path} "
-            f"--num_updates {num_updates}"
+            f"--num_updates {num_updates} "
             f"--cache_dir {cache_dir}"
         )
     else:
