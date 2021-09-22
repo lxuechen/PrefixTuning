@@ -42,6 +42,9 @@ def _run_command(
             --cache_dir {cache_dir} '''
     if out_path is not None:
         command += f'--out_path {out_path}'
+
+    print('Running command: ')
+    print(command)
     out = os.system(command)
     return out
 
@@ -52,8 +55,8 @@ def main(
     modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
 
     num_updates=2,
-    gradient_accumulation_steps=2,
-    min_micro_batch_size=1,
+    gradient_accumulation_steps=2,  # JAX fails if this is 1.
+    min_micro_batch_size=2,
     max_micro_batch_size=100,
     threshold=1,  # A loose threshold for binary search.
 ):
@@ -74,7 +77,7 @@ def main(
                     num_updates,
                 )
                 if out != 0:  # Failed -- cannot even fit a single example.
-                    config2bsz[(model_name_or_path, mode, seq_len)] = 0
+                    config2bsz[str((model_name_or_path, mode, seq_len))] = 0
                     print("Can't even fit a single example, skipping...")
                     continue
 
@@ -99,7 +102,7 @@ def main(
                         print(f"Micro batch size succeeded: {mid_micro_batch_size}")
 
                 # Take the left end as the maximum batch size.
-                config2bsz[(model_name_or_path, mode, seq_len)] = min_micro_batch_size
+                config2bsz[str((model_name_or_path, mode, seq_len))] = min_micro_batch_size
 
     config_dir = f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json"
     utils.jdump(config2bsz, config_dir)
