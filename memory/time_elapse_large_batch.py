@@ -25,11 +25,6 @@ def main(
     config = utils.jload(config_dir)
 
     # Get max batch sizes; only for seq_len = 100. Use this for computing gradient accumulation steps.
-    config2bsz = {
-        (model_name_or_path, mode): config[model_name_or_path].get(mode, 0)
-        for model_name_or_path in model_name_or_paths
-        for mode in modes
-    }
 
     os.makedirs(out_dir, exist_ok=True)
 
