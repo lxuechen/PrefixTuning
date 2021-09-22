@@ -64,13 +64,14 @@ def main(
 
     out_path=None,
     enable_profile=False,
+    cache_dir=None,
 ):
     print(f'num_warmups={num_warmups}, num_updates={num_updates}')
     torch.manual_seed(seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch = make_data(seq_len, batch_size, device)
-    config = transformers.GPT2Config.from_pretrained(model_name_or_path)
+    config = transformers.GPT2Config.from_pretrained(model_name_or_path, cache_dir=cache_dir)
     config.tie_word_embeddings = False
     config.copy_word_embeddings = True
     model = transformers.GPT2LMHeadModel.from_pretrained(

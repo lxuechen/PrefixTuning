@@ -14,13 +14,13 @@ def main(
     seq_lens=(100,),
 
     num_updates=2,
-    batch_sizes=(80,),  # This is different from previous file.
 
     model_name_or_paths=("gpt2-large",),
     modes=("layer_by_layer", "ghost",),
 
     out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse_large_batch",
     config_dir="/nlp/scr/lxuechen/prefixtune/memory/batch_size_exps_seq_len_00000100.json",
+    cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache"
 ):
     config = utils.jload(config_dir)
 
@@ -33,7 +33,8 @@ def main(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    micro_batch_sizes = (8, 10)
+    micro_batch_sizes = (7, 9)
+    batch_sizes = (micro_batch_sizes[0] * micro_batch_sizes[1],)
     for seq_len, batch_size, model_name_or_path in zip(seq_lens, batch_sizes, model_name_or_paths):
         for mode, micro_batch_size in zip(modes, micro_batch_sizes):
             if micro_batch_size == 0:
@@ -65,7 +66,8 @@ def main(
                     f"--seq_len {seq_len} "
                     f"--model_name_or_path {model_name_or_path} "
                     f"--out_path {out_path} "
-                    f"--num_updates {actual_num_updates}"
+                    f"--num_updates {actual_num_updates} "
+                    f"--cache_dir {cache_dir}"
                 )
 
 
