@@ -84,6 +84,8 @@ def main(
                 # Run binary search to get maximum batch size.
                 while (max_micro_batch_size - min_micro_batch_size) > threshold:
                     mid_micro_batch_size = (min_micro_batch_size + max_micro_batch_size) // 2
+                    print(f"Trying micro batch size: {mid_micro_batch_size}")
+
                     out = _run_command(
                         mode=mode,
                         micro_batch_size=mid_micro_batch_size,
@@ -94,8 +96,10 @@ def main(
                     )
                     if out != 0:  # Did fit.
                         max_micro_batch_size = mid_micro_batch_size
+                        print(f"Micro batch size failed: {mid_micro_batch_size}")
                     else:  # Fit, try harder.
                         min_micro_batch_size = mid_micro_batch_size
+                        print(f"Micro batch size succeeded: {mid_micro_batch_size}")
 
                 # Take the left end as the maximum batch size.
                 config2bsz[(model_name_or_path, mode, seq_len)] = min_micro_batch_size
