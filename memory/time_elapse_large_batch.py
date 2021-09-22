@@ -13,7 +13,7 @@ def main(
 
     seq_lens=(100,),
 
-    num_updates=2,
+    num_updates=5,
 
     model_name_or_paths=("gpt2-large",),
     modes=("layer_by_layer", "ghost",),
@@ -33,7 +33,7 @@ def main(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    micro_batch_sizes = (6, 8)
+    micro_batch_sizes = (4, 6)
     batch_sizes = (micro_batch_sizes[0] * micro_batch_sizes[1],)
     for seq_len, batch_size, model_name_or_path in zip(seq_lens, batch_sizes, model_name_or_paths):
         for mode, micro_batch_size in zip(modes, micro_batch_sizes):
