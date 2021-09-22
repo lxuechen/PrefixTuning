@@ -56,6 +56,7 @@ def main(
                     f"--model_name_or_path {model_name_or_path} "
                     f"--out_path {out_path} "
                     f"--num_updates {actual_num_updates}"
+                    f"--cache_dir {cache_dir}"
                 )
             else:
                 os.system(

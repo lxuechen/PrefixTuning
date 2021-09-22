@@ -113,11 +113,12 @@ def main(
     no_vmap=False,
 
     out_path=None,
+    cache_dir=None,
 ):
     rng = jax.random.PRNGKey(seed)
     batch = make_data(seq_len, batch_size)
 
-    model = fm.gpt2.GPT2LMHeadModel(pretrained=model_name_or_path)
+    model = fm.gpt2.GPT2LMHeadModel(pretrained=model_name_or_path, ckpt_dir=cache_dir)
     params = model.init(rng, input_ids=batch[0])
     cumulative_grad = zero_grad(params)
     opt_init, opt_update, get_params = optimizers.adam(learning_rate)
