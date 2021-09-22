@@ -50,10 +50,10 @@ def _run_command(
 
 
 def main(
-    seq_lens=(100,),
     model_name_or_paths=("gpt2", "gpt2-medium", "gpt2-large"),
     modes=("nonprivate", "vanilla", "layer_by_layer", "ghost", "jax"),
 
+    seq_lens=(100,),
     num_updates=2,
     gradient_accumulation_steps=2,  # JAX fails if this is 1.
     min_micro_batch_size=2,
@@ -63,46 +63,51 @@ def main(
 ):
     config2bsz = dict()
     for seq_len in seq_lens:
-        for model_name_or_path in model_name_or_paths:
-            for mode in modes:
+        for mode in modes:
+            for model_name_or_path in model_name_or_paths:
                 # Check first you can fit the minimum number of examples.
                 print(f"model_name_or_path: {model_name_or_path}, mode: {mode}")
 
                 out = _run_command(
-                    mode,
-                    min_micro_batch_size,
-                    gradient_accumulation_steps,
-                    seq_len,
-                    model_name_or_path,
-                    num_updates,
+                    mode=mode,
+                    micro_batch_size=min_micro_batch_size,  # MIN
+                    gradient_accumulation_steps=gradient_accumulation_steps,
+                    seq_len=seq_len,
+                    model_name_or_path=model_name_or_path,
+                    num_updates=num_updates,
                 )
                 if out != 0:  # Failed -- cannot even fit a single example.
                     config2bsz[str((model_name_or_path, mode, seq_len))] = 0
-                    print("Can't even fit a single example, skipping...")
+                    print("Can't even fit the min batch size, skipping...")
                     continue
+                del out
 
                 # Run binary search to get maximum batch size.
-                while (max_micro_batch_size - min_micro_batch_size) > threshold:
-                    mid_micro_batch_size = (min_micro_batch_size + max_micro_batch_size) // 2
-                    print(f"Trying micro batch size: {mid_micro_batch_size}")
+
+                # Don't overwrite max_micro_batch_size, min_micro_batch_size.
+                this_max_micro_batch_size = max_micro_batch_size
+                this_min_micro_batch_size = min_micro_batch_size
+                while (this_max_micro_batch_size - this_min_micro_batch_size) > threshold:
+                    mid = (this_min_micro_batch_size + this_max_micro_batch_size) // 2
 
                     out = _run_command(
                         mode=mode,
-                        micro_batch_size=mid_micro_batch_size,
+                        micro_batch_size=mid,  # MID
                         gradient_accumulation_steps=gradient_accumulation_steps,
                         seq_len=seq_len,
                         model_name_or_path=model_name_or_path,
                         num_updates=num_updates,
                     )
-                    if out != 0:  # Did fit.
-                        max_micro_batch_size = mid_micro_batch_size
-                        print(f"Micro batch size failed: {mid_micro_batch_size}")
-                    else:  # Fit, try harder.
-                        min_micro_batch_size = mid_micro_batch_size
-                        print(f"Micro batch size succeeded: {mid_micro_batch_size}")
+                    if out != 0:  # Didn't fit => reduce max.
+                        this_max_micro_batch_size = mid
+                        print(f"Micro batch size failed: {mid}")
+                    else:  # Fit => increase min.
+                        this_min_micro_batch_size = mid
+                        print(f"Micro batch size succeeded: {mid}")
+                    del out
 
                 # Take the left end as the maximum batch size.
-                config2bsz[str((model_name_or_path, mode, seq_len))] = min_micro_batch_size
+                config2bsz[str((model_name_or_path, mode, seq_len))] = this_min_micro_batch_size
 
     utils.jdump(config2bsz, config_dir)
 
