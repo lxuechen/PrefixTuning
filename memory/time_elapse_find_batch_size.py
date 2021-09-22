@@ -24,28 +24,25 @@ def _run_command(
     cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache",
 ):
     if mode == "jax":
-        out = os.system(
-            f"python -m memory.jax_dp_grad_accumulation "
-            f"--batch_size {micro_batch_size} "
-            f"--gradient_accumulation_steps {gradient_accumulation_steps} "
-            f"--seq_len {seq_len} "
-            f"--model_name_or_path {model_name_or_path} "
-            f"--out_path {out_path} "
-            f"--num_updates {num_updates} "
-            f"--cache_dir {cache_dir}"
-        )
+        command = f'''python -m memory.jax_dp_grad_accumulation \
+            --batch_size {micro_batch_size} \
+            --gradient_accumulation_steps {gradient_accumulation_steps} \
+            --seq_len {seq_len} \
+            --model_name_or_path {model_name_or_path} \
+            --num_updates {num_updates} \
+            --cache_dir {cache_dir} '''
     else:
-        out = os.system(
-            f"python -m memory.torch_dp "
-            f"--mode {mode} "
-            f"--batch_size {micro_batch_size} "
-            f"--gradient_accumulation_steps {gradient_accumulation_steps} "
-            f"--seq_len {seq_len} "
-            f"--model_name_or_path {model_name_or_path} "
-            f"--out_path {out_path} "
-            f"--num_updates {num_updates} "
-            f"--cache_dir {cache_dir}"
-        )
+        command = f'''python -m memory.torch_dp \
+            --mode {mode} \
+            --batch_size {micro_batch_size} \
+            --gradient_accumulation_steps {gradient_accumulation_steps} \
+            --seq_len {seq_len} \
+            --model_name_or_path {model_name_or_path} \
+            --num_updates {num_updates} \
+            --cache_dir {cache_dir} '''
+    if out_path is not None:
+        command += f'--out_path {out_path}'
+    out = os.system(command)
     return out
 
 
