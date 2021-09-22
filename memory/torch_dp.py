@@ -114,6 +114,7 @@ def main(
 
     for _ in tqdm.tqdm(range(num_warmups), desc="warmup"):
         train_step(model, optimizer, criterion, batch, mode)  # step, gradient_accumulation_steps don't matter here.
+    torch.cuda.empty_cache()
 
     if enable_profile:
         prof = profile(activities=[ProfilerActivity.CPU], record_shapes=True)

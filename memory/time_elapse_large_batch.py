@@ -33,7 +33,7 @@ def main(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    micro_batch_sizes = (7, 9)
+    micro_batch_sizes = (6, 8)
     batch_sizes = (micro_batch_sizes[0] * micro_batch_sizes[1],)
     for seq_len, batch_size, model_name_or_path in zip(seq_lens, batch_sizes, model_name_or_paths):
         for mode, micro_batch_size in zip(modes, micro_batch_sizes):
