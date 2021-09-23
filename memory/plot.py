@@ -63,7 +63,8 @@ def main(
     ):
         plt.figure(dpi=300)
 
-        for i, (mode, this_grouped) in enumerate(grouped.items()):
+        for i, mode in enumerate(("nonprivate", "vanilla", "layer_by_layer", "jax", "ghost",)):
+            this_grouped = grouped[mode]
             label = mode2label(mode)
 
             xlocs = x + (-2 + i) * width
@@ -73,7 +74,7 @@ def main(
             for this_x, this_y in zip(xlocs, ylocs):
                 plt.text(this_x - width / 4, this_y + 0.5, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
-        xtick_labels = ["GPT-2(-small)", "GPT-2-medium", "GPT-2-large"]
+        xtick_labels = ["GPT-2", "GPT-2-medium", "GPT-2-large"]
         plt.xticks(x, xtick_labels, fontsize=label_fontsize)
         plt.ylabel('maximum batch size (single TITAN RTX)', fontsize=label_fontsize)
         if not disable_legend_on_first:
@@ -103,7 +104,8 @@ def main(
     ):
         plt.figure(dpi=300)
 
-        for i, (mode, this_grouped) in enumerate(grouped.items()):
+        for i, mode in enumerate(("nonprivate", "vanilla", "layer_by_layer", "jax", "ghost",)):
+            this_grouped = grouped[mode]
             label = mode2label(mode)
 
             xlocs = x + (-2 + i) * width
@@ -113,7 +115,7 @@ def main(
             for this_x, this_y in zip(xlocs, ylocs):
                 plt.text(this_x - width / 3, this_y + 2, f"{int(this_y)}", fontdict=dict(fontsize=8))
 
-        xtick_labels = ["GPT-2-small", "GPT-2-medium", "GPT-2-large"]
+        xtick_labels = ["GPT-2", "GPT-2-medium", "GPT-2-large"]
         plt.xticks(x, xtick_labels, fontsize=label_fontsize)
         plt.ylabel('steps per minute', fontsize=label_fontsize)
         plt.legend(fontsize=legend_fontsize)
