@@ -19,6 +19,20 @@ def main(
 ):
     x = np.array(list(range(len(model_name_or_paths))))
 
+    nonprivate_throughput = collections.defaultdict(list)  # model -> []
+    for mode in modes:
+        for model_name_or_path in model_name_or_paths:
+            this_path = os.path.join(
+                base_dir, f'nonprivate-{mode}',
+                f'model_name_or_path_{model_name_or_path}_mode_nonprivate.json'
+            )
+            usage = utils.jload(this_path)
+            throughput = (usage["batch_size"] * usage["num_updates"]) / usage["time_elapse"]
+            nonprivate_throughput[model_name_or_path].append(throughput)
+    # Roughly average throughputs.
+    for key, item in nonprivate_throughput.items():
+        nonprivate_throughput[key] = np.mean(item)
+
     grouped = collections.defaultdict(list)  # mode->[times for models]
     for mode in modes:
         for model_name_or_path in model_name_or_paths:
@@ -40,9 +54,8 @@ def main(
             else:
                 usage = utils.jload(this_path)
                 mode_time = usage["time_elapse"]
-                mode_div_nonprivate = mode_time / nonprivate_time
-                grouped[mode].append(mode_div_nonprivate)
-
+                throughput = (nonprivate_time * nonprivate_throughput[model_name_or_path]) / mode_time
+                grouped[mode].append(throughput)
     print(grouped)
 
 
