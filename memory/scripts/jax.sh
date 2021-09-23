@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache"
-micro_batch_size=25
+micro_batch_size=${1:-25}
 gradient_accumulation_steps=2
 num_updates=2
 seq_len=100
