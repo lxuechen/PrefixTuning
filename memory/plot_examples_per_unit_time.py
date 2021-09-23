@@ -94,7 +94,7 @@ def main(
             plt.bar(xlocs, ylocs, width, label=label)
 
             for this_x, this_y in zip(xlocs, ylocs):
-                plt.text(this_x - width / 3, this_y + 2, f"{int(this_y)}", fontdict=dict(fontsize=8))
+                plt.text(this_x - width / 2.4, this_y + 2, f"{this_y:.1f}", fontdict=dict(fontsize=7))
 
         xtick_labels = ["GPT-2", "GPT-2-medium", "GPT-2-large"]
         plt.xticks(x, xtick_labels, fontsize=label_fontsize)
