@@ -25,7 +25,7 @@ def autolabel(rects):
 def mode2label(mode):
     return {
         "nonprivate": "non-private",
-        "vanilla": "chain-rule-based (Opacus)",
+        "vanilla": "Opacus (chain-rule-based)",
         "layer_by_layer": "Lee & Kifer, 2020",
         "ghost": "ghost (ours)",
         "jax": "JAX (+jit & vmap)",
