@@ -33,7 +33,7 @@ def main(
 
     out_dir="/nlp/scr/lxuechen/prefixtune/memory/time_elapse_large_batch",
     cache_dir="/nlp/scr/lxuechen/prefixtune/memory/cache",
-    config_dir=f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size.json",
+    config_dir=f"/nlp/scr/lxuechen/prefixtune/memory/time_elapse_micro_batch_size_v2.json",
 ):
     config2bsz = utils.jload(config_dir)
     print('Config:')
